@@ -1,0 +1,274 @@
+<?php
+
+if (!defined('UTUMISHI_WEB_APP')) {
+    die('Direct access not permitted');
+}
+
+require_once __DIR__ . '/CrimeAnalyzer.php';
+
+class ReportManager {
+    private $db;
+    private $crimeAnalyzer;
+
+    public function __construct() {
+        $this->db = Database::getInstance();
+        $this->crimeAnalyzer = new CrimeAnalyzer();
+    }
+
+    /**
+     * Generate monthly report for a station
+     */
+    public function generateMonthlyReport($year, $month, $stationId = null) {
+        $whereConditions = ["YEAR(created_at) = :year", "MONTH(created_at) = :month"];
+        $params = ['year' => $year, 'month' => $month];
+
+        if ($stationId) {
+            $whereConditions[] = "station_id = :station_id";
+            $params['station_id'] = $stationId;
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        $overallStats = $this->db->fetchOne("
+            SELECT 
+                COUNT(*) as total_cases,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
+            FROM cases 
+            WHERE $whereClause", $params);
+
+        $categoryStats = $this->db->fetchAll("
+            SELECT 
+                category,
+                COUNT(*) as case_count,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
+            FROM cases 
+            WHERE $whereClause
+            GROUP BY category
+            ORDER BY case_count DESC", $params);
+
+        $locationStats = $this->db->fetchAll("
+            SELECT 
+                location_county as county,
+                location_constituency as constituency,
+                COUNT(*) as case_count
+            FROM cases 
+            WHERE $whereClause
+            GROUP BY location_county, location_constituency
+            ORDER BY case_count DESC
+            LIMIT 10", $params);
+
+        return [
+            'type' => 'Monthly Report',
+            'period' => [
+                'year' => $year,
+                'month' => $month,
+                'month_name' => date('F', mktime(0, 0, 0, $month, 1, $year))
+            ],
+            'overall_stats' => $overallStats,
+            'category_breakdown' => $categoryStats,
+            'location_breakdown' => $locationStats,
+            'generated_at' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
+     * Generate performance report for a station
+     */
+    public function generatePerformanceReport($stationId, $timeframe = 30) {
+        $params = ['station_id' => $stationId, 'timeframe' => $timeframe];
+
+        $stationStats = $this->db->fetchOne("
+            SELECT 
+                COUNT(*) as total_cases,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
+            FROM cases 
+            WHERE station_id = :station_id 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+        ", $params);
+
+        $categoryBreakdown = $this->db->fetchAll("
+            SELECT 
+                category,
+                COUNT(*) as case_count,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
+            FROM cases 
+            WHERE station_id = :station_id 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            GROUP BY category
+            ORDER BY case_count DESC
+        ", $params);
+
+        return [
+            'type' => 'Station Performance Report',
+            'period' => "Last {$timeframe} days",
+            'station_stats' => $stationStats,
+            'category_breakdown' => $categoryBreakdown,
+            'generated_at' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
+     * Generate crime analysis report
+     */
+    public function generateCrimeAnalysisReport($stationId, $timeframe = 30) {
+        $params = ['station_id' => $stationId, 'timeframe' => $timeframe];
+
+        $trends = $this->db->fetchAll("
+            SELECT 
+                DATE(created_at) as date,
+                COUNT(*) as case_count,
+                category
+            FROM cases 
+            WHERE station_id = :station_id 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            GROUP BY DATE(created_at), category
+            ORDER BY date DESC
+        ", $params);
+
+        $hotspots = $this->db->fetchAll("
+            SELECT 
+                location_constituency,
+                category,
+                COUNT(*) as case_count
+            FROM cases 
+            WHERE station_id = :station_id 
+            AND created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            GROUP BY location_constituency, category
+            HAVING case_count > 2
+            ORDER BY case_count DESC
+        ", $params);
+
+        return [
+            'type' => 'Crime Analysis Report',
+            'period' => "Last {$timeframe} days",
+            'trends' => $trends,
+            'hotspots' => $hotspots,
+            'generated_at' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
+     * Generate officer workload report
+     */
+    public function generateOfficerWorkloadReport($stationId) {
+        $officers = $this->db->fetchAll("
+            SELECT 
+                u.name,
+                o.badge_number,
+                o.current_case_load,
+                o.total_cases_resolved,
+                COUNT(c.id) as active_cases,
+                ROUND(COUNT(CASE WHEN c.status IN ('resolved', 'closed') THEN 1 END) * 100.0 / 
+                      NULLIF(COUNT(c.id), 0), 1) as resolution_rate
+            FROM officers o
+            JOIN users u ON o.user_id = u.id
+            LEFT JOIN cases c ON o.id = c.assigned_officer_id
+            WHERE u.station_id = :station_id AND u.is_active = 1
+            GROUP BY u.name, o.badge_number, o.current_case_load, o.total_cases_resolved
+            ORDER BY o.current_case_load DESC
+        ", ['station_id' => $stationId]);
+
+        $workloadSummary = $this->db->fetchOne("
+            SELECT 
+                COUNT(DISTINCT o.id) as total_officers,
+                AVG(o.current_case_load) as avg_case_load,
+                MAX(o.current_case_load) as max_case_load,
+                COUNT(CASE WHEN o.current_case_load > 10 THEN 1 END) as overloaded_officers
+            FROM officers o
+            JOIN users u ON o.user_id = u.id
+            WHERE u.station_id = :station_id AND u.is_active = 1
+        ", ['station_id' => $stationId]);
+
+        return [
+            'type' => 'Officer Workload Report',
+            'officers' => $officers,
+            'summary' => $workloadSummary,
+            'generated_at' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
+     * Generate comprehensive station report
+     */
+    public function generateStationOverviewReport($stationId) {
+        // Get station information
+        $stationInfo = $this->db->fetchOne("
+            SELECT s.*, u.name as commander_name 
+            FROM stations s 
+            LEFT JOIN users u ON s.commander_id = u.id 
+            WHERE s.id = :station_id
+        ", ['station_id' => $stationId]);
+
+        // Get basic statistics (last 30 days)
+        $stats = $this->generatePerformanceReport($stationId, 30);
+        
+        // Get officer workload
+        $workload = $this->generateOfficerWorkloadReport($stationId);
+        
+        // Get recent trends
+        $trends = $this->generateCrimeAnalysisReport($stationId, 30);
+
+        return [
+            'type' => 'Station Overview Report',
+            'station_info' => $stationInfo,
+            'performance' => $stats,
+            'officer_workload' => $workload,
+            'crime_trends' => $trends,
+            'generated_at' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
+     * Export report data as JSON
+     */
+    public function exportReportAsJson($reportData) {
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="police_report_' . date('Y-m-d') . '.json"');
+        return json_encode($reportData, JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * Get available report types
+     */
+    public function getAvailableReportTypes() {
+        return [
+            'monthly' => [
+                'name' => 'Monthly Report',
+                'description' => 'Comprehensive monthly statistics and analysis',
+                'icon' => '📊',
+                'parameters' => ['year', 'month']
+            ],
+            'performance' => [
+                'name' => 'Performance Report',
+                'description' => 'Station performance metrics and trends',
+                'icon' => '📈',
+                'parameters' => ['timeframe']
+            ],
+            'crime_analysis' => [
+                'name' => 'Crime Analysis',
+                'description' => 'Crime patterns and hotspot analysis',
+                'icon' => '🔍',
+                'parameters' => ['timeframe']
+            ],
+            'officer_workload' => [
+                'name' => 'Officer Workload',
+                'description' => 'Current officer assignments and performance',
+                'icon' => '👥',
+                'parameters' => []
+            ],
+            'station_overview' => [
+                'name' => 'Station Overview',
+                'description' => 'Comprehensive station report',
+                'icon' => '🏢',
+                'parameters' => []
+            ]
+        ];
+    }
+}
+?>
