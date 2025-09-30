@@ -58,15 +58,15 @@ class Database {
             $stmt->execute($params);
             return $stmt;
        } catch (PDOException $e) {
-    $errorMessage = "Database Query Error: " . $e->getMessage() . " | SQL: " . $sql . " | Params: " . json_encode($params);
-    error_log($errorMessage);
+            $errorMessage = "Database Query Error: " . $e->getMessage() . " | SQL: " . $sql . " | Params: " . json_encode($params);
+            error_log($errorMessage);
 
-    if ($_SERVER['REMOTE_ADDR'] === '127.0.0.1' || $_SERVER['REMOTE_ADDR'] === '::1') {
-        throw new Exception($errorMessage);
-    } else {
-        throw new Exception("Database operation failed");
-    }
-}
+            if ($_SERVER['REMOTE_ADDR'] === '127.0.0.1' || $_SERVER['REMOTE_ADDR'] === '::1') {
+                throw new Exception($errorMessage);
+            } else {
+                throw new Exception("Database operation failed");
+            }
+        }
     }
 
     public function fetchOne($sql, $params = []) {

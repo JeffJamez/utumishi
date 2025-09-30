@@ -56,7 +56,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
             <div class="mb-4">
-                <h1>Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?></h1>
+                <h2>Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?></h2>
                 <p class="text-muted">Here's an overview of your cases and public safety information.</p>
             </div>
 
@@ -81,8 +81,48 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="kpi-label">National Resolution Rate</div>
                 </div>
             </div>
+             <div>
+                <!-- <div class="card mb-3">
+                    <div class="card-header">
+                        <h3>Quick Actions</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-column gap-2">
+                            <a href="<?php echo BASE_URL; ?>/pages/citizen/track_case.php" class="btn btn-outline btn-primary btn-block">
+                                Track Case
+                            </a>
+                            <a href="<?php echo BASE_URL; ?>/pages/citizen/public_stats.php" class="btn btn-outline btn-primary btn-block">
+                                View Crime Stats
+                            </a>
+                        </div>
+                    </div>
+                </div> -->
 
-            <div class="d-grid" style="grid-template-columns: 2fr 1fr; gap: 2rem;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Safety Information</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <strong>Emergency Numbers:</strong><br>
+                                Police: 999 or 911<br>
+                                Fire: 999<br>
+                                Medical: 999
+                            </div>
+
+                            <p><strong>Reporting a Crime:</strong></p>
+                            <ol style="font-size: 0.9rem;">
+                                <li>Visit the nearest police station</li>
+                                <li>Provide your National ID</li>
+                                <li>Give detailed information</li>
+                                <li>Get your OB Number</li>
+                                <li>Track progress here</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+
+            <div class="d-grid" style="">
 
                 <div class="card">
                     <div class="card-header">
@@ -138,52 +178,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 </div>
 
-                <div>
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h3>Quick Actions</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex flex-column gap-2">
-                                <a href="<?php echo BASE_URL; ?>/pages/citizen/track_case.php" class="btn btn-outline btn-primary btn-block">
-                                    🔍 Track Case
-                                </a>
-                                <a href="<?php echo BASE_URL; ?>/pages/citizen/public_stats.php" class="btn btn-outline btn-primary btn-block">
-                                    📊 View Crime Stats
-                                </a>
-                                <a href="<?php echo BASE_URL; ?>/pages/citizen/emergency_contacts.php" class="btn btn-outline btn-primary btn-block">
-                                    📞 Emergency Contacts
-                                </a>
-                                <a href="<?php echo BASE_URL; ?>/pages/citizen/safety_tips.php" class="btn btn-outline btn-primary btn-block">
-                                    💡 Safety Tips
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Safety Information</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                <strong>Emergency Numbers:</strong><br>
-                                Police: 999 or 911<br>
-                                Fire: 999<br>
-                                Medical: 999
-                            </div>
-
-                            <p><strong>Reporting a Crime:</strong></p>
-                            <ol style="font-size: 0.9rem;">
-                                <li>Visit the nearest police station</li>
-                                <li>Provide your National ID</li>
-                                <li>Give detailed information</li>
-                                <li>Get your OB Number</li>
-                                <li>Track progress here</li>
-                            </ol>
-                        </div>
-                    </div>
-                </div>
+               
             </div>
 
             <div class="card">
@@ -256,7 +251,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div class="card-body">
                     <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
                         <div class="alert alert-info">
-                            <h5>🏠 Home Security</h5>
+                            <h5> Home Security</h5>
                             <ul style="margin-bottom: 0; font-size: 0.9rem;">
                                 <li>Install proper lighting around your property</li>
                                 <li>Use deadbolts and security cameras</li>
@@ -266,7 +261,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <div class="alert alert-warning">
-                            <h5>🚗 Vehicle Safety</h5>
+                            <h5> Vehicle Safety</h5>
                             <ul style="margin-bottom: 0; font-size: 0.9rem;">
                                 <li>Always lock your vehicle</li>
                                 <li>Park in well-lit, busy areas</li>
@@ -276,7 +271,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <div class="alert alert-success">
-                            <h5>💻 Cyber Security</h5>
+                            <h5> Cyber Security</h5>
                             <ul style="margin-bottom: 0; font-size: 0.9rem;">
                                 <li>Use strong, unique passwords</li>
                                 <li>Be cautious with M-Pesa transactions</li>
@@ -286,7 +281,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <div class="alert alert-danger">
-                            <h5>🚶‍♀️ Personal Safety</h5>
+                            <h5> Personal Safety</h5>
                             <ul style="margin-bottom: 0; font-size: 0.9rem;">
                                 <li>Stay alert in public places</li>
                                 <li>Avoid walking alone at night</li>
@@ -295,16 +290,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </ul>
                         </div>
                     </div>
-
-                    <div class="text-center mt-3">
-                        <a href="<?php echo BASE_URL; ?>/pages/citizen/safety_tips.php" class="btn btn-primary">
-                            View Complete Safety Guide
-                        </a>
-                    </div>
                 </div>
             </div>
 
-            <div class="card">
+            <!-- <div class="card">
                 <div class="card-header">
                     <h3>System Updates & Announcements</h3>
                 </div>
@@ -332,7 +321,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </main>
     </div>
 
@@ -513,5 +502,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
         }
     </style>
+
+     <?php renderHeaderScripts(); ?>
 </body>
 </html>

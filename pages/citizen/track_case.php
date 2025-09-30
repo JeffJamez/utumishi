@@ -71,18 +71,18 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php flashMessage(); ?>
 
             <div class="mb-4">
-                <h1>Track My Case</h1>
+                <h2>Track My Case</h2>
                 <p class="text-muted">Search for your case using the OB number or browse your reported cases</p>
             </div>
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>🔍 Search by OB Number</h3>
+                    <h3> Search by OB Number</h3>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="" class="d-flex gap-2" style="align-items: flex-end;">
-                        <div class="form-group mb-0" style="flex: 1;">
-                            <label for="search_term" class="form-label">OB Number</label>
+                        <div class="form-group mb-0 d-flex" style="flex: 1;">
+                            <!-- <label for="search_term" class="form-label">OB Number</label> -->
                             <input 
                                 type="text" 
                                 id="search_term" 
@@ -93,12 +93,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 pattern="OB-[A-Z]{3}-\d{4}-\d{5}"
                                 maxlength="20"
                             >
-                            <div class="form-help">Enter the complete OB number from your case report</div>
                         </div>
                         <button type="submit" class="btn btn-primary">
-                            🔍 Search Case
+                            Search Case
                         </button>
                     </form>
+                    <div class="form-help">Enter the complete OB number from your case report</div>
                 </div>
             </div>
 
@@ -189,7 +189,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <?php if (!empty($caseUpdates)): ?>
                     <div class="card">
                         <div class="card-header">
-                            <h3>📋 Case Timeline & Updates</h3>
+                            <h3>Case Timeline & Updates</h3>
                         </div>
                         <div class="card-body">
                             <div class="case-timeline">
@@ -241,7 +241,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>📋 My Reported Cases</h3>
+                        <h3>My Reported Cases</h3>
                         <span class="text-muted"><?php echo count($searchResults); ?> case(s) found</span>
                     </div>
                     <div class="card-body">
@@ -305,7 +305,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center p-4">
-                                <div style="font-size: 3rem;">📋</div>
+                                <div style="font-size: 3rem;"></div>
                                 <h4>No Cases Found</h4>
                                 <p class="text-muted">You haven't reported any cases yet.</p>
                                 <p><small>Cases are reported in-person at police stations. Once reported, they will appear here for tracking.</small></p>
@@ -318,7 +318,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-body text-center">
-                        <div style="font-size: 4rem; margin-bottom: 1rem;">🔍</div>
+                        <div><svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg></div>
                         <h3>Track Your Cases</h3>
                         <p class="text-muted mb-4">
                             Use the search box above to find a specific case by OB number, or view all your reported cases below.
@@ -326,13 +326,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                         <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 2rem;">
                             <div class="alert alert-info">
-                                <h5>📝 How to Get Your OB Number</h5>
+                                <h5> How to Get Your OB Number</h5>
                                 <p class="mb-0">When you report a case at any police station, you'll receive an OB number. Keep this number safe for tracking your case.</p>
                             </div>
 
                             <div class="alert alert-success">
-                                <h5>🔄 Case Status Updates</h5>
-                                <p class="mb-0">Your case status will be updated as investigation progresses: Reported → Assigned → In Progress → Resolved → Closed</p>
+                                <h5>Case Status Updates</h5>
+                                <p class="mb-0">Your case status will be updated as investigation progresses: Reported -> Assigned -> In Progress -> Resolved -> Closed</p>
                             </div>
                         </div>
                     </div>
@@ -341,25 +341,25 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h3>❓ Need Help?</h3>
+                    <h3>Need Help?</h3>
                 </div>
                 <div class="card-body">
                     <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
                         <div>
-                            <h5>📞 Contact Information</h5>
+                            <h5> Contact Information</h5>
                             <p><strong>Emergency:</strong> 999 or 911</p>
                             <p><strong>Police Hotline:</strong> 999</p>
                             <p><strong>DCI Hotline:</strong> 0800 722 203</p>
                         </div>
 
                         <div>
-                            <h5>🏢 Visit Police Station</h5>
+                            <h5> Visit Police Station</h5>
                             <p>For case updates, evidence submission, or statements, visit the station handling your case.</p>
                             <p><strong>Bring:</strong> National ID and OB Number</p>
                         </div>
 
                         <div>
-                            <h5>📋 Case Status Meanings</h5>
+                            <h5> Case Status Meanings</h5>
                             <ul style="font-size: 0.9rem;">
                                 <li><strong>Reported:</strong> Case recorded, awaiting assignment</li>
                                 <li><strong>Assigned:</strong> Officer assigned to investigate</li>
@@ -723,5 +723,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             text-decoration: underline;
         }
     </style>
+
+     <?php renderHeaderScripts(); ?>
 </body>
 </html>

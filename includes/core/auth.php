@@ -43,7 +43,7 @@ class Auth {
             $user = $this->db->fetchOne($sql, $params);
 
             if (!$user) {
-                return ['success' => false, 'message' => 'Invalid credentials or user not found'];
+                return ['success' => false, 'message' => 'User not found'];
             }
 
             if (!password_verify($password, $user['password'])) {

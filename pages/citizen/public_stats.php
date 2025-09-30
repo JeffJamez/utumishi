@@ -130,13 +130,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
             <div class="mb-4">
-                <h1>Public Crime Statistics</h1>
+                <h2>Public Crime Statistics</h2>
                 <p class="text-muted">Transparent crime data and safety information for Kenya</p>
             </div>
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>📊 Data Filters</h3>
+                    <h3> Data Filters</h3>
                 </div>
                 <div class="card-body">
                     <form method="GET" action="" class="d-flex gap-3" style="align-items: flex-end;">
@@ -177,7 +177,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <button type="submit" class="btn btn-primary">
-                            📈 Update Statistics
+                             Update Statistics
                         </button>
                     </form>
                 </div>
@@ -223,7 +223,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>🏷️ Crime Category Breakdown</h3>
+                        <h3> Crime Category Breakdown</h3>
                         <span class="text-muted">Last <?php echo $filters['timeframe']; ?> days</span>
                     </div>
                     <div class="card-body">
@@ -259,10 +259,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                     <?php
                                                     $trend = '';
                                                     $cases = $category['total_cases'];
-                                                    if ($cases >= 100) $trend = '📈 Very High';
-                                                    elseif ($cases >= 50) $trend = '📊 High';
-                                                    elseif ($cases >= 20) $trend = '📉 Moderate';
-                                                    else $trend = '📋 Low';
+                                                    if ($cases >= 100) $trend = 'Very High';
+                                                    elseif ($cases >= 50) $trend = 'High';
+                                                    elseif ($cases >= 20) $trend = 'Moderate';
+                                                    else $trend = 'Low';
                                                     echo $trend;
                                                     ?>
                                                 </td>
@@ -281,7 +281,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>📈 Monthly Trends</h3>
+                        <h3> Monthly Trends</h3>
                     </div>
                     <div class="card-body">
                         <?php if (!empty($monthlyTrends)): ?>
@@ -322,7 +322,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h3>🛡️ County Safety Assessment</h3>
+                    <h3> County Safety Assessment</h3>
                     <p class="text-muted mb-0">Based on crime rates, resolution efficiency, and police coverage</p>
                 </div>
                 <div class="card-body">
@@ -361,12 +361,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h3>ℹ️ Understanding These Statistics</h3>
+                    <h3>Understanding These Statistics</h3>
                 </div>
                 <div class="card-body">
                     <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
                         <div>
-                            <h5>📊 What These Numbers Mean</h5>
+                            <h5> What These Numbers Mean</h5>
                             <ul class="mb-0">
                                 <li><strong>Total Cases:</strong> All crimes reported to police in the time period</li>
                                 <li><strong>Resolution Rate:</strong> Percentage of cases that have been resolved or closed</li>
@@ -375,7 +375,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <div>
-                            <h5>🛡️ Safety Scores Explained</h5>
+                            <h5> Safety Scores Explained</h5>
                             <ul class="mb-0">
                                 <li><strong>80-100:</strong> Very Safe - Low crime, high resolution rates</li>
                                 <li><strong>65-79:</strong> Safe - Manageable crime levels, good policing</li>
@@ -385,7 +385,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <div>
-                            <h5>📈 How to Stay Safe</h5>
+                            <h5> How to Stay Safe</h5>
                             <ul class="mb-0">
                                 <li>Stay informed about your area's crime trends</li>
                                 <li>Report crimes promptly to help improve statistics</li>
@@ -395,7 +395,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <div>
-                            <h5>📞 Emergency Contacts</h5>
+                            <h5> Emergency Contacts</h5>
                             <ul class="mb-0">
                                 <li><strong>Emergency:</strong> 999 or 911</li>
                                 <li><strong>Police Hotline:</strong> 999</li>
@@ -615,7 +615,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .kpi-value {
-            font-size: 2.5rem;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--primary-green);
             transition: color 0.3s ease;
@@ -800,5 +800,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             to { opacity: 1; }
         }
     </style>
+
+     <?php renderHeaderScripts(); ?>
 </body>
 </html>

@@ -7,6 +7,7 @@ if (!defined('UTUMISHI_WEB_APP')) {
 require_once __DIR__ . '/navigation.php';
 
 $userRole = $_SESSION['role'] ?? 'citizen';
+$currentUser = getCurrentUser();
 ?>
 
 <!DOCTYPE html>
@@ -16,11 +17,16 @@ $userRole = $_SESSION['role'] ?? 'citizen';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle ?? 'Dashboard'; ?> - Utumishi</title>
     <link rel="stylesheet" href="<?php echo ASSETS_URL; ?>/css/style.css">
+
+
+     <?php renderHeaderStyles(); ?>
 </head>
 <body>
     <div class="app-layout">
 
-        <?php echo renderHeader($userRole); ?>
+       <?php renderHeader($userRole, $currentUser); ?>
+        
+        <?php renderFlashMessage(); ?>
 
         <aside class="app-sidebar">
             <?php echo renderNavigation($userRole); ?>

@@ -316,6 +316,10 @@ function sanitizePhone($phone) {
     return Sanitizer::sanitizePhone($phone);
 }
 
+function sanitizeNationalId($nId) {
+    return Sanitizer::sanitizeNationalId($nId);
+}
+
 function sanitizeName($name) {
     return Sanitizer::sanitizeName($name);
 }

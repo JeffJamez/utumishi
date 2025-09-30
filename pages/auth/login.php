@@ -90,15 +90,16 @@ $flashMessage = getFlashMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Utumishi</title>
+    <title>Login - <?php echo APP_NAME; ?></title>
     <link rel="stylesheet" href="<?php echo ASSETS_URL; ?>/css/style.css">
 </head>
 <body>
+
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
                 <div class="login-logo"></div>
-                <h1 class="login-title">Utumishi</h1>
+                <h1 class="login-title"><?php echo APP_NAME; ?></h1>
                 <p class="login-subtitle">Predictive Crime Analysis & Digital OB</p>
             </div>
 
@@ -160,17 +161,17 @@ $flashMessage = getFlashMessage();
                         <option value="<?php echo ROLE_OCS; ?>" <?php echo (($_POST['role'] ?? '') === ROLE_OCS) ? 'selected' : ''; ?>>OCS (Station Commander)</option>
                         <option value="<?php echo ROLE_ADMIN; ?>" <?php echo (($_POST['role'] ?? '') === ROLE_ADMIN) ? 'selected' : ''; ?>>Admin</option>
                     </select>
-                    <div class="form-help">Leave blank to auto-detect your role</div>
+                    <div class="form-help">Leave as is, to auto-detect your role</div>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block">
-                    Login to System
+                    Login
                 </button>
             </form>
 
-            <div class="text-center mt-3">
-                <p class="text-muted">New citizen?</p>
-                <a href="<?php echo BASE_URL; ?>/pages/auth/register_citizen.php" class="btn btn-outline btn-primary">
+            <div class="text-center">
+                <span class="text-muted">New citizen?</span>
+                <a href="<?php echo BASE_URL; ?>/pages/auth/register_citizen.php">
                     Register as Citizen
                 </a>
             </div>

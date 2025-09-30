@@ -1,4 +1,4 @@
-
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -155,7 +155,8 @@ body {
 
 .nav-link {
   display: flex;
-  align-items: center;
+  gap: 3px;
+  /* align-items: center; */
   padding: 0.75rem 1rem;
   color: var(--dark-gray);
   text-decoration: none;
@@ -463,14 +464,14 @@ body {
 }
 
 .kpi-value {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
   color: var(--primary-green);
   margin-bottom: 0.5rem;
 }
 
 .kpi-label {
-  font-size: 1rem;
+  font-size: 0.7rem;
   color: var(--medium-gray);
   font-weight: 600;
 }
@@ -602,7 +603,7 @@ body {
   padding: 1rem;
   margin-bottom: 1rem;
   border-radius: var(--border-radius);
-  border-left: 4px solid;
+  /* border-left: 4px solid; */
 }
 
 .alert-success {
@@ -670,14 +671,13 @@ body {
   background: var(--primary-white);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 2rem;
+  padding: 10px 2rem;
   width: 100%;
   max-width: 400px;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
 }
 
 .login-logo {

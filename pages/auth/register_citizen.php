@@ -46,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         $validation = Validator::validateFields($formData, $validationRules);
+
         if (!$validation['valid']) {
             $errors = array_merge($errors, $validation['errors']);
         }
@@ -56,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
 
-            $db = Database::getInstance();
+            $db = getDB();
             if ($db->exists('users', 'national_id = :national_id', ['national_id' => $formData['national_id']])) {
                 $errors['national_id'] = 'This National ID is already registered';
             }
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Citizen Registration - Utumishi</title>
+    <title>Citizen Registration - <?php echo APP_NAME; ?></title>
     <link rel="stylesheet" href="<?php echo ASSETS_URL; ?>/css/style.css">
 </head>
 <body>
@@ -176,7 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php if (isset($errors['phone'])): ?>
                         <div class="form-error"><?php echo htmlspecialchars($errors['phone']); ?></div>
                     <?php endif; ?>
-                    <div class="form-help">Kenyan mobile number for case updates and notifications</div>
+                    <!-- <div class="form-help">Kenyan mobile number for case updates and notifications</div> -->
                 </div>
 
                 <div class="form-group">
@@ -243,13 +244,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <div class="text-center mt-3">
-                <p class="text-muted">Already have an account?</p>
-                <a href="<?php echo BASE_URL; ?>/pages/auth/login.php" class="btn btn-outline btn-primary">
+                <span class="text-muted">Already have an account?</span>
+                <a href="<?php echo BASE_URL; ?>/pages/auth/login.php" >
                     Login Here
                 </a>
             </div>
 
-            <div class="text-center mt-4">
+            <div class="text-center">
                 <div class="form-help">
                     <small>
                         <strong>Note:</strong> This registration is for citizens only.<br>
