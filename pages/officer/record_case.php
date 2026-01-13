@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../includes/core/auth.php';
 require_once __DIR__ . '/../../includes/utils/validation.php';
 require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/utils/ob_generator.php';
+require_once __DIR__ . '/../../includes/utils/file_upload.php';
 require_once __DIR__ . '/../../includes/classes/CaseManager.php';
 
 requireRole(ROLE_OFFICER);
@@ -33,10 +34,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'citizen_name' => sanitizeName($_POST['citizen_name'] ?? ''),
             'citizen_phone' => sanitizePhone($_POST['citizen_phone'] ?? ''),
             'title' => sanitizeText($_POST['title'] ?? ''),
-            'description' => sanitizeDescription($_POST['description'] ?? ''),
+            'description' => sanitizeText($_POST['description'] ?? ''),
             'category' => sanitizeText($_POST['category'] ?? ''),
             'location_county' => sanitizeText($_POST['location_county'] ?? ''),
             'location_constituency' => sanitizeText($_POST['location_constituency'] ?? ''),
+            'incident_local_area' => sanitizeText($_POST['incident_local_area'] ?? ''),
+            'reporter_county' => sanitizeText($_POST['reporter_county'] ?? ''),
+            'reporter_constituency' => sanitizeText($_POST['reporter_constituency'] ?? ''),
+            'reporter_local_area' => sanitizeText($_POST['reporter_local_area'] ?? ''),
         ];
 
         if (empty($formData['citizen_national_id'])) {
@@ -92,64 +97,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        if (empty($formData['reporter_county']) || empty($formData['reporter_constituency'])) {
+            $errors['reporter_location'] = 'Reporter residence (county and constituency) is required';
+        } else {
+            $reporterLocationValidation = validateLocation($formData['reporter_county'], $formData['reporter_constituency']);
+            if (!$reporterLocationValidation['valid']) {
+                $errors['reporter_location'] = $reporterLocationValidation['message'];
+            }
+        }
+
         if (empty($errors)) {
             $db = Database::getInstance();
 
-            $citizen = $db->fetchOne(
-                "SELECT id FROM users WHERE national_id = :national_id AND role = 'citizen'",
-                ['national_id' => $formData['citizen_national_id']]
-            );
-
-            if (!$citizen) {
-
-                $citizenData = [
-                    'national_id' => $formData['citizen_national_id'],
-                    'name' => $formData['citizen_name'],
-                    'phone' => $formData['citizen_phone'],
-                    'password' => password_hash($formData['citizen_national_id'], PASSWORD_DEFAULT),
-                    'role' => ROLE_CITIZEN,
-                    'created_at' => date('Y-m-d H:i:s')
-                ];
-
-                $citizenId = $db->insert('users', $citizenData);
-
-                if (!$citizenId) {
-                    throw new Exception('Failed to create citizen record');
+            // Handle citizen ID document upload
+            $citizenIdDocumentPath = null;
+            if (isset($_FILES['citizen_id_document']) && $_FILES['citizen_id_document']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $uploadResult = uploadCitizenIdDocument($_FILES['citizen_id_document'], $formData['citizen_national_id']);
+                if (!$uploadResult['success']) {
+                    $errors['citizen_id_document'] = $uploadResult['message'];
+                } else {
+                    $citizenIdDocumentPath = $uploadResult['file_path'];
                 }
-            } else {
-                $citizenId = $citizen['id'];
-
-                $db->update('users', [
-                    'name' => $formData['citizen_name'],
-                    'phone' => $formData['citizen_phone']
-                ], 'id = :id', ['id' => $citizenId]);
             }
 
-            $caseData = [
-                'title' => $formData['title'],
-                'description' => $formData['description'],
-                'category' => $formData['category'],
-                'location_county' => $formData['location_county'],
-                'location_constituency' => $formData['location_constituency'],
-                'reported_by_citizen_id' => $citizenId,
-                'recorded_by_officer_id' => $currentUser['id'],
-                'station_id' => $currentUser['station_id']
-            ];
+            if (empty($errors)) {
+                $citizen = $db->fetchOne(
+                    "SELECT id FROM users WHERE national_id = :national_id AND role = 'citizen'",
+                    ['national_id' => $formData['citizen_national_id']]
+                );
 
-            $result = $caseManager->createCase($caseData);
+                if (!$citizen) {
 
-            if ($result['success']) {
-                $success = $result['message'];
-                $obNumber = $result['ob_number'];
+                    $citizenData = [
+                        'national_id' => $formData['citizen_national_id'],
+                        'name' => $formData['citizen_name'],
+                        'phone' => $formData['citizen_phone'],
+                        'id_document_path' => $citizenIdDocumentPath,
+                        'password' => password_hash($formData['citizen_national_id'], PASSWORD_DEFAULT),
+                        'role' => ROLE_CITIZEN,
+                        'created_at' => date('Y-m-d H:i:s')
+                    ];
 
-                $formData = [];
+                    $citizenId = $db->insert('users', $citizenData);
 
-                setFlashMessage('success', "Case successfully recorded. OB Number: {$obNumber}");
+                    if (!$citizenId) {
+                        throw new Exception('Failed to create citizen record');
+                    }
+                } else {
+                    $citizenId = $citizen['id'];
 
-                header('Location: ' . BASE_URL . '/pages/officer/dashboard.php');
-                exit;
-            } else {
-                $errors['general'] = $result['message'];
+                    $updateData = [
+                        'name' => $formData['citizen_name'],
+                        'phone' => $formData['citizen_phone']
+                    ];
+                    if ($citizenIdDocumentPath) {
+                        $updateData['id_document_path'] = $citizenIdDocumentPath;
+                    }
+
+                    $db->update('users', $updateData, 'id = :id', ['id' => $citizenId]);
+                }
+
+                // Create case only after successful citizen handling
+                $caseData = [
+                    'title' => $formData['title'],
+                    'description' => $formData['description'],
+                    'category' => $formData['category'],
+                    'location_county' => $formData['location_county'],
+                    'location_constituency' => $formData['location_constituency'],
+                    'incident_local_area' => $formData['incident_local_area'],
+                    'reporter_county' => $formData['reporter_county'],
+                    'reporter_constituency' => $formData['reporter_constituency'],
+                    'reporter_local_area' => $formData['reporter_local_area'],
+                    'reported_by_citizen_id' => $citizenId,
+                    'recorded_by_officer_id' => $currentUser['id'],
+                    'station_id' => $currentUser['station_id']
+                ];
+
+                $result = $caseManager->createCase($caseData);
+
+                if ($result['success']) {
+                    $success = $result['message'];
+                    $obNumber = $result['ob_number'];
+
+                    $formData = [];
+
+                    setFlashMessage('success', "Case successfully recorded. OB Number: {$obNumber}");
+
+                    header('Location: ' . BASE_URL . '/pages/officer/dashboard.php');
+                    exit;
+                } else {
+                    $errors['general'] = $result['message'];
+                }
             }
         }
 
@@ -168,7 +206,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php flashMessage(); ?>
 
             <div class="mb-4">
-                <h1>Digital Occurrence Book - Record New Case</h1>
+                <h2>Digital Occurrence Book - Record New Case</h2>
                 <p class="text-muted">Record a new crime case reported by a citizen at the station</p>
             </div>
 
@@ -184,7 +222,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="" id="recordCaseForm" class="card">
+            <form method="POST" action="" id="recordCaseForm" enctype="multipart/form-data" class="card">
                 <div class="card-header">
                     <h3>Case Information</h3>
                     <p class="text-muted mb-0">Fill in all required information accurately</p>
@@ -196,28 +234,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <fieldset class="mb-4">
                         <legend class="h4 mb-3">Citizen Information (Reporter)</legend>
 
-                        <div class="d-grid" style="grid-template-columns: 1fr 2fr; gap: 1.5rem;">
-                            <div class="form-group">
-                                <label for="citizen_national_id" class="form-label">National ID *</label>
-                                <input 
-                                    type="text" 
-                                    id="citizen_national_id" 
-                                    name="citizen_national_id" 
-                                    class="form-control <?php echo isset($errors['citizen_national_id']) ? 'error' : ''; ?>"
-                                    placeholder="12345678"
-                                    value="<?php echo htmlspecialchars($formData['citizen_national_id'] ?? ''); ?>"
-                                    maxlength="8"
-                                    pattern="[0-9]{8}"
-                                    required
-                                >
-                                <?php if (isset($errors['citizen_national_id'])): ?>
-                                    <div class="form-error"><?php echo htmlspecialchars($errors['citizen_national_id']); ?></div>
-                                <?php endif; ?>
-                                <div class="form-help">8-digit National ID of the person reporting</div>
-                            </div>
-
-                            <div class="d-grid" style="grid-template-columns: 2fr 1fr; gap: 1rem;">
-                                <div class="form-group">
+                    <div class="d-grid" style="grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+                         <div class="form-group">
                                     <label for="citizen_name" class="form-label">Full Name *</label>
                                     <input 
                                         type="text" 
@@ -249,7 +267,42 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <div class="form-error"><?php echo htmlspecialchars($errors['citizen_phone']); ?></div>
                                     <?php endif; ?>
                                 </div>
-                            </div>
+                                </div>
+
+                        <div class="d-grid" style="grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+                            <div class="form-group">
+                                <label for="citizen_national_id" class="form-label">National ID *</label>
+                                <input 
+                                    type="text" 
+                                    id="citizen_national_id" 
+                                    name="citizen_national_id" 
+                                    class="form-control <?php echo isset($errors['citizen_national_id']) ? 'error' : ''; ?>"
+                                    placeholder="12345678"
+                                    value="<?php echo htmlspecialchars($formData['citizen_national_id'] ?? ''); ?>"
+                                    maxlength="8"
+                                    pattern="[0-9]{8}"
+                                    required
+                                >
+                                 <?php if (isset($errors['citizen_national_id'])): ?>
+                                     <div class="form-error"><?php echo htmlspecialchars($errors['citizen_national_id']); ?></div>
+                                 <?php endif; ?>
+                                 <div class="form-help">8-digit National ID of the person reporting</div>
+                             </div>
+
+                             <div class="form-group">
+                                 <label for="citizen_id_document" class="form-label">National ID Document (PDF)</label>
+                                 <input
+                                     type="file"
+                                     id="citizen_id_document"
+                                     name="citizen_id_document"
+                                     class="form-control <?php echo isset($errors['citizen_id_document']) ? 'error' : ''; ?>"
+                                     accept=".pdf"
+                                 >
+                                 <?php if (isset($errors['citizen_id_document'])): ?>
+                                     <div class="form-error"><?php echo htmlspecialchars($errors['citizen_id_document']); ?></div>
+                                 <?php endif; ?>
+                                 <div class="form-help">Upload a PDF copy of the citizen's National ID for verification</div>
+                             </div>                               
                         </div>
                     </fieldset>
 
@@ -317,12 +370,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <fieldset class="mb-4">
                         <legend class="h4 mb-3">Location of Incident</legend>
 
-                        <div class="d-grid" style="grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div class="d-grid" style="grid-template-columns: 1fr 1fr 2fr; gap: 1.5rem;">
                             <div class="form-group">
                                 <label for="location_county" class="form-label">County *</label>
-                                <select 
-                                    id="location_county" 
-                                    name="location_county" 
+                                <select
+                                    id="location_county"
+                                    name="location_county"
                                     class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
                                     required
                                 >
@@ -338,9 +391,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                             <div class="form-group">
                                 <label for="location_constituency" class="form-label">Constituency *</label>
-                                <select 
-                                    id="location_constituency" 
-                                    name="location_constituency" 
+                                <select
+                                    id="location_constituency"
+                                    name="location_constituency"
                                     class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
                                     required
                                 >
@@ -348,13 +401,82 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                                 </select>
                             </div>
+
+                            <div class="form-group">
+                                <label for="incident_local_area" class="form-label">Local Area</label>
+                                <input
+                                    type="text"
+                                    id="incident_local_area"
+                                    name="incident_local_area"
+                                    class="form-control"
+                                    placeholder="e.g., Town name, Estate name, village, street"
+                                    value="<?php echo htmlspecialchars($formData['incident_local_area'] ?? ''); ?>"
+                                    maxlength="100"
+                                >
+                                <div class="form-help">Optional: Specific area or landmark</div>
+                            </div>
                         </div>
 
-                        <?php if (isset($errors['location'])): ?>
-                            <div class="form-error"><?php echo htmlspecialchars($errors['location']); ?></div>
-                        <?php endif; ?>
-                        <div class="form-help">Select the county and constituency where the incident occurred</div>
-                    </fieldset>
+                         <?php if (isset($errors['location'])): ?>
+                             <div class="form-error"><?php echo htmlspecialchars($errors['location']); ?></div>
+                         <?php endif; ?>
+                         <div class="form-help">Select the county and constituency where the incident occurred</div>
+                     </fieldset>
+
+                     <fieldset class="mb-4">
+                         <legend class="h4 mb-3">Reporter's Residence</legend>
+
+                         <div class="d-grid" style="grid-template-columns: 1fr 1fr 2fr; gap: 1.5rem;">
+                             <div class="form-group">
+                                 <label for="reporter_county" class="form-label">County *</label>
+                                 <select
+                                     id="reporter_county"
+                                     name="reporter_county"
+                                     class="form-control form-select <?php echo isset($errors['reporter_location']) ? 'error' : ''; ?>"
+                                     required
+                                 >
+                                     <option value="">Select county...</option>
+                                     <?php foreach (KENYAN_COUNTIES as $county => $constituencies): ?>
+                                         <option value="<?php echo htmlspecialchars($county); ?>"
+                                                 <?php echo ($formData['reporter_county'] ?? '') === $county ? 'selected' : ''; ?>>
+                                             <?php echo htmlspecialchars($county); ?>
+                                         </option>
+                                     <?php endforeach; ?>
+                                 </select>
+                             </div>
+
+                             <div class="form-group">
+                                 <label for="reporter_constituency" class="form-label">Constituency *</label>
+                                 <select
+                                     id="reporter_constituency"
+                                     name="reporter_constituency"
+                                     class="form-control form-select <?php echo isset($errors['reporter_location']) ? 'error' : ''; ?>"
+                                     required
+                                 >
+                                     <option value="">Select constituency...</option>
+                                 </select>
+                             </div>
+
+                             <div class="form-group">
+                                 <label for="reporter_local_area" class="form-label">Local Area</label>
+                                 <input
+                                     type="text"
+                                     id="reporter_local_area"
+                                     name="reporter_local_area"
+                                     class="form-control"
+                                     placeholder="e.g., Estate name, village, street"
+                                     value="<?php echo htmlspecialchars($formData['reporter_local_area'] ?? ''); ?>"
+                                     maxlength="100"
+                                 >
+                                 <div class="form-help">Optional: Specific area or landmark</div>
+                             </div>
+                         </div>
+
+                         <?php if (isset($errors['reporter_location'])): ?>
+                             <div class="form-error"><?php echo htmlspecialchars($errors['reporter_location']); ?></div>
+                         <?php endif; ?>
+                         <div class="form-help">Select the county and constituency where the reporter resides</div>
+                     </fieldset>
                 </div>
 
                 <div class="card-footer">
@@ -362,8 +484,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-secondary">
                             ← Cancel
                         </a>
-                        <button type="submit" class="btn btn-success btn-lg">
-                            📝 Record Case in Digital OB
+                        <button type="submit" class="btn btn-success btn-lg" style="padding:0;">
+                             Record Case in Digital OB
                         </button>
                     </div>
                 </div>
@@ -397,10 +519,43 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
         });
 
+        document.getElementById('reporter_county').addEventListener('change', function() {
+            const county = this.value;
+            const constituencySelect = document.getElementById('reporter_constituency');
+
+            constituencySelect.innerHTML = '<option value="">Select constituency...</option>';
+
+            if (county && kenyanCounties[county]) {
+                kenyanCounties[county].forEach(constituency => {
+                    const option = document.createElement('option');
+                    option.value = constituency;
+                    option.textContent = constituency;
+
+                    if ('<?php echo $formData['reporter_constituency'] ?? ''; ?>' === constituency) {
+                        option.selected = true;
+                    }
+
+                    constituencySelect.appendChild(option);
+                });
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if form was just saved
+            if (sessionStorage.getItem('recordCaseSaved') === 'true') {
+                sessionStorage.removeItem('recordCaseSaved');
+                sessionStorage.removeItem('recordCaseForm');
+                return; // Don't load old data
+            }
+
             const selectedCounty = document.getElementById('location_county').value;
             if (selectedCounty) {
                 document.getElementById('location_county').dispatchEvent(new Event('change'));
+            }
+
+            const selectedReporterCounty = document.getElementById('reporter_county').value;
+            if (selectedReporterCounty) {
+                document.getElementById('reporter_county').dispatchEvent(new Event('change'));
             }
         });
 
@@ -413,7 +568,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 description: document.getElementById('description').value.trim(),
                 category: document.getElementById('category').value,
                 county: document.getElementById('location_county').value,
-                constituency: document.getElementById('location_constituency').value
+                constituency: document.getElementById('location_constituency').value,
+                incidentLocalArea: document.getElementById('incident_local_area').value.trim(),
+                reporterCounty: document.getElementById('reporter_county').value,
+                reporterConstituency: document.getElementById('reporter_constituency').value,
+                reporterLocalArea: document.getElementById('reporter_local_area').value.trim()
             };
 
             let errors = [];
@@ -454,7 +613,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
 
             if (!formData.county || !formData.constituency) {
-                errors.push('Location (county and constituency) is required');
+                errors.push('Incident location (county and constituency) is required');
+            }
+
+            if (!formData.reporterCounty || !formData.reporterConstituency) {
+                errors.push('Reporter residence (county and constituency) is required');
             }
 
             if (errors.length > 0) {
@@ -463,21 +626,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 return false;
             }
 
-            const confirmMessage = `Please confirm the case details:\n\n` +
-                `Reporter: ${formData.name} (ID: ${formData.nationalId})\n` +
-                `Case: ${formData.title}\n` +
-                `Category: ${formData.category}\n` +
-                `Location: ${formData.constituency}, ${formData.county}\n\n` +
-                `Once recorded, this case will be assigned an OB number and cannot be easily deleted. Continue?`;
 
-            if (!confirm(confirmMessage)) {
-                e.preventDefault();
-                return false;
-            }
 
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;
-            submitBtn.textContent = '⏳ Recording Case...';
+            submitBtn.textContent = ' Recording Case...';
             submitBtn.disabled = true;
 
             setTimeout(() => {
@@ -528,96 +681,15 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         descriptionField.addEventListener('input', updateCharCount);
         updateCharCount();
 
-        const formFields = ['citizen_national_id', 'citizen_name', 'citizen_phone', 'title', 'description', 'category', 'location_county', 'location_constituency'];
-
-        function saveFormData() {
-            const data = {};
-            formFields.forEach(field => {
-                const element = document.getElementById(field);
-                if (element) {
-                    data[field] = element.value;
-                }
-            });
-            sessionStorage.setItem('recordCaseForm', JSON.stringify(data));
-        }
-
-        function loadFormData() {
-            try {
-                const saved = sessionStorage.getItem('recordCaseForm');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    formFields.forEach(field => {
-                        const element = document.getElementById(field);
-                        if (element && data[field]) {
-                            element.value = data[field];
-
-                            if (element.tagName === 'SELECT') {
-                                element.dispatchEvent(new Event('change'));
-                            }
-                        }
-                    });
-                }
-            } catch (e) {
-                console.log('Could not load saved form data');
-            }
-        }
-
-        function clearSavedData() {
-            sessionStorage.removeItem('recordCaseForm');
-        }
-
-        setInterval(saveFormData, 30000);
-
-        formFields.forEach(field => {
-            const element = document.getElementById(field);
-            if (element) {
-                element.addEventListener('input', saveFormData);
-                element.addEventListener('change', saveFormData);
-            }
-        });
-
         document.addEventListener('DOMContentLoaded', function() {
-            const isEmpty = formFields.every(field => {
-                const element = document.getElementById(field);
-                return !element || !element.value.trim();
-            });
-
-            if (isEmpty) {
-                loadFormData();
+            const selectedCounty = document.getElementById('location_county').value;
+            if (selectedCounty) {
+                document.getElementById('location_county').dispatchEvent(new Event('change'));
             }
-        });
 
-        document.getElementById('recordCaseForm').addEventListener('submit', function() {
-            setTimeout(clearSavedData, 1000);
-        });
-
-        window.addEventListener('beforeunload', function(e) {
-            const hasUnsavedData = formFields.some(field => {
-                const element = document.getElementById(field);
-                return element && element.value.trim();
-            });
-
-            if (hasUnsavedData) {
-                e.returnValue = 'You have unsaved case data. Are you sure you want to leave?';
-                return e.returnValue;
-            }
-        });
-
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case 's':
-                        e.preventDefault();
-                        saveFormData();
-                        alert('Form data saved locally');
-                        break;
-                    case 'Enter':
-                        if (e.shiftKey) {
-                            e.preventDefault();
-                            document.getElementById('recordCaseForm').submit();
-                        }
-                        break;
-                }
+            const selectedReporterCounty = document.getElementById('reporter_county').value;
+            if (selectedReporterCounty) {
+                document.getElementById('reporter_county').dispatchEvent(new Event('change'));
             }
         });
 
@@ -627,7 +699,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         document.getElementById('citizen_national_id').focus();
 
-        const tabOrder = ['citizen_national_id', 'citizen_name', 'citizen_phone', 'title', 'category', 'description', 'location_county', 'location_constituency'];
+        const tabOrder = ['citizen_national_id', 'citizen_name', 'citizen_phone', 'title', 'category', 'description', 'location_county', 'location_constituency', 'incident_local_area', 'reporter_county', 'reporter_constituency', 'reporter_local_area'];
 
         tabOrder.forEach((fieldId, index) => {
             const field = document.getElementById(fieldId);
@@ -693,7 +765,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             border-color: var(--success-green);
         }
 
-        .form-control:invalid:not(:focus) {
+        .form-control:invalid:not(:focus):not(:placeholder-shown):not(select) {
             border-color: var(--danger-red);
         }
 

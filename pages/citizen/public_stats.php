@@ -8,12 +8,9 @@ require_once __DIR__ . '/../../includes/config/constants.php';
 require_once __DIR__ . '/../../includes/core/db.php';
 require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/core/auth.php';
-require_once __DIR__ . '/../../includes/classes/CrimeAnalyzer.php';
-
 requireRole(ROLE_CITIZEN);
 
 $currentUser = getCurrentUser();
-$crimeAnalyzer = new CrimeAnalyzer();
 
 $filters = [
     'timeframe' => (int)($_GET['timeframe'] ?? 30),
@@ -134,7 +131,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <p class="text-muted">Transparent crime data and safety information for Kenya</p>
             </div>
 
-            <div class="card mb-4">
+            <!-- <div class="card mb-4">
                 <div class="card-header">
                     <h3> Data Filters</h3>
                 </div>
@@ -405,7 +402,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </main>
     </div>
 

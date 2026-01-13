@@ -17,16 +17,17 @@ $currentUser = getCurrentUser();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle ?? 'Dashboard'; ?> - Utumishi</title>
     <link rel="stylesheet" href="<?php echo ASSETS_URL; ?>/css/style.css">
-
-
-     <?php renderHeaderStyles(); ?>
+    <link rel="stylesheet" href="<?php echo ASSETS_URL; ?>/css/dashboard.css">
+    <?php if (isset($additionalCSS)): ?>
+        <?php foreach ($additionalCSS as $css): ?>
+            <link rel="stylesheet" href="<?php echo htmlspecialchars($css); ?>">
+        <?php endforeach; ?>
+    <?php endif; ?>
 </head>
 <body>
     <div class="app-layout">
 
-       <?php renderHeader($userRole, $currentUser); ?>
-        
-        <?php renderFlashMessage(); ?>
+       <?php renderCompleteHeader($userRole, $currentUser); ?>
 
         <aside class="app-sidebar">
             <?php echo renderNavigation($userRole); ?>

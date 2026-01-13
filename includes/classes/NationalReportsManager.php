@@ -148,37 +148,27 @@ class NationalReportsManager {
      */
     public function generateResourceReport() {
         $stationResources = $this->db->fetchAll("
-            SELECT 
+            SELECT
                 s.name as station_name,
                 s.county,
-                s.budget_allocated,
                 COUNT(DISTINCT o.id) as officer_count,
                 COUNT(DISTINCT c.id) as cases_handled,
-                ROUND(s.budget_allocated / NULLIF(COUNT(DISTINCT o.id), 0), 2) as budget_per_officer,
-                ROUND(COUNT(DISTINCT c.id) / NULLIF(COUNT(DISTINCT o.id), 0), 1) as cases_per_officer,
-                ROUND(s.budget_allocated / NULLIF(COUNT(DISTINCT c.id), 0), 2) as budget_per_case
+                ROUND(COUNT(DISTINCT c.id) / NULLIF(COUNT(DISTINCT o.id), 0), 1) as cases_per_officer
             FROM stations s
             LEFT JOIN users u ON s.id = u.station_id AND u.role = 'officer' AND u.is_active = 1
             LEFT JOIN officers o ON u.id = o.user_id
             LEFT JOIN cases c ON s.id = c.station_id AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            GROUP BY s.id, s.name, s.county, s.budget_allocated
+            GROUP BY s.id, s.name, s.county
             ORDER BY s.county ASC, s.name ASC
         ");
 
-        $budgetSummary = $this->db->fetchOne("
-            SELECT 
-                COUNT(*) as total_stations,
-                SUM(budget_allocated) as total_budget,
-                AVG(budget_allocated) as avg_budget_per_station,
-                MIN(budget_allocated) as min_budget,
-                MAX(budget_allocated) as max_budget
-            FROM stations
+        $stationCount = $this->db->fetchOne("
+            SELECT COUNT(*) as total_stations FROM stations
         ");
 
         return [
             'type' => 'Resource Allocation Report',
             'station_resources' => $stationResources,
-            'budget_summary' => $budgetSummary,
             'generated_at' => date('Y-m-d H:i:s')
         ];
     }

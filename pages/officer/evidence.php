@@ -113,7 +113,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php flashMessage(); ?>
 
             <div class="mb-4">
-                <h1>Evidence Management</h1>
+                <h2>Evidence Management</h2>
                 <p class="text-muted">Upload and manage evidence files for your assigned cases</p>
             </div>
 
@@ -129,97 +129,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             <?php endif; ?>
 
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3>📤 Upload New Evidence</h3>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($errors['upload'])): ?>
-                        <div class="alert alert-danger">
-                            <?php echo htmlspecialchars($errors['upload']); ?>
-                        </div>
-                    <?php endif; ?>
-
-                    <form method="POST" action="" enctype="multipart/form-data" id="uploadForm">
-                        <?php echo csrfField(); ?>
-                        <input type="hidden" name="action" value="upload_evidence">
-
-                        <div class="d-grid" style="grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-                            <div>
-                                <div class="form-group">
-                                    <label for="case_id" class="form-label">Select Case *</label>
-                                    <select 
-                                        id="case_id" 
-                                        name="case_id" 
-                                        class="form-control form-select"
-                                        required
-                                    >
-                                        <option value="">Choose a case to upload evidence...</option>
-                                        <?php foreach ($officerCases as $case): ?>
-                                            <option value="<?php echo $case['id']; ?>" 
-                                                    <?php echo $case['id'] == $caseId ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($case['ob_number']); ?> - 
-                                                <?php echo htmlspecialchars($case['title']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <div class="form-help">Select the case to associate this evidence with</div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="evidence_file" class="form-label">Evidence File *</label>
-                                    <input 
-                                        type="file" 
-                                        id="evidence_file" 
-                                        name="evidence_file" 
-                                        class="form-control form-file"
-                                        accept=".pdf,.jpg,.jpeg,.png"
-                                        required
-                                    >
-                                    <div class="form-help">PDF, JPG, or PNG files only. Maximum size: 5MB</div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label for="description" class="form-label">Description</label>
-                                    <input 
-                                        type="text" 
-                                        id="description" 
-                                        name="description" 
-                                        class="form-control"
-                                        placeholder="e.g., CCTV footage from scene, witness statement, stolen items photo"
-                                        maxlength="200"
-                                    >
-                                    <div class="form-help">Brief description of the evidence (optional)</div>
-                                </div>
-                            </div>
-
-                            <div class="evidence-guidelines">
-                                <h5>📋 Evidence Guidelines</h5>
-                                <ul style="font-size: 0.9rem; line-height: 1.4;">
-                                    <li>Only upload relevant case evidence</li>
-                                    <li>Ensure files are clear and readable</li>
-                                    <li>Do not upload duplicate files</li>
-                                    <li>Include descriptive information</li>
-                                    <li>Maximum file size: 5MB</li>
-                                    <li>Supported formats: PDF, JPG, PNG</li>
-                                </ul>
-
-                                <div class="mt-3">
-                                    <button type="submit" class="btn btn-success btn-block">
-                                        📤 Upload Evidence
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
+        
             <?php if (!$selectedCase && empty($caseId)): ?>
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>📋 My Cases - Select to View Evidence</h3>
+                        <h3> My Cases - Select to View Evidence</h3>
                     </div>
                     <div class="card-body">
                         <?php if (!empty($officerCases)): ?>
@@ -275,7 +190,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center p-4">
-                                <div style="font-size: 3rem;">📋</div>
+                                <div style="font-size: 3rem;"></div>
                                 <h4>No Cases Assigned</h4>
                                 <p class="text-muted">You don't have any cases assigned for evidence management.</p>
                                 <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-primary">
@@ -290,7 +205,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>📎 Evidence for Case: <?php echo htmlspecialchars($selectedCase['ob_number']); ?></h3>
+                        <h3>Evidence for Case: <?php echo htmlspecialchars($selectedCase['ob_number']); ?></h3>
                         <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php" class="btn btn-sm btn-outline btn-secondary">
                             ← Back to Cases
                         </a>
@@ -354,7 +269,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <a href="<?php echo BASE_URL; ?>/api/download_evidence.php?id=<?php echo $evidence['id']; ?>" 
                                                class="btn btn-sm btn-outline btn-primary"
                                                target="_blank">
-                                                📥 Download
+                                                 Download
                                             </a>
                                             <?php if ($evidence['uploaded_by_officer_id'] == $currentUser['id']): ?>
                                                 <form method="POST" style="display: inline;" 
@@ -363,7 +278,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                     <input type="hidden" name="action" value="delete_evidence">
                                                     <input type="hidden" name="evidence_id" value="<?php echo $evidence['id']; ?>">
                                                     <button type="submit" class="btn btn-sm btn-outline btn-danger">
-                                                        🗑️ Delete
+                                                         Delete
                                                     </button>
                                                 </form>
                                             <?php endif; ?>
@@ -373,7 +288,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center p-4" style="background: var(--light-gray); border-radius: var(--border-radius);">
-                                <div style="font-size: 3rem;">📎</div>
                                 <h4>No Evidence Files</h4>
                                 <p class="text-muted">No evidence has been uploaded for this case yet.</p>
                                 <p><small>Use the upload form above to add evidence files.</small></p>
@@ -382,6 +296,94 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 </div>
             <?php endif; ?>
+
+
+                <div class="card mb-4">
+                <div class="card-header">
+                    <h3> Upload New Evidence</h3>
+                </div>
+                <div class="card-body">
+                    <?php if (!empty($errors['upload'])): ?>
+                        <div class="alert alert-danger">
+                            <?php echo htmlspecialchars($errors['upload']); ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <form method="POST" action="" enctype="multipart/form-data" id="uploadForm">
+                        <?php echo csrfField(); ?>
+                        <input type="hidden" name="action" value="upload_evidence">
+
+                        <div class="d-grid" style="grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                            <div>
+                                <div class="form-group">
+                                    <label for="case_id" class="form-label">Select Case *</label>
+                                    <select 
+                                        id="case_id" 
+                                        name="case_id" 
+                                        class="form-control form-select"
+                                        required
+                                    >
+                                        <option value="">Choose a case to upload evidence...</option>
+                                        <?php foreach ($officerCases as $case): ?>
+                                            <option value="<?php echo $case['id']; ?>" 
+                                                    <?php echo $case['id'] == $caseId ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($case['ob_number']); ?> - 
+                                                <?php echo htmlspecialchars($case['title']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div class="form-help">Select the case to associate this evidence with</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="evidence_file" class="form-label">Evidence File *</label>
+                                    <input 
+                                        type="file" 
+                                        id="evidence_file" 
+                                        name="evidence_file" 
+                                        class="form-control form-file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        required
+                                    >
+                                    <div class="form-help">PDF, JPG, or PNG files only. Maximum size: 5MB</div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="description" class="form-label">Description</label>
+                                    <input 
+                                        type="text" 
+                                        id="description" 
+                                        name="description" 
+                                        class="form-control"
+                                        placeholder="e.g., CCTV footage from scene, witness statement, stolen items photo"
+                                        maxlength="200"
+                                    >
+                                    <div class="form-help">Brief description of the evidence (optional)</div>
+                                </div>
+                            </div>
+
+                            <div class="evidence-guidelines">
+                                <h5> Evidence Guidelines</h5>
+                                <ul style="font-size: 0.9rem; line-height: 1.4;">
+                                    <li>Only upload relevant case evidence</li>
+                                    <li>Ensure files are clear and readable</li>
+                                    <li>Do not upload duplicate files</li>
+                                    <li>Include descriptive information</li>
+                                    <li>Maximum file size: 5MB</li>
+                                    <li>Supported formats: PDF, JPG, PNG</li>
+                                </ul>
+
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-success btn-block">
+                                         Upload Evidence
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
         </main>
     </div>
 
@@ -489,7 +491,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             background: var(--light-gray);
             padding: 1.5rem;
             border-radius: var(--border-radius);
-            border-left: 4px solid var(--primary-green);
+            /* border-left: 4px solid var(--primary-green); */
         }
 
         .evidence-guidelines h5 {
@@ -580,3 +582,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     </style>
 </body>
 </html>
+
+
+
+

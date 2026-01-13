@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Sep 22, 2025 at 08:52 PM
+-- Generation Time: Jan 13, 2026 at 10:36 AM
 -- Server version: 10.11.13-MariaDB-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -43,34 +43,6 @@ CREATE TABLE `active_cases` (
 ,`estimated_resolution_hours` int(11)
 ,`hours_since_reported` bigint(21)
 );
-
--- --------------------------------------------------------
-
---
--- Table structure for table `budgets`
---
-
-CREATE TABLE `budgets` (
-  `id` int(11) NOT NULL,
-  `station_id` int(11) NOT NULL,
-  `year` year(4) NOT NULL,
-  `allocated_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
-  `spent_amount` decimal(15,2) NOT NULL DEFAULT 0.00,
-  `category` enum('salaries','equipment','transport','events','maintenance') NOT NULL,
-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `budgets`
---
-
-INSERT INTO `budgets` (`id`, `station_id`, `year`, `allocated_amount`, `spent_amount`, `category`, `updated_at`) VALUES
-(1, 1, '2025', 1500000.00, 450000.00, 'salaries', '2025-09-16 17:19:37'),
-(2, 1, '2025', 800000.00, 120000.00, 'equipment', '2025-09-16 17:19:37'),
-(3, 1, '2025', 300000.00, 45000.00, 'transport', '2025-09-16 17:19:37'),
-(4, 2, '2025', 1200000.00, 380000.00, 'salaries', '2025-09-16 17:19:37'),
-(5, 2, '2025', 600000.00, 85000.00, 'equipment', '2025-09-16 17:19:37'),
-(6, 2, '2025', 250000.00, 32000.00, 'transport', '2025-09-16 17:19:37');
 
 -- --------------------------------------------------------
 
@@ -193,32 +165,6 @@ INSERT INTO `crime_statistics` (`id`, `station_id`, `crime_category`, `county`, 
 (6, 2, 'Traffic Offenses', 'Nairobi', 'Langata', '2025-01', 20, 18, 8.50, '07:00-09:00', '2025-09-16 17:19:37', '2025-09-16 17:19:37');
 
 -- --------------------------------------------------------
-
---
--- Table structure for table `events`
---
-
-CREATE TABLE `events` (
-  `id` int(11) NOT NULL,
-  `title` varchar(200) NOT NULL,
-  `description` text NOT NULL,
-  `station_id` int(11) NOT NULL,
-  `date_time` datetime NOT NULL,
-  `location` varchar(200) NOT NULL,
-  `officer_ids` text DEFAULT NULL,
-  `created_by` int(11) NOT NULL,
-  `created_at` timestamp NULL DEFAULT current_timestamp(),
-  `status` enum('scheduled','completed','cancelled') DEFAULT 'scheduled'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `events`
---
-
-INSERT INTO `events` (`id`, `title`, `description`, `station_id`, `date_time`, `location`, `officer_ids`, `created_by`, `created_at`, `status`) VALUES
-(1, 'Community Safety Meeting', 'Monthly community meeting to discuss local security concerns', 1, '2025-02-15 14:00:00', 'Starehe Community Hall', '4,5', 2, '2025-09-16 17:19:37', 'scheduled'),
-(2, 'School Safety Campaign', 'Educational campaign on personal safety for students', 2, '2025-02-20 10:00:00', 'Langata Primary School', '6,7', 3, '2025-09-16 17:19:37', 'scheduled'),
-(3, 'Traffic Safety Awareness', 'Road safety campaign at major intersections', 1, '2025-01-25 08:00:00', 'University Way Junction', '4', 2, '2025-09-16 17:19:37', 'completed');
 
 -- --------------------------------------------------------
 
@@ -348,15 +294,15 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `national_id`, `name`, `email`, `phone`, `password`, `role`, `station_id`, `created_at`, `last_login`, `is_active`) VALUES
-(1, '12345678', 'System Administrator', 'admin@police.go.ke', '+254700000000', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL, '2025-09-16 17:19:36', '2025-09-22 17:14:50', 1),
-(2, '23456789', 'John Kamau', 'j.kamau@police.go.ke', '+254701000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ocs', 1, '2025-09-16 17:19:36', '2025-09-22 17:40:54', 1),
+(1, '12345678', 'System Administrator', 'admin@police.go.ke', '+254700000000', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL, '2025-09-16 17:19:36', '2025-11-18 13:58:57', 1),
+(2, '23456789', 'John Kamau', 'j.kamau@police.go.ke', '+254701000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ocs', 1, '2025-09-16 17:19:36', '2025-11-18 13:58:07', 1),
 (3, '34567890', 'Mary Wanjiku', 'm.wanjiku@police.go.ke', '+254701000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ocs', 2, '2025-09-16 17:19:36', NULL, 1),
-(4, '45678901', 'Peter Mwangi', 'p.mwangi@police.go.ke', '+254702000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 1, '2025-09-16 17:19:36', '2025-09-22 15:34:48', 1),
+(4, '45678901', 'Peter Mwangi', 'p.mwangi@police.go.ke', '+254702000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 1, '2025-09-16 17:19:36', '2026-01-10 01:38:42', 1),
 (5, '56789012', 'Grace Atieno', 'g.atieno@police.go.ke', '+254702000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 1, '2025-09-16 17:19:36', NULL, 1),
 (6, '67890123', 'David Kiprop', 'd.kiprop@police.go.ke', '+254702000003', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 2, '2025-09-16 17:19:36', NULL, 1),
 (7, '78901234', 'Alice Nyong\'o', 'a.nyongo@police.go.ke', '+254702000004', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 2, '2025-09-16 17:19:36', NULL, 1),
 (8, '89012345', 'James Kuria', 'j.kuria@police.go.ke', '+254702000005', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 3, '2025-09-16 17:19:36', NULL, 1),
-(9, '11111111', 'Francis Mutua', NULL, '+254703000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', '2025-09-22 15:33:24', 1),
+(9, '11111111', 'Francis Mutua', NULL, '+254703000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', '2025-11-18 13:56:25', 1),
 (10, '22222222', 'Sarah Kiprotich', NULL, '+254703000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
 (11, '33333333', 'Michael Ochieng', NULL, '+254703000003', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
 (12, '44444444', 'Jane Wambui', NULL, '+254703000004', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
@@ -365,7 +311,8 @@ INSERT INTO `users` (`id`, `national_id`, `name`, `email`, `phone`, `password`, 
 (15, '77777777', 'Daniel Cherono', NULL, '+254703000007', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
 (16, '88888888', 'Rose Njoki', NULL, '+254703000008', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
 (17, '99999999', 'Samuel Rotich', NULL, '+254703000009', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(18, '10101010', 'Elizabeth Wanjiru', NULL, '+254703000010', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1);
+(18, '10101010', 'Elizabeth Wanjiru', NULL, '+254703000010', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
+(19, '32894832', 'Paul Kagai', 'paul@gmail.com', '0729426791', '$2y$10$WyRBI/N1Yl0U3.4KI.P.ZeZ2UgPG4oz.xmOfFOjAc5q2R68hPfy0G', 'citizen', NULL, '2025-09-30 10:06:58', '2025-10-17 02:59:31', 1);
 
 -- --------------------------------------------------------
 
@@ -388,13 +335,6 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 --
 -- Indexes for dumped tables
 --
-
---
--- Indexes for table `budgets`
---
-ALTER TABLE `budgets`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_station_year` (`station_id`,`year`);
 
 --
 -- Indexes for table `cases`
@@ -438,14 +378,7 @@ ALTER TABLE `crime_statistics`
   ADD KEY `idx_county_month` (`county`,`month`),
   ADD KEY `idx_crime_stats_month_category` (`month`,`crime_category`);
 
---
--- Indexes for table `events`
---
-ALTER TABLE `events`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `idx_station` (`station_id`),
-  ADD KEY `idx_date` (`date_time`),
-  ADD KEY `created_by` (`created_by`);
+
 
 --
 -- Indexes for table `officers`
@@ -490,12 +423,6 @@ ALTER TABLE `users`
 --
 
 --
--- AUTO_INCREMENT for table `budgets`
---
-ALTER TABLE `budgets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
-
---
 -- AUTO_INCREMENT for table `cases`
 --
 ALTER TABLE `cases`
@@ -519,11 +446,7 @@ ALTER TABLE `case_updates`
 ALTER TABLE `crime_statistics`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
---
--- AUTO_INCREMENT for table `events`
---
-ALTER TABLE `events`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
 
 --
 -- AUTO_INCREMENT for table `officers`
@@ -547,17 +470,11 @@ ALTER TABLE `system_settings`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- Constraints for dumped tables
 --
-
---
--- Constraints for table `budgets`
---
-ALTER TABLE `budgets`
-  ADD CONSTRAINT `budgets_ibfk_1` FOREIGN KEY (`station_id`) REFERENCES `stations` (`id`);
 
 --
 -- Constraints for table `cases`
@@ -588,12 +505,7 @@ ALTER TABLE `case_updates`
 ALTER TABLE `crime_statistics`
   ADD CONSTRAINT `crime_statistics_ibfk_1` FOREIGN KEY (`station_id`) REFERENCES `stations` (`id`);
 
---
--- Constraints for table `events`
---
-ALTER TABLE `events`
-  ADD CONSTRAINT `events_ibfk_1` FOREIGN KEY (`station_id`) REFERENCES `stations` (`id`),
-  ADD CONSTRAINT `events_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
+
 
 --
 -- Constraints for table `officers`

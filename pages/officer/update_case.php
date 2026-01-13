@@ -40,25 +40,24 @@ if (!empty($_GET['id'])) {
             $caseUpdates = $caseManager->getCaseUpdates($caseId);
             $caseEvidence = getCaseEvidence($caseId);
         }
-    } catch (Exception $e) {
+        } catch (Exception $e) {
         error_log("Case Load Error: " . $e->getMessage());
         $errors['general'] = 'Unable to load case details.';
 
-         echo '<div style="font-family:monospace; background:#fef0f0; color:#721c24; border:2px solid #f5c6cb; padding:20px; margin:20px; border-radius:8px; white-space:pre-wrap;">';
-    echo '<h3 style="margin-top:0; color:#842029;">🚨 Dashboard Error (Debug Mode)</h3>';
-    echo '<strong>Message:</strong> ' . htmlspecialchars($e->getMessage()) . '<br><br>';
-    echo '<strong>File:</strong> ' . htmlspecialchars($e->getFile()) . '<br><br>';
-    echo '<strong>Line:</strong> ' . $e->getLine() . '<br><br>';
-    echo '<strong>Trace:</strong><br><pre style="background:#fff; padding:10px; border:1px solid #f5c6cb; overflow:auto;">' . htmlspecialchars($e->getTraceAsString()) . '</pre>';
-    echo '</div>';
+        echo '<div style="font-family:monospace; background:#fef0f0; color:#721c24; border:2px solid #f5c6cb; padding:20px; margin:20px; border-radius:8px; white-space:pre-wrap;">';
+        echo '<h3 style="margin-top:0; color:#842029;">🚨 Dashboard Error (Debug Mode)</h3>';
+        echo '<strong>Message:</strong> ' . htmlspecialchars($e->getMessage()) . '<br><br>';
+        echo '<strong>File:</strong> ' . htmlspecialchars($e->getFile()) . '<br><br>';
+        echo '<strong>Line:</strong> ' . $e->getLine() . '<br><br>';
+        echo '<strong>Trace:</strong><br><pre style="background:#fff; padding:10px; border:1px solid #f5c6cb; overflow:auto;">' . htmlspecialchars($e->getTraceAsString()) . '</pre>';
+        echo '</div>';
 
-    exit;
+        exit;
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $case && empty($errors['general'])) {
     try {
-
         if (!validateCSRF($_POST['csrf_token'] ?? '')) {
             throw new Exception('Invalid request. Please try again.');
         }
@@ -66,10 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $case && empty($errors['general']))
         $action = sanitizeText($_POST['action'] ?? '');
 
         if ($action === 'update_case') {
-
             $updateData = [
                 'status' => sanitizeText($_POST['status'] ?? ''),
-                'update_notes' => sanitizeDescription($_POST['update_notes'] ?? '')
+                'update_notes' => sanitizeText($_POST['update_notes'] ?? '')
             ];
 
             if (empty($updateData['status'])) {
@@ -90,35 +88,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $case && empty($errors['general']))
 
                 if ($result['success']) {
                     $success = $result['message'];
-
                     $case = $caseManager->getCaseById($caseId, $currentUser['id']);
                     $caseUpdates = $caseManager->getCaseUpdates($caseId);
-
                     setFlashMessage('success', 'Case updated successfully');
                 } else {
                     $errors['general'] = $result['message'];
                 }
             }
-
-        } elseif ($action === 'upload_evidence') {
-
-            if (!empty($_FILES['evidence_file']) && $_FILES['evidence_file']['error'] !== UPLOAD_ERR_NO_FILE) {
-                $description = sanitizeText($_POST['evidence_description'] ?? '');
-
-                $uploadResult = uploadEvidence($_FILES['evidence_file'], $caseId, $currentUser['id'], $description);
-
-                if ($uploadResult['success']) {
-                    $success = $uploadResult['message'];
-                    $caseEvidence = getCaseEvidence($caseId);
-                    setFlashMessage('success', 'Evidence uploaded successfully');
-                } else {
-                    $errors['evidence'] = $uploadResult['message'];
-                }
+        } elseif ($action === 'request_closure') {
+            // Check if case is resolved
+            if ($case['status'] !== CASE_RESOLVED) {
+                $errors['general'] = 'Only resolved cases can be requested for closure.';
             } else {
-                $errors['evidence'] = 'Please select a file to upload';
+                // Check if already requested
+                $existing = $db->fetchOne("SELECT id FROM closure_requests WHERE case_id = ? AND status = 'pending'", [$caseId]);
+                if ($existing) {
+                    $errors['general'] = 'Closure request already pending for this case.';
+                } else {
+                    $db->insert('closure_requests', [
+                        'case_id' => $caseId,
+                        'requested_by' => $currentUser['id']
+                    ]);
+                    $success = 'Closure request submitted successfully. Awaiting OCS approval.';
+                    setFlashMessage('success', $success);
+                }
             }
         }
-
     } catch (Exception $e) {
         error_log("Case Update Error: " . $e->getMessage());
         $errors['general'] = $e->getMessage();
@@ -128,8 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $case && empty($errors['general']))
 $availableStatuses = [
     CASE_ASSIGNED => 'Assigned',
     CASE_IN_PROGRESS => 'In Progress',
-    CASE_RESOLVED => 'Resolved',
-    CASE_CLOSED => 'Closed'
+    CASE_RESOLVED => 'Resolved'
 ];
 
 if ($case) {
@@ -148,15 +142,11 @@ if ($case) {
             break;
         case CASE_IN_PROGRESS:
             $availableStatuses = [
-                CASE_RESOLVED => 'Resolved',
-                CASE_CLOSED => 'Closed'
+                CASE_RESOLVED => 'Resolved'
             ];
             break;
         case CASE_RESOLVED:
-            $availableStatuses = [
-                CASE_CLOSED => 'Closed',
-                CASE_IN_PROGRESS => 'Reopen Case'
-            ];
+            $availableStatuses = [];
             break;
     }
 }
@@ -171,12 +161,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php flashMessage(); ?>
 
             <div class="mb-4">
-                <h1>Update Case</h1>
+                <h2>Update Station Case</h2>
                 <p class="text-muted">
                     <?php if ($case): ?>
                         Update status and add information for case <?php echo htmlspecialchars($case['ob_number']); ?>
                     <?php else: ?>
-                        Select a case to update from your assigned cases
+                        Select a case to update from your assigned cases or cases in your station
                     <?php endif; ?>
                 </p>
             </div>
@@ -216,7 +206,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <th>OB Number</th>
                                             <th>Case Details</th>
                                             <th>Status</th>
-                                            <th>Time Since Reported</th>
+                                            <!-- <th>Time Since Reported</th> -->
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -238,7 +228,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                         <?php echo ucfirst(str_replace('_', ' ', $assignedCase['status'])); ?>
                                                     </span>
                                                 </td>
-                                                <td>
+                                               <!--  <td>
                                                     <?php 
                                                     $hours = round($assignedCase['hours_since_reported']);
                                                     $isOverdue = $hours > $assignedCase['estimated_resolution_hours'];
@@ -246,10 +236,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                     <div class="<?php echo $isOverdue ? 'text-danger' : ''; ?>">
                                                         <?php echo $hours; ?>h ago
                                                         <?php if ($isOverdue): ?>
-                                                            <br><small><strong>⚠️ Overdue</strong></small>
+                                                            <br><small><strong>Overdue</strong></small>
                                                         <?php endif; ?>
                                                     </div>
-                                                </td>
+                                                </td> -->
                                                 <td>
                                                     <a href="<?php echo BASE_URL; ?>/pages/officer/update_case.php?id=<?php echo $assignedCase['id']; ?>" 
                                                        class="btn btn-sm btn-primary">
@@ -263,7 +253,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
                         <?php else: ?>
                             <div class="text-center p-4">
-                                <div style="font-size: 3rem;">📋</div>
+                                <div style="font-size: 3rem;"></div>
                                 <h4>No Cases Assigned</h4>
                                 <p class="text-muted">You don't have any cases assigned to update.</p>
                                 <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-primary">
@@ -334,102 +324,83 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <h3>Update Case Status</h3>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="" id="updateCaseForm">
-                                <?php echo csrfField(); ?>
-                                <input type="hidden" name="action" value="update_case">
+                            <?php if (!empty($availableStatuses)): ?>
+                                <form method="POST" action="" id="updateCaseForm">
+                                    <?php echo csrfField(); ?>
+                                    <input type="hidden" name="action" value="update_case">
 
-                                <div class="form-group">
-                                    <label for="status" class="form-label">New Status *</label>
-                                    <select 
-                                        id="status" 
-                                        name="status" 
-                                        class="form-control form-select <?php echo isset($errors['status']) ? 'error' : ''; ?>"
-                                        required
-                                    >
-                                        <option value="">Select new status...</option>
-                                        <?php foreach ($availableStatuses as $value => $label): ?>
-                                            <option value="<?php echo htmlspecialchars($value); ?>">
-                                                <?php echo htmlspecialchars($label); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <?php if (isset($errors['status'])): ?>
-                                        <div class="form-error"><?php echo htmlspecialchars($errors['status']); ?></div>
-                                    <?php endif; ?>
-                                    <div class="form-help">Select the new status for this case</div>
+                                    <div class="form-group">
+                                        <label for="status" class="form-label">New Status *</label>
+                                        <select
+                                            id="status"
+                                            name="status"
+                                            class="form-control form-select <?php echo isset($errors['status']) ? 'error' : ''; ?>"
+                                            required
+                                        >
+                                            <option value="">Select new status...</option>
+                                            <?php foreach ($availableStatuses as $value => $label): ?>
+                                                <option value="<?php echo htmlspecialchars($value); ?>">
+                                                    <?php echo htmlspecialchars($label); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <?php if (isset($errors['status'])): ?>
+                                            <div class="form-error"><?php echo htmlspecialchars($errors['status']); ?></div>
+                                        <?php endif; ?>
+                                        <div class="form-help">Select the new status for this case</div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="update_notes" class="form-label">Update Notes *</label>
+                                        <textarea
+                                            id="update_notes"
+                                            name="update_notes"
+                                            class="form-control form-textarea <?php echo isset($errors['update_notes']) ? 'error' : ''; ?>"
+                                            placeholder="Describe what actions were taken, findings, next steps, etc.&#10;&#10;Example:&#10;- Interviewed witness at scene&#10;- Collected CCTV footage from nearby shops&#10;- Suspect identified through fingerprints&#10;- Case forwarded to court"
+                                            rows="6"
+                                            maxlength="1000"
+                                            required
+                                        ></textarea>
+                                        <?php if (isset($errors['update_notes'])): ?>
+                                            <div class="form-error"><?php echo htmlspecialchars($errors['update_notes']); ?></div>
+                                        <?php endif; ?>
+                                        <div class="form-help">Provide detailed notes about the case progress</div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-success btn-block">
+                                        Update Case Status
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <div class="text-center p-4">
+                                    <div style="font-size: 3rem;">✅</div>
+                                    <h4>Case Resolved</h4>
+                                    <p class="text-muted">This case has been resolved. Request closure for final approval.</p>
+                                    <form method="POST" action="" style="display: inline;">
+                                        <?php echo csrfField(); ?>
+                                        <input type="hidden" name="action" value="request_closure">
+                                        <button type="submit" class="btn btn-primary">
+                                            Request Case Closure
+                                        </button>
+                                    </form>
                                 </div>
-
-                                <div class="form-group">
-                                    <label for="update_notes" class="form-label">Update Notes *</label>
-                                    <textarea 
-                                        id="update_notes" 
-                                        name="update_notes" 
-                                        class="form-control form-textarea <?php echo isset($errors['update_notes']) ? 'error' : ''; ?>"
-                                        placeholder="Describe what actions were taken, findings, next steps, etc.&#10;&#10;Example:&#10;- Interviewed witness at scene&#10;- Collected CCTV footage from nearby shops&#10;- Suspect identified through fingerprints&#10;- Case forwarded to court"
-                                        rows="6"
-                                        maxlength="1000"
-                                        required
-                                    ></textarea>
-                                    <?php if (isset($errors['update_notes'])): ?>
-                                        <div class="form-error"><?php echo htmlspecialchars($errors['update_notes']); ?></div>
-                                    <?php endif; ?>
-                                    <div class="form-help">Provide detailed notes about the case progress</div>
-                                </div>
-
-                                <button type="submit" class="btn btn-success btn-block">
-                                    ✏️ Update Case Status
-                                </button>
-                            </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
 
                 <div class="card mt-4">
                     <div class="card-header">
-                        <h3>📎 Evidence Management</h3>
+                        <h3>Evidence Management</h3>
                     </div>
                     <div class="card-body">
-                        <div class="d-grid" style="grid-template-columns: 1fr 2fr; gap: 2rem;">
+                        <div class="d-grid" style="grid-template-columns: 1fr; gap: 2rem;">
 
-                            <div>
-                                <h4>Upload New Evidence</h4>
-                                <form method="POST" action="" enctype="multipart/form-data" id="evidenceForm">
-                                    <?php echo csrfField(); ?>
-                                    <input type="hidden" name="action" value="upload_evidence">
-
-                                    <div class="form-group">
-                                        <label for="evidence_file" class="form-label">Evidence File *</label>
-                                        <input 
-                                            type="file" 
-                                            id="evidence_file" 
-                                            name="evidence_file" 
-                                            class="form-control form-file <?php echo isset($errors['evidence']) ? 'error' : ''; ?>"
-                                            accept=".pdf,.jpg,.jpeg,.png"
-                                            required
-                                        >
-                                        <?php if (isset($errors['evidence'])): ?>
-                                            <div class="form-error"><?php echo htmlspecialchars($errors['evidence']); ?></div>
-                                        <?php endif; ?>
-                                        <div class="form-help">PDF, JPG, or PNG files only. Max 5MB.</div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="evidence_description" class="form-label">Description</label>
-                                        <input 
-                                            type="text" 
-                                            id="evidence_description" 
-                                            name="evidence_description" 
-                                            class="form-control"
-                                            placeholder="e.g., CCTV footage, witness statement, photo of stolen items"
-                                            maxlength="200"
-                                        >
-                                        <div class="form-help">Brief description of the evidence</div>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-primary btn-block">
-                                        📤 Upload Evidence
-                                    </button>
-                                </form>
+                            <div class="text-center">
+                                <p class="text-muted">Evidence management is handled through the dedicated Evidence page.</p>
+                                <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php?case_id=<?php echo $caseId; ?>" class="btn btn-primary">
+                                    Manage Evidence
+                                </a>
                             </div>
 
                             <div>
@@ -453,7 +424,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                         <a href="<?php echo BASE_URL; ?>/api/download_evidence.php?id=<?php echo $evidence['id']; ?>" 
                                                            class="btn btn-sm btn-outline btn-primary"
                                                            target="_blank">
-                                                            📥 Download
+                                                            Download
                                                         </a>
                                                     </div>
                                                 </div>
@@ -473,7 +444,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <?php if (!empty($caseUpdates)): ?>
                     <div class="card mt-4">
                         <div class="card-header">
-                            <h3>📋 Case Timeline</h3>
+                            <h3>Case Timeline</h3>
                         </div>
                         <div class="card-body">
                             <div class="case-timeline">
@@ -556,29 +527,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
         });
 
-        document.getElementById('evidenceForm')?.addEventListener('submit', function(e) {
-            const fileInput = document.getElementById('evidence_file');
-            const file = fileInput.files[0];
 
-            if (!file) {
-                e.preventDefault();
-                alert('Please select a file to upload');
-                return false;
-            }
-
-            if (file.size > 5 * 1024 * 1024) {
-                e.preventDefault();
-                alert('File size must be less than 5MB');
-                return false;
-            }
-
-            const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-            if (!allowedTypes.includes(file.type)) {
-                e.preventDefault();
-                alert('Only PDF, JPG, and PNG files are allowed');
-                return false;
-            }
-        });
 
         function saveDraft() {
             const notes = document.getElementById('update_notes')?.value;
@@ -672,7 +621,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             padding: 1rem;
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-sm);
-            border-left: 3px solid var(--light-gray);
+            /* border-left: 3px solid var(--light-gray); */
         }
 
         .timeline-item::before {
@@ -791,7 +740,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             border-color: var(--success-green);
         }
 
-        .form-control:invalid:not(:focus) {
+        .form-control:invalid:not(:focus):not(:placeholder-shown):not(select) {
             border-color: var(--danger-red);
         }
 
@@ -842,15 +791,15 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .priority-high {
-            border-left: 4px solid var(--danger-red);
+            /* border-left: 4px solid var(--danger-red); */
         }
 
         .priority-normal {
-            border-left: 4px solid var(--warning-orange);
+            /* border-left: 4px solid var(--warning-orange); */
         }
 
         .priority-low {
-            border-left: 4px solid var(--success-green);
+            /* border-left: 4px solid var(--success-green); */
         }
 
         .status-progression {

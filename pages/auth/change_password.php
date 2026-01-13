@@ -280,7 +280,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     }
 
     .btn-outline {
-        background-color: transparent;
+        /* background-color: transparent; */
         border: 1px solid var(--medium-gray);
     }
 

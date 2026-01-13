@@ -71,7 +71,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
      <main class="app-main">
 
             <div class="mb-4">
-                <h1>National Reports</h1>
+                <h2>National Reports</h2>
                 <p class="text-muted">Generate comprehensive reports on national crime statistics and police performance</p>
             </div>
 
@@ -116,7 +116,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <div class="card-body text-center">
                                 <div style="font-size: 3rem;">💰</div>
                                 <h5>Resource Allocation Report</h5>
-                                <p class="text-muted">Analysis of budget allocation and resource distribution across stations</p>
+                                <p class="text-muted">Analysis of resource distribution and station performance across stations</p>
                                 <form method="GET" class="mb-3">
                                     <input type="hidden" name="type" value="resource">
                                     <button type="submit" class="btn btn-primary">Generate Report</button>
@@ -275,21 +275,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <div class="mb-4">
                             <h4>Resource Allocation Report</h4>
                             
-                            <!-- Budget Summary -->
-                            <div class="kpi-grid mb-4">
-                                <div class="kpi-card">
-                                    <div class="kpi-value">KES <?php echo number_format($reportData['budget_summary']['total_budget'] ?? 0, 2); ?></div>
-                                    <div class="kpi-label">Total Budget</div>
-                                </div>
-                                <div class="kpi-card">
-                                    <div class="kpi-value"><?php echo $reportData['budget_summary']['total_stations'] ?? 0; ?></div>
-                                    <div class="kpi-label">Total Stations</div>
-                                </div>
-                                <div class="kpi-card">
-                                    <div class="kpi-value">KES <?php echo number_format($reportData['budget_summary']['avg_budget_per_station'] ?? 0, 2); ?></div>
-                                    <div class="kpi-label">Average per Station</div>
-                                </div>
-                            </div>
+
                             
                             <!-- Station Resources -->
                             <h5>Station Resource Allocation</h5>
@@ -299,10 +285,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <tr>
                                             <th>Station</th>
                                             <th>County</th>
-                                            <th>Budget Allocated</th>
                                             <th>Officers</th>
                                             <th>Cases (30 days)</th>
-                                            <th>Budget/Officer</th>
                                             <th>Cases/Officer</th>
                                         </tr>
                                     </thead>
@@ -311,10 +295,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <tr>
                                                 <td><?php echo htmlspecialchars($station['station_name']); ?></td>
                                                 <td><?php echo htmlspecialchars($station['county']); ?></td>
-                                                <td>KES <?php echo number_format($station['budget_allocated'], 2); ?></td>
                                                 <td><?php echo $station['officer_count']; ?></td>
                                                 <td><?php echo $station['cases_handled']; ?></td>
-                                                <td>KES <?php echo number_format($station['budget_per_officer'] ?? 0, 2); ?></td>
                                                 <td><?php echo $station['cases_per_officer']; ?></td>
                                             </tr>
                                         <?php endforeach; ?>

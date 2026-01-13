@@ -98,7 +98,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 </div> -->
 
-                    <div class="card">
+                    <!-- <div class="card">
                         <div class="card-header">
                             <h3>Safety Information</h3>
                         </div>
@@ -119,7 +119,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <li>Track progress here</li>
                             </ol>
                         </div>
-                    </div>
+                    </div> -->
                 </div>
 
             <div class="d-grid" style="">
@@ -244,7 +244,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
                                 </div>
 
-            <div class="card">
+            <!-- <div class="card">
                 <div class="card-header">
                     <h3>Safety Tips & Crime Prevention</h3>
                 </div>
@@ -291,7 +291,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- <div class="card">
                 <div class="card-header">

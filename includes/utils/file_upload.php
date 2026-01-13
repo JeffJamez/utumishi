@@ -324,4 +324,67 @@ function serveEvidenceFile($evidenceId, $userId) {
     $handler = new FileUploadHandler();
     return $handler->serveEvidenceFile($evidenceId, $userId);
 }
+
+function uploadCitizenIdDocument($file, $nationalId) {
+    $uploadPath = UPLOADS_PATH . '/citizen_docs';
+
+    if (!file_exists($uploadPath)) {
+        if (!mkdir($uploadPath, 0755, true)) {
+            return ['success' => false, 'message' => 'Failed to create upload directory'];
+        }
+    }
+
+    $htaccess = $uploadPath . '/.htaccess';
+    if (!file_exists($htaccess)) {
+        file_put_contents($htaccess, "Options -Indexes\nDeny from all");
+    }
+
+    $index = $uploadPath . '/index.php';
+    if (!file_exists($index)) {
+        file_put_contents($index, '<?php header("HTTP/1.0 403 Forbidden"); exit; ?>');
+    }
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $errors = [
+            UPLOAD_ERR_INI_SIZE => 'File exceeds maximum upload size',
+            UPLOAD_ERR_FORM_SIZE => 'File exceeds form maximum size',
+            UPLOAD_ERR_PARTIAL => 'File was only partially uploaded',
+            UPLOAD_ERR_NO_TMP_DIR => 'Missing temporary folder',
+            UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk',
+            UPLOAD_ERR_EXTENSION => 'File upload stopped by extension'
+        ];
+        $message = $errors[$file['error']] ?? 'Unknown upload error';
+        return ['success' => false, 'message' => $message];
+    }
+
+    if ($file['size'] > MAX_FILE_SIZE) {
+        return ['success' => false, 'message' => 'File size exceeds maximum allowed (5MB)'];
+    }
+
+    $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if ($fileExtension !== 'pdf') {
+        return ['success' => false, 'message' => 'Only PDF files are allowed for citizen ID documents'];
+    }
+
+    $mimeType = mime_content_type($file['tmp_name']);
+    if ($mimeType !== 'application/pdf') {
+        return ['success' => false, 'message' => 'File type does not match PDF content'];
+    }
+
+    $timestamp = date('YmdHis');
+    $random = substr(uniqid(), -6);
+    $fileName = "citizen_{$nationalId}_{$timestamp}_{$random}.pdf";
+    $filePath = $uploadPath . '/' . $fileName;
+
+    if (!move_uploaded_file($file['tmp_name'], $filePath)) {
+        return ['success' => false, 'message' => 'Failed to upload file'];
+    }
+
+    return [
+        'success' => true,
+        'message' => 'Citizen ID document uploaded successfully',
+        'file_path' => 'citizen_docs/' . $fileName,
+        'file_name' => $fileName
+    ];
+}
 ?>

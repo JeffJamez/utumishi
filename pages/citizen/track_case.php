@@ -142,15 +142,15 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
 
                             <div class="case-info-panel">
-                                <div class="mb-3">
-                                    <strong>Current Status:</strong><br>
-                                    <span class="badge <?php echo STATUS_COLORS[$caseDetails['status']] ?? 'status-reported'; ?>" style="font-size: 1rem;">
+                                <div class="mb-1">
+                                    <strong>Current Status:</strong>
+                                    <span class="badge <?php echo STATUS_COLORS[$caseDetails['status']] ?? 'status-reported'; ?>" style="font-size: 13px;">
                                         <?php echo ucfirst(str_replace('_', ' ', $caseDetails['status'])); ?>
                                     </span>
                                 </div>
 
-                                <div class="mb-3">
-                                    <strong>Assigned Officer:</strong><br>
+                                <div class="mb-1">
+                                    <strong>Assigned Officer:</strong>
                                     <?php if ($caseDetails['assigned_officer_name']): ?>
                                         <?php echo htmlspecialchars($caseDetails['assigned_officer_name']); ?><br>
                                         <small class="text-muted">Badge: <?php echo htmlspecialchars($caseDetails['badge_number']); ?></small>
@@ -159,25 +159,25 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     <?php endif; ?>
                                 </div>
 
-                                <div class="mb-3">
-                                    <strong>Station:</strong><br>
-                                    <?php echo htmlspecialchars($caseDetails['station_name']); ?><br>
+                                <div class="mb-1">
+                                    <strong>Station:</strong>
+                                    <?php echo htmlspecialchars($caseDetails['station_name']); ?>
                                     <small class="text-muted"><?php echo htmlspecialchars($caseDetails['station_county']); ?></small>
                                 </div>
 
-                                <div class="mb-3">
-                                    <strong>Date Reported:</strong><br>
+                                <div class="mb-1">
+                                    <strong>Date Reported:</strong>
                                     <?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['created_at'])); ?>
                                 </div>
 
-                                <div class="mb-3">
-                                    <strong>Last Updated:</strong><br>
+                                <div class="mb-1">
+                                    <strong>Last Updated:</strong>
                                     <?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['updated_at'])); ?>
                                 </div>
 
                                 <?php if ($caseDetails['status'] === 'closed' && $caseDetails['closed_at']): ?>
-                                    <div class="mb-3">
-                                        <strong>Date Closed:</strong><br>
+                                    <div class="mb-1">
+                                        <strong>Date Closed:</strong>
                                         <?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['closed_at'])); ?>
                                     </div>
                                 <?php endif; ?>
@@ -338,39 +338,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 </div>
             <?php endif; ?>
-
-            <div class="card">
-                <div class="card-header">
-                    <h3>Need Help?</h3>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-                        <div>
-                            <h5> Contact Information</h5>
-                            <p><strong>Emergency:</strong> 999 or 911</p>
-                            <p><strong>Police Hotline:</strong> 999</p>
-                            <p><strong>DCI Hotline:</strong> 0800 722 203</p>
-                        </div>
-
-                        <div>
-                            <h5> Visit Police Station</h5>
-                            <p>For case updates, evidence submission, or statements, visit the station handling your case.</p>
-                            <p><strong>Bring:</strong> National ID and OB Number</p>
-                        </div>
-
-                        <div>
-                            <h5> Case Status Meanings</h5>
-                            <ul style="font-size: 0.9rem;">
-                                <li><strong>Reported:</strong> Case recorded, awaiting assignment</li>
-                                <li><strong>Assigned:</strong> Officer assigned to investigate</li>
-                                <li><strong>In Progress:</strong> Active investigation ongoing</li>
-                                <li><strong>Resolved:</strong> Investigation complete</li>
-                                <li><strong>Closed:</strong> Case officially closed</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
 
@@ -417,22 +384,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }, 120000);
         <?php endif; ?>
 
-        function printCaseDetails() {
-            window.print();
-        }
-
-        <?php if ($caseDetails): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const caseHeader = document.querySelector('.card-header h3');
-            if (caseHeader) {
-                const printBtn = document.createElement('button');
-                printBtn.innerHTML = '🖨️ Print';
-                printBtn.className = 'btn btn-sm btn-outline btn-secondary no-print';
-                printBtn.onclick = printCaseDetails;
-                caseHeader.parentNode.appendChild(printBtn);
-            }
-        });
-        <?php endif; ?>
+       
 
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('tbody tr').forEach(row => {
@@ -604,7 +556,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             background: var(--light-gray);
             padding: 1.5rem;
             border-radius: var(--border-radius);
-            border-left: 4px solid var(--primary-green);
+            /* border-left: 4px solid var(--primary-green); */
         }
 
         .case-info-panel strong {
@@ -709,7 +661,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .timeline-item.recent {
-            border-left: 4px solid var(--primary-green);
+            /* border-left: 4px solid var(--primary-green); */
             background: rgba(0, 107, 63, 0.05);
         }
 

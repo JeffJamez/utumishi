@@ -22,16 +22,12 @@ class Officer extends User {
         }
     }
 
-   private function loadOfficerData() {
-        $sql = "SELECT o.*, s.name as station_name, s.county, s.constituency
-                FROM officers o
-                JOIN users u ON o.user_id = u.id
-                LEFT JOIN stations s ON u.station_id = s.id
-                WHERE o.user_id = :user_id";
+    private function loadOfficerData() {
+        $sql = "SELECT o.* FROM officers o WHERE o.user_id = :user_id";
 
         $result = $this->db->fetchOne($sql, ['user_id' => $this->id]);
 
-        $this->officerData = is_array($result) ? $result : [];
+        $this->officerData = is_array($result) ? $result : null;
     }
 
     public function getOfficerData($property = null) {
@@ -106,6 +102,77 @@ public function getPendingTasks($limit = 5) {
     public function getAssignedCases($status = null, $limit = null) {
         $caseManager = new CaseManager();
         return $caseManager->getCasesForOfficer($this->id, $status);
+    }
+
+    public function getRecordedCases($status = null) {
+        $sql = "
+            SELECT c.*,
+                   TIMESTAMPDIFF(HOUR, c.created_at, NOW()) as hours_since_reported,
+                   u.name as reporter_name,
+                   s.name as station_name,
+                   'recorded' as case_type
+            FROM cases c
+            LEFT JOIN users u ON c.reported_by_citizen_id = u.id
+            LEFT JOIN stations s ON c.station_id = s.id
+            WHERE c.recorded_by_officer_id = :officer_id
+        ";
+
+        $params = ['officer_id' => $this->id];
+
+        if ($status && $status !== 'all') {
+            $sql .= " AND c.status = :status";
+            $params['status'] = $status;
+        }
+
+        $sql .= " ORDER BY c.created_at DESC";
+
+        return $this->db->fetchAll($sql, $params);
+    }
+
+    public function getMyCases($filter = 'all') {
+        $assignedCases = $this->getAssignedCases();
+        $recordedCases = $this->getRecordedCases();
+
+
+
+        // Mark types and combine
+        foreach ($assignedCases as &$case) {
+            $case['case_type'] = 'assigned';
+        }
+
+        $allCases = array_merge($assignedCases, $recordedCases);
+
+        // Remove duplicates (if a case is both assigned and recorded by same officer)
+        $uniqueCases = [];
+        foreach ($allCases as $case) {
+            $key = $case['id'];
+            if (!isset($uniqueCases[$key])) {
+                $uniqueCases[$key] = $case;
+            } else {
+                // If duplicate, prefer 'assigned' type
+                if ($case['case_type'] === 'assigned') {
+                    $uniqueCases[$key] = $case;
+                }
+            }
+        }
+
+        $cases = array_values($uniqueCases);
+
+
+
+        // Sort by most recent (created_at DESC)
+        usort($cases, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+
+        // Apply filter
+        if ($filter === 'assigned') {
+            $cases = array_filter($cases, fn($c) => $c['case_type'] === 'assigned');
+        } elseif ($filter === 'recorded') {
+            $cases = array_filter($cases, fn($c) => $c['case_type'] === 'recorded');
+        } elseif ($filter === 'in_progress') {
+            $cases = array_filter($cases, fn($c) => $c['status'] === 'in_progress');
+        }
+
+        return $cases;
     }
 
     public function getUrgentCases() {
@@ -270,15 +337,35 @@ public function getWorkloadStatus() {
     }
 
     public function getOfficerDashboardData() {
-        $dashboardData = parent::getDashboardData();
+        $officerId = $this->officerData['id'] ?? null;
+        if (!$officerId) {
+            return [
+                'total_assigned' => 0,
+                'total_recorded' => 0,
+                'total_closed' => 0,
+                'total_open' => 0
+            ];
+        }
 
-        $dashboardData['workload'] = $this->getWorkload();
-        $dashboardData['workload_status'] = $this->getWorkloadStatus();
-        $dashboardData['performance'] = $this->getPerformance();
-        $dashboardData['urgent_cases'] = $this->getUrgentCases();
-        $dashboardData['recent_activity'] = $this->getRecentActivity(5);
+        $sql = "
+            SELECT
+                COUNT(CASE WHEN c.assigned_officer_id = ? AND c.status NOT IN ('closed') THEN 1 END) as total_assigned,
+                COUNT(CASE WHEN c.recorded_by_officer_id = ? AND c.assigned_officer_id != ? THEN 1 END) as total_recorded,
+                COUNT(CASE WHEN c.assigned_officer_id = ? AND c.status = 'closed' THEN 1 END) as total_closed,
+                COUNT(CASE WHEN c.assigned_officer_id = ? AND c.status IN ('assigned', 'in_progress', 'resolved') THEN 1 END) as total_open
+            FROM cases c
+        ";
 
-        return $dashboardData;
+        $result = $this->db->fetchOne($sql, [$officerId, $this->id, $officerId, $officerId, $officerId]);
+
+
+
+        return [
+            'total_assigned' => (int)($result['total_assigned'] ?? 0),
+            'total_recorded' => (int)($result['total_recorded'] ?? 0),
+            'total_closed' => (int)($result['total_closed'] ?? 0),
+            'total_open' => (int)($result['total_open'] ?? 0)
+        ];
     }
 
     public function canPerformAction($action, $targetId = null) {

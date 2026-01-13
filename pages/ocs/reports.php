@@ -61,7 +61,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
     <main class="app-main">
         <div class="mb-4">
-            <h1>Station Reports</h1>
+            <h2>Station Reports</h1>
             <p class="text-muted">Generate and view detailed reports for your station</p>
         </div>
 
@@ -71,7 +71,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
         <?php endif; ?>
 
-        <!-- Report Generation -->
         <div class="card mb-4">
             <div class="card-header">
                 <h3>Generate Report</h3>
@@ -82,7 +81,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Monthly Report -->
                     <div class="card">
                         <div class="card-body text-center">
-                            <div style="font-size: 3rem;">📊</div>
+
                             <h5>Monthly Report</h5>
                             <p class="text-muted">Comprehensive monthly statistics and analysis</p>
                             <form method="GET" class="mb-3">
@@ -109,7 +108,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Performance Report -->
                     <div class="card">
                         <div class="card-body text-center">
-                            <div style="font-size: 3rem;">📈</div>
+
                             <h5>Performance Report</h5>
                             <p class="text-muted">Station performance metrics and trends</p>
                             <form method="GET" class="mb-3">
@@ -127,7 +126,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Crime Analysis Report -->
                     <div class="card">
                         <div class="card-body text-center">
-                            <div style="font-size: 3rem;">🔍</div>
+
                             <h5>Crime Analysis</h5>
                             <p class="text-muted">Crime patterns and hotspot analysis</p>
                             <form method="GET" class="mb-3">
@@ -145,7 +144,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Officer Workload Report -->
                     <div class="card">
                         <div class="card-body text-center">
-                            <div style="font-size: 3rem;">👥</div>
+
                             <h5>Officer Workload</h5>
                             <p class="text-muted">Current officer assignments and performance</p>
                             <form method="GET" class="mb-3">
@@ -158,7 +157,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Station Overview -->
                     <div class="card">
                         <div class="card-body text-center">
-                            <div style="font-size: 3rem;">🏢</div>
                             <h5>Station Overview</h5>
                             <p class="text-muted">Comprehensive station report</p>
                             <form method="GET" class="mb-3">
@@ -171,7 +169,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
         </div>
 
-        <!-- Generated Report Display -->
         <?php if ($reportGenerated && !empty($reportData)): ?>
         <div class="card">
             <div class="card-header">

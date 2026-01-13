@@ -14,7 +14,6 @@ $currentUser = getCurrentUser();
 $stationId = $currentUser['station_id'];
 $predictiveAnalytics = new PredictiveAnalytics();
 
-// Get prediction timeframe from user input
 $forecastDays = $_GET['days'] ?? 7;
 $forecastDays = min(30, max(1, (int)$forecastDays)); // Limit between 1-30 days
 
@@ -37,8 +36,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     <main class="app-main">
 
             <div class="mb-4">
-                <h1>🔮 Predictive Crime Analytics</h1>
-                <p class="text-muted">AI-powered crime prediction and resource optimization for proactive policing</p>
+                <h2> Predictive Crime Analytics</h2>
+                <p class="text-muted">Crime prediction for proactive policing</p>
             </div>
 
             <?php if ($error): ?>
@@ -47,7 +46,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             <?php endif; ?>
 
-            <!-- Forecast Controls -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h3>Prediction Settings</h3>
@@ -103,7 +101,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- Crime Forecast -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>📈 Crime Volume Forecast</h3>
+                    <h3>Crime Volume Forecast</h3>
                     <span class="text-muted">Next <?php echo $forecastDays; ?> days prediction</span>
                 </div>
                 <div class="card-body">
@@ -157,7 +155,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     <?php else: ?>
                         <div class="text-center p-4">
-                            <div style="font-size: 3rem;">📊</div>
+
                             <h4>Generating Predictions...</h4>
                             <p class="text-muted">Crime forecasting requires historical data analysis.</p>
                         </div>
@@ -168,7 +166,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- Hotspot Predictions -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>🗺️ Emerging Hotspot Predictions</h3>
+                    <h3>Emerging Hotspot Predictions</h3>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($predictions['hotspot_predictions'])): ?>
@@ -200,7 +198,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     <?php else: ?>
                         <div class="text-center p-4">
-                            <div style="font-size: 3rem;">✅</div>
+
                             <h4>No Emerging Hotspots Predicted</h4>
                             <p class="text-muted">Current patterns suggest stable crime distribution.</p>
                         </div>
@@ -211,7 +209,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- Resource Predictions -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>👥 Resource Demand Forecast</h3>
+                    <h3>Resource Demand Forecast</h3>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($predictions['resource_predictions'])): ?>
@@ -261,7 +259,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- Patrol Optimization -->
             <div class="card">
                 <div class="card-header">
-                    <h3>🚓 Optimized Patrol Recommendations</h3>
+                    <h3>  Optimized Patrol Recommendations</h3>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($predictions['patrol_optimization'])): ?>
@@ -303,7 +301,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     <?php else: ?>
                         <div class="text-center p-4">
-                            <div style="font-size: 3rem;">🚓</div>
+                            <div style="font-size: 3rem;"> </div>
                             <h4>Standard Patrol Schedule Recommended</h4>
                             <p class="text-muted">Current risk levels suggest maintaining regular patrol patterns.</p>
                         </div>
@@ -329,13 +327,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 row.style.borderLeft = '4px solid var(--warning-orange)';
             });
             
-            // Add tooltips for confidence scores
             document.querySelectorAll('[data-confidence]').forEach(element => {
                 element.title = `Prediction confidence: ${element.dataset.confidence}%`;
             });
         });
         
-        // Prediction accuracy indicator
         function showPredictionInfo() {
             alert('Predictions are based on historical crime patterns, seasonal trends, and resource availability. Confidence levels indicate the reliability of each forecast.');
         }

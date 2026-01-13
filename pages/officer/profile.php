@@ -130,7 +130,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php flashMessage(); ?>
 
             <div class="mb-4">
-                <h1>My Profile</h1>
+                <h2>My Profile</h2>
                 <p class="text-muted">Manage your profile information and view your performance</p>
             </div>
 
@@ -248,7 +248,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
 
                             <button type="submit" class="btn btn-primary btn-block">
-                                💾 Update Profile
+                                 Update Profile
                             </button>
                         </form>
                     </div>
@@ -257,7 +257,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div>
                     <div class="card mb-3">
                         <div class="card-header">
-                            <h3>📊 My Performance</h3>
+                            <h3>My Performance</h3>
                         </div>
                         <div class="card-body">
                             <div class="stats-grid">
@@ -291,7 +291,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                     <div class="card">
                         <div class="card-header">
-                            <h3>🔒 Change Password</h3>
+                            <h3>Change Password</h3>
                         </div>
                         <div class="card-body">
                             <?php if (!empty($errors['password_general'])): ?>
@@ -350,7 +350,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 </div>
 
                                 <button type="submit" class="btn btn-warning btn-block">
-                                    🔐 Change Password
+                                    Change Password
                                 </button>
                             </form>
                         </div>

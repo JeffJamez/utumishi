@@ -74,7 +74,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
             <div class="mb-4">
-                <h1>Station Command Dashboard</h1>
+                <h2>Station Command Dashboard</h2>
                 <p class="text-muted">
                     <?php echo htmlspecialchars($stationInfo['name'] ?? 'Police Station'); ?> • 
                     <?php echo htmlspecialchars($stationInfo['county'] ?? ''); ?>, 
@@ -151,7 +151,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>🎯 Resource Deployment Recommendations</h3>
+                        <h3>Resource Deployment Recommendations</h3>
                         <?php if (count($recommendations) > 0): ?>
                             <span class="badge status-progress"><?php echo count($recommendations); ?> recommendations</span>
                         <?php endif; ?>
@@ -195,7 +195,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <?php endif; ?>
                         <?php else: ?>
                             <div class="text-center p-4">
-                                <div style="font-size: 3rem;">✅</div>
+
                                 <h4>No Critical Recommendations</h4>
                                 <p class="text-muted">Current resource deployment appears optimal based on crime patterns.</p>
                             </div>
@@ -206,24 +206,22 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div>
                     <div class="card mb-3">
                         <div class="card-header">
-                            <h3>⚡ Quick Actions</h3>
+                            <h3>Quick Actions</h3>
                         </div>
                         <div class="card-body">
                             <div class="d-flex flex-column gap-2">
                                 <a href="<?php echo BASE_URL; ?>/pages/ocs/officer_workload.php" class="btn btn-outline btn-primary btn-block">
-                                    👥 Manage Officers
+                                    Manage Officers
                                 </a>
                                 <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-outline btn-primary btn-block">
-                                    📋 Review Cases
+                                    Review Cases
                                 </a>
                                 <a href="<?php echo BASE_URL; ?>/pages/ocs/crime_heatmap.php" class="btn btn-outline btn-primary btn-block">
-                                    🗺️ Crime Analysis
+                                    Crime Analysis
                                 </a>
-                                <a href="<?php echo BASE_URL; ?>/pages/ocs/events.php" class="btn btn-outline btn-primary btn-block">
-                                    📅 Plan Event
-                                </a>
+
                                 <a href="<?php echo BASE_URL; ?>/pages/ocs/reports.php" class="btn btn-outline btn-primary btn-block">
-                                    📊 Generate Report
+                                    Generate Report
                                 </a>
                             </div>
                         </div>
@@ -231,7 +229,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                     <div class="card">
                         <div class="card-header">
-                            <h3>🏢 Station Information</h3>
+                            <h3>Station Information</h3>
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
@@ -247,10 +245,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <strong>Contact:</strong><br>
                                 <?php echo htmlspecialchars($stationInfo['contact_phone'] ?? 'Not set'); ?>
                             </div>
-                            <div class="mb-3">
-                                <strong>Budget Allocated:</strong><br>
-                                KES <?php echo number_format($stationInfo['budget_allocated'] ?? 0, 2); ?>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -258,7 +253,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h3>👥 Officer Performance Overview</h3>
+                    <h3>Officer Performance Overview</h3>
                     <a href="<?php echo BASE_URL; ?>/pages/ocs/officer_workload.php" class="btn btn-sm btn-outline btn-primary">
                         View Details
                     </a>
@@ -333,7 +328,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h3>📋 Recent Cases (Last 7 Days)</h3>
+                    <h3>Recent Cases (Last 7 Days)</h3>
                     <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-sm btn-outline btn-primary">
                         View All Cases
                     </a>

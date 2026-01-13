@@ -97,7 +97,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
    <main class="app-main"> 
         <div class="mb-4">
-            <h1>Manage Officers</h1>
+            <h2>Manage Officers</h2>
             <p class="text-muted">Add, edit, and manage police officers across all stations</p>
         </div>
 

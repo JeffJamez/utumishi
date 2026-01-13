@@ -14,8 +14,8 @@ requireRole(ROLE_OCS);
 $currentUser = getCurrentUser();
 $stationId = $currentUser['station_id'];
 $station = new Station($stationId);
+$db = getDB();
 
-// Handle filters from GET parameters
 $filters = [
     'status' => $_GET['status'] ?? 'all',
     'category' => $_GET['category'] ?? '',
@@ -24,33 +24,82 @@ $filters = [
     'date_to' => $_GET['date_to'] ?? ''
 ];
 
-// Handle search
 $searchTerm = $_GET['search'] ?? '';
 
-// Initialize data
 $cases = [];
 $caseStats = [];
 $officers = [];
 $categories = [];
 $error = '';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        if (!validateCSRF($_POST['csrf_token'] ?? '')) {
+            throw new Exception('Invalid request. Please try again.');
+        }
+
+        $action = $_POST['action'] ?? '';
+        $requestId = (int)($_POST['request_id'] ?? 0);
+        $caseId = (int)($_POST['case_id'] ?? 0);
+
+        if ($action === 'approve_closure' && $requestId && $caseId) {
+            // Update request to approved
+            $db->update('closure_requests', [
+                'status' => 'approved',
+                'reviewed_by' => $currentUser['id'],
+                'reviewed_at' => date('Y-m-d H:i:s')
+            ], 'id = ?', [$requestId]);
+
+            // Close the case
+            $db->update('cases', [
+                'status' => CASE_CLOSED,
+                'closed_at' => date('Y-m-d H:i:s')
+            ], 'id = ?', [$caseId]);
+
+            setFlashMessage('success', 'Case closure approved and case closed.');
+        } elseif ($action === 'reject_closure' && $requestId) {
+            $rejectNotes = sanitizeText($_POST['reject_notes'] ?? '');
+            $db->update('closure_requests', [
+                'status' => 'rejected',
+                'reviewed_by' => $currentUser['id'],
+                'reviewed_at' => date('Y-m-d H:i:s'),
+                'review_notes' => $rejectNotes
+            ], 'id = ?', [$requestId]);
+
+            setFlashMessage('success', 'Case closure request rejected.');
+        }
+
+        // Redirect to refresh
+        header('Location: ' . $_SERVER['REQUEST_URI']);
+        exit;
+    } catch (Exception $e) {
+        error_log("Closure Request Error: " . $e->getMessage());
+        $error = $e->getMessage();
+    }
+}
+
 try {
-    // Get filtered cases
     if ($searchTerm) {
         $cases = $station->searchCases($searchTerm, $filters);
     } else {
         $cases = $station->getCases($filters);
     }
     
-    // Get case statistics (filtered)
     $caseStats = $station->getCaseStatistics();
     
-    // Get officers and categories for dropdowns
     $officers = $station->getOfficers();
     $categories = $station->getCaseCategories();
-    
-    // Get performance metrics
-    $performanceData = $station->getPerformanceMetrics(30);
+
+
+
+    $closureRequests = $db->fetchAll("
+        SELECT cr.*, c.title, c.ob_number, u.name as requester_name
+        FROM closure_requests cr
+        JOIN cases c ON cr.case_id = c.id
+        JOIN users u ON cr.requested_by = u.id
+        WHERE c.station_id = ? AND cr.status = 'pending'
+        ORDER BY cr.requested_at DESC
+    ", [$stationId]);
     
 } catch (Exception $e) {
     error_log("Station Cases Error: " . $e->getMessage());
@@ -202,14 +251,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
         </div>
 
-        <!-- Performance Alert -->
-        <?php if (isset($performanceData['overdue_cases']) && count($performanceData['overdue_cases']) > 0): ?>
-            <div class="alert alert-warning mb-4">
-                <strong>⚠️ Performance Alert:</strong> 
-                <?php echo count($performanceData['overdue_cases']); ?> cases are overdue their estimated resolution time.
-                <a href="?status=in_progress" class="btn btn-sm btn-outline btn-primary ml-2">View Overdue Cases</a>
-            </div>
-        <?php endif; ?>
+
 
         <!-- Cases Table -->
         <div class="card">
@@ -219,9 +261,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <?php if ($searchTerm): ?>
                         <span class="badge status-info">Search: "<?php echo htmlspecialchars($searchTerm); ?>"</span>
                     <?php endif; ?>
-                    <a href="<?php echo BASE_URL; ?>/pages/officer/record_case.php" class="btn btn-sm btn-success">
-                        Add New Case
-                    </a>
+                    
                 </div>
             </div>
         <div class="card-body">
@@ -235,16 +275,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     <th>Reporter</th>
                                     <th>Assigned Officer</th>
                                     <th>Status</th>
-                                    <th>Time</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($cases as $case): ?>
-                                    <?php
-                                    $isOverdue = $case['hours_since_reported'] > $case['estimated_resolution_hours'];
-                                    $rowClass = $isOverdue && !in_array($case['status'], ['resolved', 'closed']) ? 'table-warning' : '';
-                                    ?>
                                     <tr class="<?php echo $rowClass; ?>">
                                         <td>
                                             <strong><?php echo htmlspecialchars($case['ob_number']); ?></strong>
@@ -267,22 +302,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             </span>
                                         </td>
                                         <td>
-                                            <div><?php echo round($case['hours_since_reported']); ?>h ago</div>
-                                            <?php if ($isOverdue && !in_array($case['status'], ['resolved', 'closed'])): ?>
-                                                <small class="text-danger">Overdue</small>
-                                            <?php else: ?>
-                                                <small class="text-muted">
-                                                    <?php if ($case['status'] === 'closed' && $case['actual_resolution_hours']): ?>
-                                                        Resolved in <?php echo round($case['actual_resolution_hours']); ?>h
-                                                    <?php elseif (!in_array($case['status'], ['resolved', 'closed'])): ?>
-                                                        <?php echo max(0, $case['estimated_resolution_hours'] - $case['hours_since_reported']); ?>h left
-                                                    <?php endif; ?>
-                                                </small>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
                                             <div class="d-flex gap-1">
-                                                <a href="<?php echo BASE_URL; ?>/pages/officer/update_case.php?id=<?php echo $case['id']; ?>" 
+                                                <a href="<?php echo BASE_URL; ?>/pages/ocs/case_details.php?id=<?php echo $case['id']; ?>"
                                                 class="btn btn-sm btn-primary">View</a>
                                                 <?php if (!in_array($case['status'], ['resolved', 'closed'])): ?>
                                                     <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php?case_id=<?php echo $case['id']; ?>" 
@@ -311,7 +332,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     
                 <?php else: ?>
                     <div class="text-center p-4">
-                        <div style="font-size: 3rem;">🔍</div>
+
                         <h4>No Cases Found</h4>
                         <?php if ($searchTerm): ?>
                             <p class="text-muted">No cases match your search term "<?php echo htmlspecialchars($searchTerm); ?>".</p>
@@ -325,28 +346,81 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
-            </div>
-        </div>
+             </div>
+         </div>
 
-        </main>
+         <!-- Closure Requests -->
+         <?php if (!empty($closureRequests)): ?>
+             <div class="card mt-4">
+                 <div class="card-header">
+                     <h3>Closure Requests</h3>
+                     <span class="badge status-warning"><?php echo count($closureRequests); ?> pending</span>
+                 </div>
+                 <div class="card-body">
+                     <div class="table-responsive">
+                         <table class="table">
+                             <thead>
+                                 <tr>
+                                     <th>Case</th>
+                                     <th>Requested By</th>
+                                     <th>Requested At</th>
+                                     <th>Actions</th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 <?php foreach ($closureRequests as $request): ?>
+                                     <tr>
+                                         <td>
+                                             <strong><?php echo htmlspecialchars($request['ob_number']); ?></strong><br>
+                                             <small><?php echo htmlspecialchars($request['title']); ?></small>
+                                         </td>
+                                         <td><?php echo htmlspecialchars($request['requester_name']); ?></td>
+                                         <td><?php echo date('M d, Y H:i', strtotime($request['requested_at'])); ?></td>
+                                         <td>
+                                             <div class="d-flex gap-1">
+                                                 <form method="POST" style="display: inline;">
+                                                     <?php echo csrfField(); ?>
+                                                     <input type="hidden" name="action" value="approve_closure">
+                                                     <input type="hidden" name="request_id" value="<?php echo $request['id']; ?>">
+                                                     <input type="hidden" name="case_id" value="<?php echo $request['case_id']; ?>">
+                                                     <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Approve this closure request?')">Approve</button>
+                                                 </form>
+                                                 <form method="POST" style="display: inline;">
+                                                     <?php echo csrfField(); ?>
+                                                     <input type="hidden" name="action" value="reject_closure">
+                                                     <input type="hidden" name="request_id" value="<?php echo $request['id']; ?>">
+                                                     <input type="hidden" name="case_id" value="<?php echo $request['case_id']; ?>">
+                                                     <label for="reject_notes_<?php echo $request['id']; ?>" style="display: none;">Rejection Notes:</label>
+                                                     <input type="text" id="reject_notes_<?php echo $request['id']; ?>" name="reject_notes" placeholder="Reason for rejection" style="width: 150px; margin-right: 5px;">
+                                                     <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Reject this closure request?')">Reject</button>
+                                                 </form>
+                                             </div>
+                                         </td>
+                                     </tr>
+                                 <?php endforeach; ?>
+                             </tbody>
+                         </table>
+                     </div>
+                 </div>
+             </div>
+         <?php endif; ?>
+
+         </main>
     </div>
     
     <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
     <script>
-        // Auto-refresh every 3 minutes
         setInterval(function() {
             if (!document.hidden) {
                 location.reload();
             }
         }, 180000);
         
-        // Highlight overdue cases
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.table-warning').forEach(row => {
                 row.style.borderLeft = '4px solid var(--warning-orange)';
             });
             
-            // Add tooltips for status badges
             document.querySelectorAll('.badge').forEach(badge => {
                 const status = badge.textContent.toLowerCase();
                 switch(status) {
@@ -368,7 +442,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 }
             });
             
-            // Enhance search functionality
             const searchInput = document.querySelector('input[name="search"]');
             if (searchInput) {
                 searchInput.addEventListener('keypress', function(e) {
@@ -378,7 +451,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 });
             }
             
-            // Form enhancement for better UX
             const filterForm = document.querySelector('form[method="GET"]:not(:first-child)');
             if (filterForm) {
                 filterForm.addEventListener('change', function(e) {
@@ -390,7 +462,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
         });
         
-        // Export functionality (basic implementation)
         function exportCases() {
             const table = document.querySelector('.table');
             if (!table) return;
@@ -420,18 +491,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             a.click();
             window.URL.revokeObjectURL(url);
         }
-        
-        // Add export button to header (if needed)
-        document.addEventListener('DOMContentLoaded', function() {
-            const cardHeader = document.querySelector('.card:last-child .card-header');
-            if (cardHeader && document.querySelectorAll('.table tbody tr').length > 0) {
-                const exportBtn = document.createElement('button');
-                exportBtn.innerHTML = '📊 Export CSV';
-                exportBtn.className = 'btn btn-sm btn-outline btn-secondary';
-                exportBtn.onclick = exportCases;
-                cardHeader.querySelector('div').appendChild(exportBtn);
-            }
-        });
         
         // Performance monitoring
         if (performance.navigation) {

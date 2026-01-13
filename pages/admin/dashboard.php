@@ -127,7 +127,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <?php if (!empty($criticalAlerts)): ?>
                 <div class="alert alert-danger mb-4">
-                    <strong>🚨 Critical System Alerts:</strong>
+                    <strong>Critical System Alerts:</strong>
                     <ul class="mb-0 mt-2">
                         <?php foreach (array_slice($criticalAlerts, 0, 3) as $alert): ?>
                             <li><?php echo htmlspecialchars($alert['message']); ?></li>
@@ -183,19 +183,19 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <div class="card-body">
                             <div class="d-flex flex-column gap-2">
                                 <a href="<?php echo BASE_URL; ?>/pages/admin/manage_officers.php" class="btn btn-outline btn-primary btn-block">
-                                    👮 Manage Officers
+                                    Manage Officers
                                 </a>
                                 <a href="<?php echo BASE_URL; ?>/pages/admin/manage_stations.php" class="btn btn-outline btn-primary btn-block">
-                                    🏢 Station Management
+                                    Station Management
                                 </a>
-                                <a href="<?php echo BASE_URL; ?>/pages/admin/budget_allocation.php" class="btn btn-outline btn-primary btn-block">
-                                    💰 Budget Allocation
+
+                                    Budget Allocation
                                 </a>
                                 <a href="<?php echo BASE_URL; ?>/pages/admin/national_reports.php" class="btn btn-outline btn-primary btn-block">
-                                    📊 Generate Reports
+                                    Generate Reports
                                 </a>
                                 <a href="<?php echo BASE_URL; ?>/pages/admin/system_settings.php" class="btn btn-outline btn-primary btn-block">
-                                    ⚙️ System Settings
+                                    System Settings
                                 </a>
                             </div>
                         </div>
@@ -203,7 +203,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>🏆 Station Performance Ranking</h3>
+                        <h3>Station Performance Ranking</h3>
                         <span class="text-muted">Last 30 days</span>
                     </div>
                     <div class="card-body">
@@ -252,7 +252,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <tr class="<?php echo $rank <= 3 ? 'table-success' : ''; ?>">
                                                 <td>
                                                     <strong><?php echo $rank; ?></strong>
-                                                    <?php if ($rank === 1): ?>🥇<?php elseif ($rank === 2): ?>🥈<?php elseif ($rank === 3): ?>🥉<?php endif; ?>
+                                                    <?php if ($rank === 1): ?><?php elseif ($rank === 2): ?>🥈<?php elseif ($rank === 3): ?>🥉<?php endif; ?>
                                                 </td>
                                                 <td><?php echo htmlspecialchars($station['station_name']); ?></td>
                                                 <td><?php echo htmlspecialchars($station['county']); ?></td>
@@ -294,7 +294,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                     <div class="card">
                         <div class="card-header">
-                            <h3>🚨 System Alerts</h3>
+                            <h3>System Alerts</h3>
                             <?php if (count($alerts) > 0): ?>
                                 <span class="badge status-progress"><?php echo count($alerts); ?> alerts</span>
                             <?php endif; ?>
@@ -329,7 +329,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>📈 Crime Category Analysis (Last 30 Days)</h3>
+                    <h3>Crime Category Analysis (Last 30 Days)</h3>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($crimeTrends)): ?>
@@ -361,11 +361,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 <?php
                                                 $cases = $trend['total_cases'];
                                                 if ($cases >= 50) {
-                                                    echo '<span class="text-danger">📈 High Volume</span>';
+                                                    echo '<span class="text-danger"> High Volume</span>';
                                                 } elseif ($cases >= 20) {
-                                                    echo '<span class="text-warning">📊 Moderate</span>';
+                                                    echo '<span class="text-warning"> Moderate</span>';
                                                 } else {
-                                                    echo '<span class="text-success">📉 Low Volume</span>';
+                                                    echo '<span class="text-success"> Low Volume</span>';
                                                 }
                                                 ?>
                                             </td>
@@ -380,7 +380,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             <div class="card">
                 <div class="card-header">
-                    <h3>🗺️ County Performance Overview</h3>
+                    <h3>County Performance Overview</h3>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($countyStats)): ?>
@@ -443,7 +443,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         function showCriticalAlert(message) {
             const alertDiv = document.createElement('div');
             alertDiv.className = 'alert alert-danger';
-            alertDiv.innerHTML = `<strong>🚨 System Alert:</strong> ${message}`;
+            alertDiv.innerHTML = `<strong> System Alert:</strong> ${message}`;
 
             const main = document.querySelector('.app-main');
             main.insertBefore(alertDiv, main.firstChild);
@@ -497,7 +497,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         document.addEventListener('DOMContentLoaded', function() {
             const header = document.querySelector('h1');
             const exportBtn = document.createElement('button');
-            exportBtn.innerHTML = '📥 Export Data';
+            exportBtn.innerHTML = 'Export Data';
             exportBtn.className = 'btn btn-sm btn-outline btn-secondary ml-2';
             exportBtn.onclick = exportDashboardData;
             header.parentNode.appendChild(exportBtn);

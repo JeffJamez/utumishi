@@ -64,7 +64,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         <main class="app-main">
 
             <div class="mb-4">
-                <h1>Crime Heatmap & Analysis</h1>
+                <h2>Crime Heatmap & Analysis</h2>
                 <p class="text-muted">
                     Crime pattern analysis for <?php echo htmlspecialchars($stationInfo['constituency'] ?? ''); ?>, 
                     <?php echo htmlspecialchars($stationInfo['county'] ?? ''); ?>
@@ -108,7 +108,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- Hotspots Overview -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>🔥 Crime Hotspots (Last <?php echo $timeframe; ?> days)</h3>
+                    <h3> Crime Hotspots (Last <?php echo $timeframe; ?> days)</h3>
                     <span class="badge status-danger"><?php echo count($stationHotspots); ?> hotspots</span>
                 </div>
                 <div class="card-body">
@@ -154,7 +154,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     <?php else: ?>
                         <div class="text-center p-4">
-                            <div style="font-size: 3rem;">✅</div>
                             <h4>No Crime Hotspots Detected</h4>
                             <p class="text-muted">No areas show significantly elevated crime patterns for the selected period.</p>
                         </div>
@@ -165,7 +164,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- Deployment Recommendations -->
             <div class="card mb-4">
                 <div class="card-header">
-                    <h3>🎯 Resource Deployment Recommendations</h3>
+                    <h3>Resource Deployment Recommendations</h3>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($recommendations)): ?>
@@ -197,7 +196,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div class="text-center p-4">
-                            <div style="font-size: 3rem;">✅</div>
                             <h4>No Immediate Deployment Changes Needed</h4>
                             <p class="text-muted">Current resource allocation appears optimal for detected crime patterns.</p>
                         </div>
@@ -208,7 +206,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- Crime Density Map -->
             <div class="card">
                 <div class="card-header">
-                    <h3>🗺️ Crime Density Analysis</h3>
+                    <h3>Crime Density Analysis</h3>
                 </div>
                 <div class="card-body">
                     <?php if (!empty($densityData)): ?>

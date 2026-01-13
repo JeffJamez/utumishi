@@ -337,27 +337,9 @@ class PredictiveAnalytics {
         return 'minimal';
     }
 
-    /**
-     * Generate prediction accuracy metrics
-     */
-    public function getPredictionAccuracy($stationId = null, $days = 30) {
-        // Compare past predictions with actual outcomes
-        $accuracy = [
-            'overall_accuracy' => 0,
-            'crime_volume_accuracy' => 0,
-            'hotspot_accuracy' => 0,
-            'resource_accuracy' => 0,
-            'total_predictions' => 0,
-            'correct_predictions' => 0
-        ];
 
-        // This would compare stored predictions with actual data
-        // For now, return placeholder metrics
 
-        return $accuracy;
-    }
 
-    // MISSING HELPER METHODS
 
     private function calculateConfidence($historicalAvg, $trendMultiplier) {
         $dataPoints = max(1, $historicalAvg);

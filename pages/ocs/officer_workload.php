@@ -15,7 +15,6 @@ $currentUser = getCurrentUser();
 $stationId = $currentUser['station_id'];
 $workloadManager = new WorkloadManager();
 
-// Handle form submissions
 if ($_POST) {
     try {
         if ($_POST['action'] === 'assign_case') {
@@ -50,7 +49,6 @@ if ($_POST) {
     }
 }
 
-// Get workload data
 $workloadData = [];
 $recommendations = [];
 $error = '';
@@ -76,7 +74,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         <main class="app-main">
 
             <div class="mb-4">
-                <h1>Officer Workload Management</h1>
+                <h2>Officer Workload Management</h2>
                 <p class="text-muted">Manage case assignments and monitor officer performance</p>
             </div>
 
@@ -86,7 +84,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             <?php endif; ?>
 
-            <!-- Auto Assignment Card -->
+          
             <?php if (count($unassignedCases) > 0): ?>
             <div class="card mb-4">
                 <div class="card-header">
@@ -114,7 +112,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
             <?php endif; ?>
 
-            <!-- Workload Overview -->
             <div class="kpi-grid mb-4">
                 <div class="kpi-card">
                     <div class="kpi-value"><?php echo $workloadStats['total_officers'] ?? 0; ?></div>
@@ -160,7 +157,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             </div>
 
-            <!-- Workload Recommendations -->
             <?php if (!empty($recommendations)): ?>
             <div class="card mb-4">
                 <div class="card-header">
@@ -199,7 +195,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
             <?php endif; ?>
 
-            <!-- Officer Performance Table -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h3>Officer Performance & Workload</h3>
@@ -227,7 +222,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         $resolutionRate = $officer['resolution_rate'] ?? 0;
                                         $statusClass = $officer['workload_status'];
                                         
-                                        // Determine status display
                                         $statusLabels = [
                                             'overloaded' => ['label' => 'Overloaded', 'class' => 'danger'],
                                             'high' => ['label' => 'High Load', 'class' => 'warning'],
@@ -274,7 +268,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             </div>
 
-            <!-- Case Assignment Section -->
             <div class="card">
                 <div class="card-header">
                     <h3>Unassigned Cases</h3>
@@ -350,7 +343,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     <?php else: ?>
                         <div class="text-center p-4">
-                            <div style="font-size: 3rem;">✅</div>
+                            <div style="font-size: 3rem;"></div>
                             <h4>All Cases Assigned</h4>
                             <p class="text-muted">No cases pending assignment at this time.</p>
                         </div>
@@ -363,14 +356,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     
     <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
     <script>
-        // Auto-refresh every 2 minutes
         setInterval(function() {
             if (!document.hidden) {
                 location.reload();
             }
         }, 120000);
         
-        // Highlight urgent cases
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.table-danger').forEach(row => {
                 row.style.borderLeft = '4px solid var(--danger-red)';
@@ -385,7 +376,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             });
         });
         
-        // Confirm case assignment for overloaded officers
         document.querySelectorAll('form').forEach(form => {
             if (form.querySelector('input[name="action"][value="assign_case"]')) {
                 form.addEventListener('submit', function(e) {
@@ -401,7 +391,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
         });
         
-        // Workload status indicators
         document.querySelectorAll('.badge').forEach(badge => {
             if (badge.textContent.includes('Overloaded')) {
                 badge.title = 'Officer handling more than 15 cases - consider redistribution';

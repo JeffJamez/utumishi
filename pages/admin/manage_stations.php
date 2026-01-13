@@ -14,7 +14,6 @@ requireRole(ROLE_ADMIN);
 $currentUser = getCurrentUser();
 $adminManager = new AdminManager();
 
-// Handle form submissions
 if ($_POST) {
     try {
         if ($_POST['action'] === 'create_station') {
@@ -25,7 +24,6 @@ if ($_POST) {
                 'constituency' => $_POST['constituency'],
                 'address' => $_POST['address'],
                 'contact_phone' => $_POST['contact_phone'],
-                'budget_allocated' => $_POST['budget_allocated'] ?? 0,
                 'commander_id' => !empty($_POST['commander_id']) ? $_POST['commander_id'] : null
             ];
             
@@ -40,7 +38,6 @@ if ($_POST) {
                 'constituency' => $_POST['constituency'],
                 'address' => $_POST['address'],
                 'contact_phone' => $_POST['contact_phone'],
-                'budget_allocated' => $_POST['budget_allocated'],
                 'commander_id' => !empty($_POST['commander_id']) ? $_POST['commander_id'] : null
             ];
             
@@ -89,7 +86,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         <main class="app-main">
             <div class="mb-4">
-                <h1>Manage Police Stations</h1>
+                <h2>Manage Police Stations</h2>
                 <p class="text-muted">Add, edit, and manage police stations across Kenya</p>
             </div>
 
@@ -140,12 +137,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
                             
                             <div>
-                                <label for="budget_allocated" class="form-label">Budget Allocated (KES)</label>
-                                <input type="number" name="budget_allocated" id="budget_allocated" class="form-control" 
-                                    step="0.01" min="0" placeholder="0.00">
-                            </div>
-                            
-                            <div>
                                 <label for="commander_id" class="form-label">Station Commander (OCS)</label>
                                 <select name="commander_id" id="commander_id" class="form-control">
                                     <option value="">Select Commander</option>
@@ -189,10 +180,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="kpi-label">Counties Covered</div>
                 </div>
                 
-                <div class="kpi-card">
-                    <div class="kpi-value">KES <?php echo number_format(array_sum(array_column($stations, 'budget_allocated')), 0); ?></div>
-                    <div class="kpi-label">Total Budget</div>
-                </div>
+
             </div>
 
             <!-- Stations Table -->
@@ -211,7 +199,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <th>Commander (OCS)</th>
                                         <th>Officers</th>
                                         <th>Cases</th>
-                                        <th>Budget</th>
                                         <th>Performance</th>
                                         <th>Actions</th>
                                     </tr>
@@ -244,9 +231,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 <span class="badge badge-secondary"><?php echo $station['total_cases']; ?> cases</span>
                                             </td>
                                             <td>
-                                                KES <?php echo number_format($station['budget_allocated'], 0); ?>
-                                            </td>
-                                            <td>
                                                 <?php if ($station['avg_resolution_time']): ?>
                                                     <?php echo round($station['avg_resolution_time'], 1); ?>h avg
                                                 <?php else: ?>
@@ -254,8 +238,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <button class="btn btn-sm btn-outline btn-primary" 
-                                                        onclick="editStation(<?php echo $station['id']; ?>, '<?php echo htmlspecialchars($station['name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['county'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['constituency'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['address'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['contact_phone'], ENT_QUOTES); ?>', '<?php echo $station['budget_allocated']; ?>', '<?php echo $station['commander_id']; ?>')">
+                                                <button class="btn btn-sm btn-outline btn-primary"
+                                                        onclick="editStation(<?php echo $station['id']; ?>, '<?php echo htmlspecialchars($station['name'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['county'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['constituency'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['address'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars($station['contact_phone'], ENT_QUOTES); ?>', '<?php echo $station['commander_id']; ?>')">
                                                     Edit
                                                 </button>
                                             </td>
@@ -304,16 +288,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <textarea name="address" id="edit_address" class="form-control" rows="3" required></textarea>
                         </div>
                         
-                        <div class="d-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
-                            <div class="mb-3">
-                                <label for="edit_contact_phone" class="form-label">Contact Phone</label>
-                                <input type="tel" name="contact_phone" id="edit_contact_phone" class="form-control">
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="edit_budget_allocated" class="form-label">Budget (KES)</label>
-                                <input type="number" name="budget_allocated" id="edit_budget_allocated" class="form-control" step="0.01" min="0">
-                            </div>
+                        <div class="mb-3">
+                            <label for="edit_contact_phone" class="form-label">Contact Phone</label>
+                            <input type="tel" name="contact_phone" id="edit_contact_phone" class="form-control">
                         </div>
                         
                         <div class="mb-3">
@@ -342,14 +319,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     
     <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
     <script>
-        function editStation(id, name, county, constituency, address, phone, budget, commanderId) {
+        function editStation(id, name, county, constituency, address, phone, commanderId) {
             document.getElementById('edit_station_id').value = id;
             document.getElementById('edit_name').value = name;
             document.getElementById('edit_county').value = county;
             document.getElementById('edit_constituency').value = constituency;
             document.getElementById('edit_address').value = address;
             document.getElementById('edit_contact_phone').value = phone;
-            document.getElementById('edit_budget_allocated').value = budget;
             document.getElementById('edit_commander_id').value = commanderId || '';
             document.getElementById('editStationModal').style.display = 'block';
         }

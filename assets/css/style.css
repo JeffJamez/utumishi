@@ -129,19 +129,19 @@ body {
 }
 
 .user-role.admin {
-  color: var(--primary-red);
+  color: white;
 }
 
 .user-role.ocs {
-  color: var(--primary-green);
+  color: white;
 }
 
 .user-role.officer {
-  color: var(--info-blue);
+  color: white;
 }
 
 .user-role.citizen {
-  color: var(--medium-gray);
+  color: white;
 }
 
 .nav-menu {
@@ -157,12 +157,12 @@ body {
   display: flex;
   gap: 3px;
   /* align-items: center; */
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.8rem;
   color: var(--dark-gray);
   text-decoration: none;
   transition: var(--transition);
   border-radius: var(--border-radius);
-  margin: 0 0.5rem;
+  margin: 0 0.3rem 0 -30px;
 }
 
 .nav-link:hover {
@@ -275,8 +275,8 @@ body {
 
 .btn {
   display: inline-block;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   text-align: center;
   text-decoration: none;
@@ -284,7 +284,6 @@ body {
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition);
-  line-height: 1.5;
 }
 
 .btn:disabled {
@@ -340,12 +339,11 @@ body {
 }
 
 .btn-outline {
-  background-color: transparent;
   border: 2px solid currentColor;
 }
 
 .btn-outline.btn-primary {
-  color: var(--primary-green);
+  /* color: var(--primary-green); */
   border-color: var(--primary-green);
 }
 
@@ -609,29 +607,29 @@ body {
 .alert-success {
   background-color: #d4edda;
   color: #155724;
-  border-left-color: var(--success-green);
+  /* border-left-color: var(--success-green); */
 }
 
 .alert-warning {
   background-color: #fff3cd;
   color: #856404;
-  border-left-color: var(--warning-orange);
+  /* border-left-color: var(--warning-orange); */
 }
 
 .alert-danger {
   background-color: #f8d7da;
   color: #721c24;
-  border-left-color: var(--danger-red);
+  /* border-left-color: var(--danger-red); */
 }
 
 .alert-info {
   background-color: #d1ecf1;
   color: #0c5460;
-  border-left-color: var(--info-blue);
+  /* border-left-color: var(--info-blue); */
 }
 
 .flash-success {
-  background-color: var(--success-green);
+  /* background-color: var(--success-green); */
   color: var(--primary-white);
   padding: 1rem;
   margin-bottom: 1rem;
@@ -976,4 +974,10 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--dark-gray);
+}
+
+/* Reduce card header title size */
+.card-header h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
 }

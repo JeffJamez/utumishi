@@ -15,6 +15,9 @@ requireRole(ROLE_OFFICER);
 
 $currentUser = getCurrentUser();
 $officer = new Officer($currentUser['id']);
+$db = Database::getInstance();
+$badgeData = $db->fetchOne("SELECT badge_number FROM officers WHERE user_id = ?", [$currentUser['id']]);
+$badgeNumber = $badgeData ? $badgeData['badge_number'] : 'N/A';
 
 $caseManager = new CaseManager();
 
@@ -64,9 +67,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
             <div class="mb-4">
-                <h1>Officer Dashboard</h1>
+                <h2>Officer Dashboard</h2>
                 <p class="text-muted">
-                    Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?>. 
+                    Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?> - Badge No <?php echo htmlspecialchars($badgeNumber); ?>. 
                     Station: <?php echo htmlspecialchars($officer->station_name); ?>
                 </p>
             </div>
@@ -76,56 +79,47 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             if ($workloadStatus['level'] >= 3): 
             ?>
                 <div class="alert alert-warning">
-                    <strong>⚠️ High Workload Alert:</strong> 
+                    <strong> High Workload Alert:</strong> 
                     You currently have <?php echo $dashboardData['workload']['current_case_load'] ?? 0; ?> active cases assigned. 
                     Consider prioritizing urgent cases and requesting assistance if needed.
                 </div>
             <?php endif; ?>
 
-            <div class="kpi-grid">
-                <div class="kpi-card">
-                    <div class="kpi-value"><?php echo $dashboardData['workload']['current_case_load'] ?? 0; ?></div>
-                    <div class="kpi-label">Active Cases</div>
-                    <div class="kpi-change">
-                        Workload: 
-                        <span class="<?php echo $workloadStatus['level'] >= 3 ? 'negative' : 'positive'; ?>">
-                            <?php echo $workloadStatus['status']; ?>
-                        </span>
-                    </div>
-                </div>
+             <div class="kpi-grid">
+                 <div class="kpi-card">
+                     <div class="kpi-value"><?php echo $dashboardData['total_assigned'] ?? 0; ?></div>
+                     <div class="kpi-label">Total Cases Assigned</div>
+                     <div class="kpi-change">
+                         Cases currently assigned to you
+                     </div>
+                 </div>
 
-                <div class="kpi-card">
-                    <div class="kpi-value"><?php echo count($urgentCases); ?></div>
-                    <div class="kpi-label">Urgent Cases</div>
-                    <div class="kpi-change">
-                        <?php if (count($urgentCases) > 0): ?>
-                            <span class="negative">Requires immediate attention</span>
-                        <?php else: ?>
-                            <span class="positive">No urgent cases</span>
-                        <?php endif; ?>
-                    </div>
-                </div>
+                 <div class="kpi-card">
+                     <div class="kpi-value"><?php echo $dashboardData['total_recorded'] ?? 0; ?></div>
+                     <div class="kpi-label">Total Cases Recorded</div>
+                     <div class="kpi-change">
+                         Cases you have recorded in the system
+                     </div>
+                 </div>
 
-                <div class="kpi-card">
-                    <div class="kpi-value"><?php echo $dashboardData['performance']['total_cases_resolved'] ?? 0; ?></div>
-                    <div class="kpi-label">Total Cases Resolved</div>
-                    <div class="kpi-change">
-                        Resolution Rate: 
-                        <span class="positive"><?php echo $dashboardData['performance']['resolution_rate'] ?? 0; ?>%</span>
-                    </div>
-                </div>
+                 <div class="kpi-card">
+                     <div class="kpi-value"><?php echo $dashboardData['total_closed'] ?? 0; ?></div>
+                     <div class="kpi-label">Total Cases Closed</div>
+                     <div class="kpi-change">
+                         Cases you have successfully closed
+                     </div>
+                 </div>
 
-                <div class="kpi-card">
-                    <div class="kpi-value"><?php echo round($dashboardData['performance']['avg_resolution_time_hours'] ?? 0, 1); ?>h</div>
-                    <div class="kpi-label">Avg Resolution Time</div>
-                    <div class="kpi-change">
-                        On-time Rate: 
-                        <span class="positive"><?php echo $dashboardData['performance']['on_time_rate'] ?? 0; ?>%</span>
-                    </div>
-                </div>
-            </div>
+                 <div class="kpi-card">
+                     <div class="kpi-value"><?php echo $dashboardData['total_open'] ?? 0; ?></div>
+                     <div class="kpi-label">Total Cases Open</div>
+                     <div class="kpi-change">
+                         Cases currently open/under investigation
+                     </div>
+                 </div>
+             </div>
 
-            <div class="d-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+           <!--  <div class="d-grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
 
                 <div class="card">
                     <div class="card-header">
@@ -147,9 +141,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <?php if ($case['attention_level'] === 'overdue'): ?>
 
                                             <?php elseif ($case['attention_level'] === 'due_soon'): ?>
-                                                <span class="text-warning">⏰ Due soon</span>
+                                                <span class="text-warning">Due soon</span>
                                             <?php elseif ($case['attention_level'] === 'high_priority'): ?>
-                                                <span class="text-warning">🚨 High Priority</span>
+                                                <span class="text-warning">High Priority</span>
                                             <?php endif; ?>
                                             <br>
                                             <a href="<?php echo BASE_URL; ?>/pages/officer/update_case.php?id=<?php echo $case['id']; ?>" 
@@ -168,7 +162,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <?php endif; ?>
                         <?php else: ?>
                             <div class="text-center p-4">
-                                <div style="font-size: 3rem;">✅</div>
+                                <div style="font-size: 3rem;"></div>
                                 <p class="text-muted">All cases are up to date!</p>
                                 <p><small>Great job staying on top of your caseload.</small></p>
                             </div>
@@ -216,7 +210,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <h3>My Active Cases</h3>
                     <div>
                         <a href="<?php echo BASE_URL; ?>/pages/officer/record_case.php" class="btn btn-sm btn-success">
-                            ➕ Record New Case
+                            Record New Case
                         </a>
                     </div>
                 </div>
@@ -283,7 +277,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <?php endif; ?>
                     <?php else: ?>
                         <div class="text-center p-4">
-                            <div style="font-size: 3rem;">📋</div>
+                            <div style="font-size: 3rem;"></div>
                             <p class="text-muted">No active cases assigned.</p>
                             <p><small>New cases will appear here when assigned to you.</small></p>
                             <a href="<?php echo BASE_URL; ?>/pages/officer/record_case.php" class="btn btn-primary">
@@ -301,20 +295,20 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div class="card-body">
                     <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                         <a href="<?php echo BASE_URL; ?>/pages/officer/record_case.php" class="btn btn-outline btn-success btn-block">
-                            ➕ Record New Case
+                             Record New Case
                         </a>
                         <a href="<?php echo BASE_URL; ?>/pages/officer/my_cases.php?status=in_progress" class="btn btn-outline btn-warning btn-block">
-                            ⚠️ Cases In Progress
+                            Cases In Progress
                         </a>
                         <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php" class="btn btn-outline btn-info btn-block">
-                            📎 Manage Evidence
+                             Manage Evidence
                         </a>
                         <a href="<?php echo BASE_URL; ?>/pages/officer/profile.php" class="btn btn-outline btn-secondary btn-block">
-                            👤 Update Profile
+                             Update Profile
                         </a>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </main>
     </div>
 
@@ -323,6 +317,24 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
     <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
     <script>
+
+         document.addEventListener('DOMContentLoaded', function() {
+            const dropdownToggle = document.querySelector('.dropdown-toggle');
+            const dropdownMenu = document.querySelector('.dropdown-menu');
+
+            if (dropdownToggle && dropdownMenu) {
+                dropdownToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+                });
+
+                document.addEventListener('click', function(e) {
+                    if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                        dropdownMenu.style.display = 'none';
+                    }
+                });
+            }
+        });
 
         function checkForUpdates() {
             fetch('<?php echo BASE_URL; ?>/api/officer_updates.php')
@@ -490,12 +502,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .alert-overdue {
-            border-left: 4px solid var(--danger-red);
+            /* border-left: 4px solid var(--danger-red); */
             background-color: rgba(220, 53, 69, 0.1);
         }
 
         .alert-due-soon {
-            border-left: 4px solid var(--warning-orange);
+            /* border-left: 4px solid var(--warning-orange); */
             background-color: rgba(255, 193, 7, 0.1);
         }
 

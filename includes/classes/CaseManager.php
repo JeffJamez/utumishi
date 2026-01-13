@@ -15,7 +15,8 @@ class CaseManager {
         try {
             $this->db->beginTransaction();
 
-            $required = ['title', 'description', 'category', 'location_county', 'location_constituency', 
+            $required = ['title', 'description', 'category', 'location_county', 'location_constituency',
+                        'reporter_county', 'reporter_constituency',
                         'reported_by_citizen_id', 'recorded_by_officer_id', 'station_id'];
 
             foreach ($required as $field) {
@@ -30,10 +31,14 @@ class CaseManager {
             $caseData = [
                 'ob_number' => $obNumber,
                 'title' => sanitizeText($data['title']),
-                'description' => sanitizeDescription($data['description']),
+                'description' => sanitizeText($data['description']),
                 'category' => sanitizeText($data['category']),
                 'location_county' => sanitizeText($data['location_county']),
                 'location_constituency' => sanitizeText($data['location_constituency']),
+                'incident_local_area' => sanitizeText($data['incident_local_area'] ?? ''),
+                'reporter_county' => sanitizeText($data['reporter_county']),
+                'reporter_constituency' => sanitizeText($data['reporter_constituency']),
+                'reporter_local_area' => sanitizeText($data['reporter_local_area'] ?? ''),
                 'reported_by_citizen_id' => (int)$data['reported_by_citizen_id'],
                 'recorded_by_officer_id' => (int)$data['recorded_by_officer_id'],
                 'station_id' => (int)$data['station_id'],
@@ -53,8 +58,8 @@ class CaseManager {
             if ($assignedOfficer) {
                 $this->assignCase($caseId, $assignedOfficer['id']);
 
-                $this->addCaseUpdate($caseId, $data['recorded_by_officer_id'], 
-                    "Case automatically assigned to Officer {$assignedOfficer['badge_number']}", 
+                $this->addCaseUpdate($caseId, $data['recorded_by_officer_id'],
+                    "Case automatically assigned to Officer {$assignedOfficer['badge_number']} - {$assignedOfficer['name']}",
                     CASE_REPORTED, CASE_ASSIGNED);
             }
 
@@ -101,7 +106,7 @@ class CaseManager {
                         $statusChanged = true;
                     } else {
                         $updateData[$field] = $field === 'description' ? 
-                            sanitizeDescription($data[$field]) : 
+                            sanitizeText($data[$field]) : 
                             sanitizeText($data[$field]);
                     }
                 }
@@ -214,8 +219,8 @@ class CaseManager {
     }
 
     $sql = "
-        SELECT c.*, 
-               u1.name as reporter_name, u1.phone as reporter_phone,
+        SELECT c.*,
+               u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone,
                u2.name as recorded_by_name,
                u3.name as assigned_officer_name, o.badge_number,
                s.name as station_name, s.county as station_county
@@ -295,10 +300,10 @@ class CaseManager {
                 JOIN officers o ON c.assigned_officer_id = o.id
                 LEFT JOIN users u ON c.reported_by_citizen_id = u.id  
                 JOIN stations s ON c.station_id = s.id
-                WHERE $whereClause
-                ORDER BY c.created_at ASC";
+                 WHERE $whereClause
+                 ORDER BY c.created_at ASC";
 
-    return $this->db->fetchAll($sql, $params);
+     return $this->db->fetchAll($sql, $params);
 }
 
     public function getCasesForStation($stationId, $dateFrom = null, $dateTo = null) {
@@ -344,7 +349,7 @@ class CaseManager {
             $updateData = [
                 'case_id' => $caseId,
                 'officer_id' => $officerId,
-                'update_text' => sanitizeDescription($updateText),
+                'update_text' => sanitizeText($updateText),
                 'status_before' => $statusBefore,
                 'status_after' => $statusAfter,
                 'created_at' => date('Y-m-d H:i:s')
