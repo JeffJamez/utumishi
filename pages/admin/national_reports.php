@@ -82,88 +82,195 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
             <!-- Report Generation Cards -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3>Available Reports</h3>
+            <style>
+                .reports-container {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 20px;
+                    justify-content: center;
+                    padding: 20px;
+                }
+
+                .report-card {
+                    flex: 1 1 320px;
+                    max-width: 380px;
+                    border: 1px solid #ddd;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                    background: white;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+
+                .report-card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                }
+
+                .report-header {
+                    background: linear-gradient(135deg, #007bff, #0056b3);
+                    color: white;
+                    padding: 15px;
+                    text-align: center;
+                }
+
+                .report-body {
+                    padding: 20px;
+                    text-align: center;
+                }
+
+                .report-icon {
+                    font-size: 48px;
+                    margin-bottom: 10px;
+                    opacity: 0.9;
+                }
+
+                .report-title {
+                    font-size: 18px;
+                    font-weight: bold;
+                    margin-bottom: 8px;
+                }
+
+                .report-description {
+                    color: #666;
+                    margin-bottom: 15px;
+                    line-height: 1.4;
+                    font-size: 14px;
+                }
+
+                .report-form {
+                    margin-top: 15px;
+                }
+
+                .report-form select {
+                    width: 100%;
+                    padding: 8px;
+                    margin-bottom: 10px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                    font-size: 14px;
+                }
+
+                .report-form label {
+                    display: block;
+                    margin-bottom: 5px;
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                .btn-report {
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    width: 100%;
+                    transition: background 0.3s ease;
+                }
+
+                .btn-report:hover {
+                    background: #218838;
+                }
+
+                @media (max-width: 768px) {
+                    .reports-container {
+                        padding: 10px;
+                        gap: 15px;
+                    }
+
+                    .report-card {
+                        flex: 1 1 100%;
+                        max-width: none;
+                    }
+                }
+            </style>
+
+            <div class="reports-container">
+                <!-- National Crime Report Card -->
+                <div class="report-card">
+                    <div class="report-header">
+                        <div class="report-icon">📊</div>
+                        <div class="report-title">National Crime Report</div>
+                    </div>
+                    <div class="report-body">
+                        <div class="report-description">Comprehensive analysis of crime statistics across all counties and stations</div>
+                        <div class="report-form">
+                            <form method="GET">
+                                <input type="hidden" name="type" value="national">
+                                <label>Time Period</label>
+                                <select name="timeframe">
+                                    <option value="7">Last 7 days</option>
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                    <option value="365">Last year</option>
+                                </select>
+                                <button type="submit" class="btn-report">Generate Report</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                        
-                        <!-- National Crime Report -->
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <div style="font-size: 3rem;">📊</div>
-                                <h5>National Crime Report</h5>
-                                <p class="text-muted">Comprehensive analysis of crime statistics across all counties and stations</p>
-                                <form method="GET" class="mb-3">
-                                    <input type="hidden" name="type" value="national">
-                                    <div class="mb-2">
-                                        <label for="timeframe_national" class="form-label">Time Period</label>
-                                        <select name="timeframe" id="timeframe_national" class="form-control">
-                                            <option value="7">Last 7 days</option>
-                                            <option value="30" selected>Last 30 days</option>
-                                            <option value="90">Last 90 days</option>
-                                            <option value="365">Last year</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Generate Report</button>
-                                </form>
-                            </div>
+
+                <!-- Resource Allocation Report Card -->
+                <div class="report-card">
+                    <div class="report-header">
+                        <div class="report-icon">📋</div>
+                        <div class="report-title">Resource Allocation</div>
+                    </div>
+                    <div class="report-body">
+                        <div class="report-description">Analysis of resource distribution and station performance across stations</div>
+                        <div class="report-form">
+                            <form method="GET">
+                                <input type="hidden" name="type" value="resource">
+                                <button type="submit" class="btn-report">Generate Report</button>
+                            </form>
                         </div>
-                        
-                        <!-- Resource Allocation Report -->
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <div style="font-size: 3rem;">💰</div>
-                                <h5>Resource Allocation Report</h5>
-                                <p class="text-muted">Analysis of resource distribution and station performance across stations</p>
-                                <form method="GET" class="mb-3">
-                                    <input type="hidden" name="type" value="resource">
-                                    <button type="submit" class="btn btn-primary">Generate Report</button>
-                                </form>
-                            </div>
+                    </div>
+                </div>
+
+                <!-- Officer Performance Report Card -->
+                <div class="report-card">
+                    <div class="report-header">
+                        <div class="report-icon">👮</div>
+                        <div class="report-title">Officer Performance</div>
+                    </div>
+                    <div class="report-body">
+                        <div class="report-description">National overview of officer workload and performance metrics</div>
+                        <div class="report-form">
+                            <form method="GET">
+                                <input type="hidden" name="type" value="officer_performance">
+                                <label>Time Period</label>
+                                <select name="timeframe">
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="90">Last 90 days</option>
+                                    <option value="365">Last year</option>
+                                </select>
+                                <button type="submit" class="btn-report">Generate Report</button>
+                            </form>
                         </div>
-                        
-                        <!-- Officer Performance Report -->
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <div style="font-size: 3rem;">👮</div>
-                                <h5>Officer Performance Report</h5>
-                                <p class="text-muted">National overview of officer workload and performance metrics</p>
-                                <form method="GET" class="mb-3">
-                                    <input type="hidden" name="type" value="officer_performance">
-                                    <div class="mb-2">
-                                        <label for="timeframe_officer" class="form-label">Time Period</label>
-                                        <select name="timeframe" id="timeframe_officer" class="form-control">
-                                            <option value="30" selected>Last 30 days</option>
-                                            <option value="90">Last 90 days</option>
-                                            <option value="365">Last year</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Generate Report</button>
-                                </form>
-                            </div>
-                        </div>
-                        
-                        <!-- Crime Hotspots Report -->
-                        <div class="card">
-                            <div class="card-body text-center">
-                                <div style="font-size: 3rem;">🔥</div>
-                                <h5>Crime Hotspots Report</h5>
-                                <p class="text-muted">Identification of high-crime areas requiring increased attention</p>
-                                <form method="GET" class="mb-3">
-                                    <input type="hidden" name="type" value="hotspots">
-                                    <div class="mb-2">
-                                        <label for="timeframe_hotspots" class="form-label">Time Period</label>
-                                        <select name="timeframe" id="timeframe_hotspots" class="form-control">
-                                            <option value="30" selected>Last 30 days</option>
-                                            <option value="60">Last 60 days</option>
-                                            <option value="90">Last 90 days</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Generate Report</button>
-                                </form>
-                            </div>
+                    </div>
+                </div>
+
+                <!-- Crime Hotspots Report Card -->
+                <div class="report-card">
+                    <div class="report-header">
+                        <div class="report-icon">🔥</div>
+                        <div class="report-title">Crime Hotspots</div>
+                    </div>
+                    <div class="report-body">
+                        <div class="report-description">Identification of high-crime areas requiring increased attention</div>
+                        <div class="report-form">
+                            <form method="GET">
+                                <input type="hidden" name="type" value="hotspots">
+                                <label>Time Period</label>
+                                <select name="timeframe">
+                                    <option value="30" selected>Last 30 days</option>
+                                    <option value="60">Last 60 days</option>
+                                    <option value="90">Last 90 days</option>
+                                </select>
+                                <button type="submit" class="btn-report">Generate Report</button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -406,14 +513,14 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <tr>
                                                 <td>
                                                     <strong><?php echo $rank; ?></strong>
-                                                    <?php if ($rank <= 3): ?>
-                                                        <?php echo $rank === 1 ? '🥇' : ($rank === 2 ? '🥈' : '🥉'); ?>
-                                                    <?php endif; ?>
+                                                     <?php if ($rank <= 3): ?>
+                                                         #<?php echo $rank; ?>
+                                                     <?php endif; ?>
                                                 </td>
-                                                <td>
-                                                    <strong><?php echo htmlspecialchars($hotspot['location_constituency']); ?></strong><br>
-                                                    <small class="text-muted"><?php echo htmlspecialchars($hotspot['location_county']); ?> County</small>
-                                                </td>
+                                                 <td>
+                                                      <strong><?php echo htmlspecialchars($hotspot['incident_location_constituency']); ?><?php if ($hotspot['incident_local_area']): ?>, <?php echo htmlspecialchars($hotspot['incident_local_area']); ?><?php endif; ?></strong><br>
+                                                      <small class="text-muted"><?php echo htmlspecialchars($hotspot['incident_location_county']); ?> County</small>
+                                                 </td>
                                                 <td><?php echo htmlspecialchars($hotspot['category']); ?></td>
                                                 <td><?php echo $hotspot['case_count']; ?></td>
                                                 <td><?php echo $casesPerMonth; ?></td>

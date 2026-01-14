@@ -12,28 +12,30 @@ class CrimeAnalyzer {
     }
 
     public function findHotspots($timeframe = 90, $minCases = 10) {
-    $sql = "SELECT 
-                location_county,
-                location_constituency, 
-                category,
-                COUNT(*) as case_count,
-                COUNT(*) / :timeframe1 * 30 as cases_per_month,
-                ROUND(COUNT(*) * 100.0 / (
-                    SELECT COUNT(*) FROM cases 
-                    WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe2 DAY)
-                ), 2) as percentage_of_total
-            FROM cases 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe3 DAY)
-            GROUP BY location_county, location_constituency, category
-            HAVING case_count >= :min_cases
-            ORDER BY case_count DESC, cases_per_month DESC";
+        $sql = "SELECT
+                     incident_location_county,
+                     incident_location_constituency,
+                     incident_local_area,
+                     category,
+                     COUNT(*) as case_count,
+                     COUNT(*) / :timeframe1 * 30 as cases_per_month,
+                     ROUND(COUNT(*) * 100.0 / (
+                         SELECT COUNT(*) FROM cases
+                         WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe2 DAY)
+                     ), 2) as percentage_of_total
+                 FROM cases
+                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe3 DAY)
+                 GROUP BY incident_location_county, incident_location_constituency, LOWER(incident_local_area), category
+                 HAVING case_count >= :min_cases
+                 ORDER BY case_count DESC, cases_per_month DESC
+                 LIMIT 100";
 
-    $hotspots = $this->db->fetchAll($sql, [
-        'timeframe1' => $timeframe,
-        'timeframe2' => $timeframe, 
-        'timeframe3' => $timeframe,
-        'min_cases' => $minCases
-    ]);
+        $hotspots = $this->db->fetchAll($sql, [
+            'timeframe1' => $timeframe,
+            'timeframe2' => $timeframe,
+            'timeframe3' => $timeframe,
+            'min_cases' => $minCases
+        ]);
 
     foreach ($hotspots as &$hotspot) {
         $hotspot['severity'] = $this->classifyHotspotSeverity($hotspot['cases_per_month']);
@@ -44,8 +46,8 @@ class CrimeAnalyzer {
 }
 
     public function analyzePeakTimes($category = null, $location = null, $days = 30) {
-        $whereConditions = ["created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)"];
-        $params = ['days' => $days];
+        $whereConditions = ["created_at >= DATE_SUB(NOW(), INTERVAL :interval_days DAY)"];
+        $params = ['interval_days' => $days, 'days_avg' => $days];
 
         if ($category) {
             $whereConditions[] = "category = :category";
@@ -53,19 +55,21 @@ class CrimeAnalyzer {
         }
 
         if ($location) {
-            $whereConditions[] = "(location_county = :location OR location_constituency = :location)";
-            $params['location'] = $location;
+            $whereConditions[] = "(incident_location_county = :location_county OR incident_location_constituency = :location_constituency OR incident_local_area = :location_area)";
+            $params['location_county'] = $location;
+            $params['location_constituency'] = $location;
+            $params['location_area'] = $location;
         }
 
         $whereClause = implode(' AND ', $whereConditions);
 
-        $sql = "SELECT 
+        $sql = "SELECT
                     HOUR(created_at) as hour_of_day,
                     DAYOFWEEK(created_at) as day_of_week,
                     COUNT(*) as case_count,
                     category,
-                    COUNT(*) / :days as daily_average
-                FROM cases 
+                    COUNT(*) / :days_avg as daily_average
+                FROM cases
                 WHERE $whereClause
                 GROUP BY HOUR(created_at), DAYOFWEEK(created_at), category
                 ORDER BY case_count DESC";
@@ -102,8 +106,8 @@ class CrimeAnalyzer {
             $station = $this->db->fetchOne("SELECT county, constituency FROM stations WHERE id = :id", ['id' => $stationId]);
             if ($station) {
                 $hotspots = array_filter($hotspots, function($hotspot) use ($station) {
-                    return $hotspot['location_county'] === $station['county'] || 
-                           $hotspot['location_constituency'] === $station['constituency'];
+                    return $hotspot['incident_location_county'] === $station['county'] ||
+                           $hotspot['incident_location_constituency'] === $station['constituency'];
                 });
             }
         }
@@ -113,7 +117,7 @@ class CrimeAnalyzer {
         foreach ($hotspots as $hotspot) {
             if ($hotspot['severity'] === 'high' || $hotspot['severity'] === 'critical') {
                 $recommendation = [
-                    'area' => $hotspot['location_constituency'] . ', ' . $hotspot['location_county'],
+                    'area' => ($hotspot['incident_local_area'] ? $hotspot['incident_local_area'] . ', ' : '') . $hotspot['incident_location_constituency'] . ', ' . $hotspot['incident_location_county'],
                     'crime_type' => $hotspot['category'],
                     'case_count' => $hotspot['case_count'],
                     'cases_per_month' => round($hotspot['cases_per_month'], 1),
@@ -122,7 +126,7 @@ class CrimeAnalyzer {
                     'priority' => $this->calculatePriority($hotspot)
                 ];
 
-                $peakTimes = $this->analyzePeakTimes($hotspot['category'], $hotspot['location_constituency'], $timeframe);
+                $peakTimes = $this->analyzePeakTimes($hotspot['category'], $hotspot['incident_location_constituency'], $timeframe);
                 $recommendation['peak_hours'] = $this->formatPeakHours($peakTimes['peak_hours']);
 
                 $recommendations[] = $recommendation;
@@ -284,13 +288,14 @@ class CrimeAnalyzer {
     }
 
     private function detectCrimeSpikes($stationId) {
-    $sql = "SELECT 
-                location_constituency as area,
+    $sql = "SELECT
+                CONCAT(COALESCE(incident_local_area, ''), ', ', incident_location_constituency) as area,
                 category,
                 COUNT(*) as recent_cases,
-                (SELECT COUNT(*) FROM cases c2 
-                 WHERE c2.location_constituency = c1.location_constituency 
-                 AND c2.category = c1.category
+                 (SELECT COUNT(*) FROM cases c2
+                  WHERE c2.incident_location_constituency = c1.incident_location_constituency
+                  AND c2.incident_local_area <=> c1.incident_local_area
+                  AND c2.category = c1.category
                  AND c2.created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
                  AND c2.created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)) as previous_cases
             FROM cases c1
@@ -302,10 +307,11 @@ class CrimeAnalyzer {
         $params['station_id'] = $stationId;
     }
 
-    $sql .= " GROUP BY location_constituency, category
-              HAVING COUNT(*) >= 3 AND previous_cases > 0
-              AND (COUNT(*) / previous_cases) >= 1.5
-              ORDER BY (COUNT(*) / previous_cases) DESC";
+     $sql .= " GROUP BY incident_location_constituency, LOWER(incident_local_area), category
+               HAVING COUNT(*) >= 3 AND previous_cases > 0
+               AND (COUNT(*) / previous_cases) >= 1.5
+               ORDER BY (COUNT(*) / previous_cases) DESC
+               LIMIT 20";
 
     $spikes = $this->db->fetchAll($sql, $params);
 
@@ -335,8 +341,9 @@ class CrimeAnalyzer {
         }
 
         $sql .= " GROUP BY s.id, s.name
-                  HAVING cases_per_officer > 12 OR (officer_count > 0 AND case_count > officer_count * 10)
-                  ORDER BY cases_per_officer DESC";
+                   HAVING cases_per_officer > 12 OR (officer_count > 0 AND case_count > officer_count * 10)
+                   ORDER BY cases_per_officer DESC
+                   LIMIT 20";
 
         return $this->db->fetchAll($sql, $params);
     }
@@ -356,10 +363,11 @@ class CrimeAnalyzer {
         $params['station_id'] = $stationId;
     }
 
-    $sql .= " GROUP BY category
-              HAVING AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) > AVG(estimated_resolution_hours) * 1.2 
-              AND COUNT(*) >= 5
-              ORDER BY (AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) / AVG(estimated_resolution_hours)) DESC";
+     $sql .= " GROUP BY category
+               HAVING AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) > AVG(estimated_resolution_hours) * 1.2
+               AND COUNT(*) >= 5
+               ORDER BY (AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) / AVG(estimated_resolution_hours)) DESC
+               LIMIT 10";
 
     $delays = $this->db->fetchAll($sql, $params);
 
@@ -394,37 +402,38 @@ class CrimeAnalyzer {
     }
 
     public function getCrimeDensityMap($filters = []) {
-    $timeframe = $filters['timeframe'] ?? 30;
+     $timeframe = $filters['timeframe'] ?? 30;
 
-    $whereConditions = ["created_at >= DATE_SUB(NOW(), INTERVAL :timeframe1 DAY)"];
-    $params = ['timeframe1' => $timeframe, 'timeframe2' => $timeframe];
+     $whereConditions = ["created_at >= DATE_SUB(NOW(), INTERVAL :timeframe1 DAY)"];
+     $params = ['timeframe1' => $timeframe, 'timeframe2' => $timeframe];
 
-    if (!empty($filters['category'])) {
-        $whereConditions[] = "category = :category";
-        $params['category'] = $filters['category'];
-    }
+     if (!empty($filters['category'])) {
+         $whereConditions[] = "category = :category";
+         $params['category'] = $filters['category'];
+     }
 
-    if (!empty($filters['county'])) {
-        $whereConditions[] = "location_county = :county";
-        $params['county'] = $filters['county'];
-    }
+     if (!empty($filters['county'])) {
+         $whereConditions[] = "incident_location_county = :county";
+         $params['county'] = $filters['county'];
+     }
 
-    $whereClause = implode(' AND ', $whereConditions);
+     $whereClause = implode(' AND ', $whereConditions);
 
-    // FIX: Use unique parameter names for each timeframe usage
-    $sql = "SELECT 
-                location_county as county,
-                location_constituency as constituency,
-                category,
-                COUNT(*) as case_count,
-                COUNT(*) / :timeframe2 * 30 as cases_per_month,
-                ROUND(AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))), 1) as avg_resolution_hours
-            FROM cases 
-            WHERE $whereClause
-            GROUP BY location_county, location_constituency, category
-            ORDER BY case_count DESC";
+     // FIX: Use unique parameter names for each timeframe usage
+     $sql = "SELECT
+                 incident_location_county as county,
+                 incident_location_constituency as constituency,
+                 incident_local_area,
+                 category,
+                 COUNT(*) as case_count,
+                 COUNT(*) / :timeframe2 * 30 as cases_per_month
+             FROM cases
+             WHERE $whereClause
+              GROUP BY incident_location_county, incident_location_constituency, LOWER(incident_local_area), category
+             ORDER BY case_count DESC
+             LIMIT 200";
 
-    $densityData = $this->db->fetchAll($sql, $params);
+     $densityData = $this->db->fetchAll($sql, $params);
 
     foreach ($densityData as &$area) {
         $area['density_level'] = $this->classifyDensityLevel($area['cases_per_month']);
@@ -452,10 +461,23 @@ class CrimeAnalyzer {
         ][$level] ?? '#32CD32';
     }
 
-
-
+    public function getHotspotCaseId($county, $constituency, $category) {
+        return $this->db->fetchOne("
+            SELECT id FROM cases
+            WHERE incident_location_county = :county
+            AND incident_location_constituency = :constituency
+            AND category = :category
+            ORDER BY created_at DESC
+            LIMIT 1
+        ", [
+            'county' => $county,
+            'constituency' => $constituency,
+            'category' => $category
+        ])['id'] ?? null;
+    }
 
 }
+
 
 if (!function_exists('array_sort')) {
     function array_sort($array, $callback) {

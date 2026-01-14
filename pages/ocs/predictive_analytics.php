@@ -51,9 +51,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <h3>Prediction Settings</h3>
                 </div>
                 <div class="card-body">
-                    <form method="GET" class="d-flex gap-3 align-items-end">
-                        <div>
-                            <label for="days" class="form-label">Forecast Period</label>
+                    <form method="GET" class="d-flex gap-3 align-items-end" >
+                        <div style="display: flex;">
+                            <label for="days" class="form-label" style="width: 300px; margin-top: 10px;">Forecast Period</label>
                             <select name="days" id="days" class="form-control" onchange="this.form.submit()">
                                 <option value="7" <?php echo $forecastDays == 7 ? 'selected' : ''; ?>>Next 7 days</option>
                                 <option value="14" <?php echo $forecastDays == 14 ? 'selected' : ''; ?>>Next 14 days</option>
@@ -61,7 +61,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </select>
                         </div>
                         <div>
-                            <span class="badge status-info">Last updated: <?php echo date('Y-m-d H:i'); ?></span>
+                            <span class="badge status-info" style="margin-top: 10px;">Last updated: <?php echo date('Y-m-d H:i'); ?></span>
                         </div>
                     </form>
                 </div>
@@ -104,20 +104,20 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <h3>Crime Volume Forecast</h3>
                     <span class="text-muted">Next <?php echo $forecastDays; ?> days prediction</span>
                 </div>
+                <p style="font-size: 0.9em; margin: 0 0 10px 0; background-color: #f8f9fa; padding: 8px; color: #495057;">*Predictions calculated from historical averages (by day of week), recent trends (30-day case comparison), and seasonal adjustments.<br>Predicted cases = avg × trend × seasonal. Confidence based on data points (more data = higher confidence).<br>Risk levels: High (>15 cases), Medium (10-15), Low (5-10), Minimal (<5).</p>
                 <div class="card-body">
                     <?php if (!empty($predictions['crime_forecast'])): ?>
                         <div class="table-responsive">
                             <table class="table">
                                 <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Predicted Cases</th>
-                                        <th>Risk Level</th>
-                                        <th>Confidence</th>
-                                        <th>Peak Hours</th>
-                                        <th>Top Category</th>
-                                    </tr>
-                                </thead>
+                                     <tr>
+                                         <th>Date</th>
+                                         <th>Predicted Cases</th>
+                                         <th>Risk Level</th>
+                                         <th>Confidence</th>
+                                         <th>Peak Hours</th>
+                                     </tr>
+                                 </thead>
                                 <tbody>
                                     <?php foreach ($predictions['crime_forecast'] as $forecast): ?>
                                         <tr class="<?php echo $forecast['risk_level'] === 'high' ? 'table-warning' : ''; ?>">
@@ -125,29 +125,31 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 <strong><?php echo date('M d', strtotime($forecast['date'])); ?></strong><br>
                                                 <small><?php echo $forecast['day_name']; ?></small>
                                             </td>
-                                            <td>
-                                                <span class="h5"><?php echo $forecast['predicted_cases']; ?></span>
-                                            </td>
+                                             <td>
+                                                 <?php if (is_array($forecast['predicted_cases']) && !empty($forecast['predicted_cases'])): ?>
+                                                     <?php foreach ($forecast['predicted_cases'] as $index => $case): ?>
+                                                         <?php echo htmlspecialchars($case['category']); ?> (<?php echo htmlspecialchars($case['severity']); ?>)
+                                                         <?php if ($index < count($forecast['predicted_cases']) - 1) echo ', '; ?>
+                                                     <?php endforeach; ?>
+                                                 <?php elseif (is_array($forecast['predicted_cases'])): ?>
+                                                     No specific predictions
+                                                 <?php else: ?>
+                                                     <span class="h5"><?php echo $forecast['predicted_cases']; ?></span>
+                                                 <?php endif; ?>
+                                             </td>
                                             <td>
                                                 <span class="badge status-<?php echo $forecast['risk_level'] === 'high' ? 'danger' : ($forecast['risk_level'] === 'medium' ? 'warning' : 'success'); ?>">
                                                     <?php echo ucfirst($forecast['risk_level']); ?>
                                                 </span>
                                             </td>
                                             <td><?php echo $forecast['confidence_level']; ?>%</td>
-                                            <td>
-                                                <?php if (!empty($forecast['peak_hours'])): ?>
-                                                    <?php echo implode(', ', array_slice($forecast['peak_hours'], 0, 2)); ?>
-                                                <?php else: ?>
-                                                    <span class="text-muted">None</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <?php if (!empty($forecast['category_breakdown'])): ?>
-                                                    <?php echo htmlspecialchars(array_keys($forecast['category_breakdown'])[0] ?? 'Mixed'); ?>
-                                                <?php else: ?>
-                                                    <span class="text-muted">Mixed</span>
-                                                <?php endif; ?>
-                                            </td>
+                                              <td>
+                                                  <?php if (!empty($forecast['peak_hours'])): ?>
+                                                      <?php echo implode(', ', array_map(function($h) { return sprintf('%02d00', $h); }, array_slice($forecast['peak_hours'], 0, 2))); ?>
+                                                  <?php else: ?>
+                                                      <span class="text-muted">None</span>
+                                                  <?php endif; ?>
+                                              </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -206,61 +208,14 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             </div>
 
-            <!-- Resource Predictions -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h3>Resource Demand Forecast</h3>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($predictions['resource_predictions'])): ?>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Expected Cases</th>
-                                        <th>Officers Needed</th>
-                                        <th>Available</th>
-                                        <th>Gap</th>
-                                        <th>Workload Level</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($predictions['resource_predictions'] as $resource): ?>
-                                        <tr class="<?php echo $resource['officer_gap'] > 0 ? 'table-warning' : ''; ?>">
-                                            <td>
-                                                <strong><?php echo date('M d', strtotime($resource['date'])); ?></strong><br>
-                                                <small><?php echo $resource['day_name']; ?></small>
-                                            </td>
-                                            <td><?php echo $resource['expected_cases']; ?></td>
-                                            <td><?php echo $resource['required_officers']; ?></td>
-                                            <td><?php echo $resource['available_officers']; ?></td>
-                                            <td>
-                                                <?php if ($resource['officer_gap'] > 0): ?>
-                                                    <span class="text-danger">-<?php echo $resource['officer_gap']; ?></span>
-                                                <?php else: ?>
-                                                    <span class="text-success">✓</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="badge status-<?php echo $resource['workload_level'] === 'high' ? 'danger' : ($resource['workload_level'] === 'medium' ? 'warning' : 'success'); ?>">
-                                                    <?php echo ucfirst($resource['workload_level']); ?>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+
 
             <!-- Patrol Optimization -->
-            <div class="card">
+             <div class="card">
                 <div class="card-header">
                     <h3>  Optimized Patrol Recommendations</h3>
                 </div>
+                <p style="font-size: 0.9em; margin: 0 0 10px 0; background-color: #f8f9fa; padding: 8px; color: #495057;">*Risk score = (cases in constituency over last 30 days) × 10 (scaled for thresholds).<br>Officer count:<br>- High risk (>80 score) = 3 officers<br>- Medium risk (>60 score) = 2 officers<br>- Low risk (≤60 score) = 1 officer</p>
                 <div class="card-body">
                     <?php if (!empty($predictions['patrol_optimization'])): ?>
                         <div class="table-responsive">
@@ -312,30 +267,23 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         </main>
     </div>
     
-    <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
-    <script>
-        // Auto-refresh predictions every 30 minutes
-        setInterval(function() {
-            if (!document.hidden) {
-                location.reload();
-            }
-        }, 1800000);
-        
-        // Highlight high-risk days
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('.table-warning').forEach(row => {
-                row.style.borderLeft = '4px solid var(--warning-orange)';
-            });
-            
-            document.querySelectorAll('[data-confidence]').forEach(element => {
-                element.title = `Prediction confidence: ${element.dataset.confidence}%`;
-            });
-        });
-        
-        function showPredictionInfo() {
-            alert('Predictions are based on historical crime patterns, seasonal trends, and resource availability. Confidence levels indicate the reliability of each forecast.');
-        }
-    </script>
+     <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
+     <script>
+         // Highlight high-risk days
+         document.addEventListener('DOMContentLoaded', function() {
+             document.querySelectorAll('.table-warning').forEach(row => {
+                 row.style.borderLeft = '4px solid var(--warning-orange)';
+             });
+
+             document.querySelectorAll('[data-confidence]').forEach(element => {
+                 element.title = `Prediction confidence: ${element.dataset.confidence}%`;
+             });
+         });
+
+         function showPredictionInfo() {
+             alert('Predictions are based on historical crime patterns, seasonal trends, and resource availability. Confidence levels indicate the reliability of each forecast.');
+         }
+     </script>
     
     <style>
         .alert {

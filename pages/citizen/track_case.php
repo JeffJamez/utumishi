@@ -135,8 +135,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     </div>
                                     <div>
                                         <strong>Location:</strong><br>
-                                        <?php echo htmlspecialchars($caseDetails['location_constituency']); ?>, 
-                                        <?php echo htmlspecialchars($caseDetails['location_county']); ?>
+                                         <?php echo htmlspecialchars($caseDetails['incident_location_constituency']); ?>,
+                                         <?php echo htmlspecialchars($caseDetails['incident_location_county']); ?>
                                     </div>
                                 </div>
                             </div>

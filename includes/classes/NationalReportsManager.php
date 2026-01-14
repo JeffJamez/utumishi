@@ -48,7 +48,7 @@ class NationalReportsManager {
                 ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time,
                 COUNT(DISTINCT station_id) as active_stations,
-                COUNT(DISTINCT location_county) as affected_counties
+                COUNT(DISTINCT incident_location_county) as affected_counties
             FROM cases 
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
         ", ['timeframe' => $timeframe]);
@@ -60,7 +60,7 @@ class NationalReportsManager {
     public function getCountyStatistics($timeframe = 30) {
         return $this->db->fetchAll("
             SELECT 
-                location_county as county,
+                incident_location_county as county,
                 COUNT(*) as total_cases,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
                 ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
@@ -72,9 +72,9 @@ class NationalReportsManager {
                     WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe1 DAY)
                 ), 2) as percentage_of_national
             FROM cases 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe2 DAY)
-            GROUP BY location_county
-            ORDER BY total_cases DESC
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe2 DAY)
+             GROUP BY incident_location_county
+             ORDER BY total_cases DESC
         ", ['timeframe1' => $timeframe, 'timeframe2' => $timeframe]);
     }
 
@@ -222,20 +222,20 @@ class NationalReportsManager {
      */
     public function generateHotspotsReport($timeframe = 30) {
         $hotspots = $this->db->fetchAll("
-            SELECT 
-                location_county,
-                location_constituency,
+            SELECT
+                incident_location_county,
+                incident_location_constituency,
                 category,
                 COUNT(*) as case_count,
                 ROUND(COUNT(*) / :timeframe1 * 30, 1) as cases_per_month,
                 ROUND(COUNT(*) * 100.0 / (
                     SELECT COUNT(*) FROM cases 
                     WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe2 DAY)
-                    AND location_county = c.location_county
+                     AND incident_location_county = c.incident_location_county
                 ), 2) as percentage_of_county
             FROM cases c
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe3 DAY)
-            GROUP BY location_county, location_constituency, category
+             GROUP BY incident_location_county, incident_location_constituency, category
             HAVING case_count >= 5
             ORDER BY case_count DESC, cases_per_month DESC
             LIMIT 20

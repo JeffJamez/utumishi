@@ -117,9 +117,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="kpi-value"><?php echo $workloadStats['total_officers'] ?? 0; ?></div>
                     <div class="kpi-label">Total Officers</div>
                     <div class="kpi-change">
-                        Idle: <span class="<?php echo ($workloadStats['idle_officers'] ?? 0) > 0 ? 'positive' : 'neutral'; ?>">
-                            <?php echo $workloadStats['idle_officers'] ?? 0; ?>
-                        </span>
                     </div>
                 </div>
                 
@@ -127,9 +124,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="kpi-value"><?php echo round($workloadStats['avg_case_load'] ?? 0, 1); ?></div>
                     <div class="kpi-label">Average Case Load</div>
                     <div class="kpi-change">
-                        Max: <span class="<?php echo ($workloadStats['max_case_load'] ?? 0) > 15 ? 'negative' : 'positive'; ?>">
-                            <?php echo $workloadStats['max_case_load'] ?? 0; ?>
-                        </span>
                     </div>
                 </div>
                 
@@ -142,9 +136,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             return $case['urgency_level'] === 'critical' || $case['urgency_level'] === 'high';
                         });
                         ?>
-                        Urgent: <span class="<?php echo count($urgentUnassigned) > 0 ? 'negative' : 'positive'; ?>">
-                            <?php echo count($urgentUnassigned); ?>
-                        </span>
+
                     </div>
                 </div>
                 
@@ -152,7 +144,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="kpi-value"><?php echo $workloadStats['overloaded_officers'] ?? 0; ?></div>
                     <div class="kpi-label">Overloaded Officers</div>
                     <div class="kpi-change">
-                        >15 cases each
                     </div>
                 </div>
             </div>
@@ -243,7 +234,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             </td>
                                             <td><?php echo $officer['total_cases_resolved']; ?></td>
                                             <td><?php echo $resolutionRate; ?>%</td>
-                                            <td><?php echo round($officer['current_avg_time'] ?? 0, 1); ?>h</td>
+                                            <td><?php echo round(($officer['current_avg_time'] ?? 0) / 24); ?> days</td>
                                             <td>
                                                 <span class="badge status-<?php echo $status['class']; ?>">
                                                     <?php echo $status['label']; ?>
@@ -435,6 +426,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
         @media (max-width: 768px) {
             .kpi-grid {
                 grid-template-columns: repeat(2, 1fr);

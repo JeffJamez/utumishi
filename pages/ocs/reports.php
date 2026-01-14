@@ -40,13 +40,7 @@ if ($reportType) {
                 $reportData = $reportManager->generateCrimeAnalysisReport($stationId, $timeframe);
                 break;
                 
-            case 'officer_workload':
-                $reportData = $reportManager->generateOfficerWorkloadReport($stationId);
-                break;
-                
-            case 'station_overview':
-                $reportData = $reportManager->generateStationOverviewReport($stationId);
-                break;
+
         }
         $reportGenerated = true;
     } catch (Exception $e) {
@@ -82,8 +76,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="card">
                         <div class="card-body text-center">
 
-                            <h5>Monthly Report</h5>
-                            <p class="text-muted">Comprehensive monthly statistics and analysis</p>
+                             <h5>Comprehensive Monthly Statistics and Analysis</h5>
+                             <p class="text-muted">Detailed monthly case statistics and trends</p>
                             <form method="GET" class="mb-3">
                                 <input type="hidden" name="type" value="monthly">
                                 <div class="d-flex gap-2">
@@ -109,8 +103,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="card">
                         <div class="card-body text-center">
 
-                            <h5>Performance Report</h5>
-                            <p class="text-muted">Station performance metrics and trends</p>
+                             <h5>Station Performance Metrics and Trends</h5>
+                             <p class="text-muted">Performance analysis and efficiency metrics</p>
                             <form method="GET" class="mb-3">
                                 <input type="hidden" name="type" value="performance">
                                 <select name="timeframe" class="form-control mb-2">
@@ -127,8 +121,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="card">
                         <div class="card-body text-center">
 
-                            <h5>Crime Analysis</h5>
-                            <p class="text-muted">Crime patterns and hotspot analysis</p>
+                             <h5>Crime Patterns and Hotspot Analysis</h5>
+                             <p class="text-muted">Crime trends and hotspot identification</p>
                             <form method="GET" class="mb-3">
                                 <input type="hidden" name="type" value="crime_analysis">
                                 <select name="timeframe" class="form-control mb-2">
@@ -141,30 +135,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     </div>
                     
-                    <!-- Officer Workload Report -->
-                    <div class="card">
-                        <div class="card-body text-center">
 
-                            <h5>Officer Workload</h5>
-                            <p class="text-muted">Current officer assignments and performance</p>
-                            <form method="GET" class="mb-3">
-                                <input type="hidden" name="type" value="officer_workload">
-                                <button type="submit" class="btn btn-primary">Generate</button>
-                            </form>
-                        </div>
-                    </div>
-                    
-                    <!-- Station Overview -->
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <h5>Station Overview</h5>
-                            <p class="text-muted">Comprehensive station report</p>
-                            <form method="GET" class="mb-3">
-                                <input type="hidden" name="type" value="station_overview">
-                                <button type="submit" class="btn btn-primary">Generate</button>
-                            </form>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -180,9 +151,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
             <div class="card-body" id="report-content">
                 
-                <?php if ($reportType === 'monthly'): ?>
-                    <div class="mb-4">
-                        <h4>Monthly Summary - <?php echo $reportData['period']['month_name'] . ' ' . $reportData['period']['year']; ?></h4>
+                 <?php if ($reportType === 'monthly'): ?>
+                     <div class="mb-4">
+                         <h4>Comprehensive Monthly Statistics and Analysis - <?php echo $reportData['period']['month_name'] . ' ' . $reportData['period']['year']; ?></h4>
                         
                         <div class="kpi-grid mb-4">
                             <div class="kpi-card">
@@ -198,140 +169,117 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <div class="kpi-label">Resolution Rate</div>
                             </div>
                             <div class="kpi-card">
-                                <div class="kpi-value"><?php echo round($reportData['overall_stats']['avg_resolution_time'] ?? 0, 1); ?>h</div>
+                                 <div class="kpi-value"><?php echo round($reportData['overall_stats']['avg_resolution_time'] ?? 0, 1); ?>h</div>
                                 <div class="kpi-label">Avg Resolution Time</div>
                             </div>
                         </div>
                         
-                        <h5>Category Breakdown</h5>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Cases</th>
-                                    <th>Resolved</th>
-                                    <th>Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($reportData['category_breakdown'] as $cat): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($cat['category']); ?></td>
-                                        <td><?php echo $cat['case_count']; ?></td>
-                                        <td><?php echo $cat['resolved_count']; ?></td>
-                                        <td><?php echo $cat['resolution_rate']; ?>%</td>
-                                    </tr>
-                                <?php endforeach; ?>
+                         <h5>Category Breakdown</h5>
+                         <table class="table">
+                             <thead>
+                                 <tr>
+                                     <th>Category</th>
+                                     <th>Cases</th>
+                                     <th>Resolved</th>
+                                     <th>Avg Resolution Time (weeks)</th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 <?php foreach ($reportData['category_breakdown'] as $cat): ?>
+                                     <tr>
+                                         <td><?php echo htmlspecialchars($cat['category']); ?></td>
+                                         <td><?php echo $cat['case_count']; ?></td>
+                                         <td><?php echo $cat['resolved_count']; ?></td>
+                                         <td><?php echo round(($cat['avg_resolution_time'] ?? 0) / 168, 1); ?> weeks</td>
+                                     </tr>
+                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
                     
-                <?php elseif ($reportType === 'performance'): ?>
-                    <div class="mb-4">
-                        <h4>Station Performance - <?php echo $reportData['period']; ?></h4>
-                        
-                        <div class="kpi-grid mb-4">
-                            <div class="kpi-card">
-                                <div class="kpi-value"><?php echo $reportData['station_stats']['total_cases'] ?? 0; ?></div>
-                                <div class="kpi-label">Total Cases</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-value"><?php echo $reportData['station_stats']['resolution_rate'] ?? 0; ?>%</div>
-                                <div class="kpi-label">Resolution Rate</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-value"><?php echo round($reportData['station_stats']['avg_resolution_time'] ?? 0, 1); ?>h</div>
-                                <div class="kpi-label">Avg Resolution Time</div>
-                            </div>
-                        </div>
-                        
-                        <h5>Performance by Category</h5>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Category</th>
-                                    <th>Cases</th>
-                                    <th>Resolved</th>
-                                    <th>Resolution Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($reportData['category_breakdown'] as $cat): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($cat['category']); ?></td>
-                                        <td><?php echo $cat['case_count']; ?></td>
-                                        <td><?php echo $cat['resolved_count']; ?></td>
-                                        <td>
-                                            <span class="badge status-<?php echo $cat['resolution_rate'] >= 70 ? 'success' : ($cat['resolution_rate'] >= 50 ? 'warning' : 'danger'); ?>">
-                                                <?php echo $cat['resolution_rate']; ?>%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                <?php elseif ($reportType === 'officer_workload'): ?>
-                    <div class="mb-4">
-                        <h4>Officer Workload Analysis</h4>
-                        
-                        <?php if (isset($reportData['summary'])): ?>
-                        <div class="kpi-grid mb-4">
-                            <div class="kpi-card">
-                                <div class="kpi-value"><?php echo $reportData['summary']['total_officers'] ?? 0; ?></div>
-                                <div class="kpi-label">Total Officers</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-value"><?php echo round($reportData['summary']['avg_case_load'] ?? 0, 1); ?></div>
-                                <div class="kpi-label">Avg Case Load</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-value"><?php echo $reportData['summary']['max_case_load'] ?? 0; ?></div>
-                                <div class="kpi-label">Max Case Load</div>
-                            </div>
-                            <div class="kpi-card">
-                                <div class="kpi-value"><?php echo $reportData['summary']['overloaded_officers'] ?? 0; ?></div>
-                                <div class="kpi-label">Overloaded Officers</div>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Officer</th>
-                                    <th>Badge</th>
-                                    <th>Current Load</th>
-                                    <th>Total Resolved</th>
-                                    <th>Resolution Rate</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($reportData['officers'] as $officer): ?>
-                                    <?php
-                                    $load = $officer['current_case_load'];
-                                    $status = $load > 15 ? 'Overloaded' : ($load > 10 ? 'High' : ($load > 5 ? 'Normal' : 'Light'));
-                                    $statusClass = $load > 15 ? 'danger' : ($load > 10 ? 'warning' : 'success');
-                                    ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($officer['name']); ?></td>
-                                        <td><?php echo htmlspecialchars($officer['badge_number']); ?></td>
-                                        <td><?php echo $load; ?></td>
-                                        <td><?php echo $officer['total_cases_resolved']; ?></td>
-                                        <td><?php echo $officer['resolution_rate'] ?? 0; ?>%</td>
-                                        <td>
-                                            <span class="badge status-<?php echo $statusClass; ?>">
-                                                <?php echo $status; ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                    
+                 <?php elseif ($reportType === 'performance'): ?>
+                     <div class="mb-4">
+                         <h4>Station Performance Metrics and Trends - <?php echo $reportData['period']; ?></h4>
+
+                         <div class="kpi-grid mb-4">
+                             <div class="kpi-card">
+                                 <div class="kpi-value"><?php echo $reportData['station_stats']['total_cases'] ?? 0; ?></div>
+                                 <div class="kpi-label">Total Cases</div>
+                             </div>
+                             <div class="kpi-card">
+                                 <div class="kpi-value"><?php echo $reportData['station_stats']['resolution_rate'] ?? 0; ?>%</div>
+                                 <div class="kpi-label">Resolution Rate</div>
+                             </div>
+                             <div class="kpi-card">
+                                 <div class="kpi-value"><?php echo round($reportData['station_stats']['avg_resolution_time'] ?? 0, 1); ?>h</div>
+                                 <div class="kpi-label">Avg Resolution Time</div>
+                             </div>
+                         </div>
+
+                         <h5>Performance by Category</h5>
+                         <table class="table">
+                             <thead>
+                                 <tr>
+                                     <th>Category</th>
+                                     <th>Cases</th>
+                                     <th>Resolved</th>
+                                     <th>Avg Resolution Time (weeks)</th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 <?php foreach ($reportData['category_breakdown'] as $cat): ?>
+                                     <tr>
+                                         <td><?php echo htmlspecialchars($cat['category']); ?></td>
+                                         <td><?php echo $cat['case_count']; ?></td>
+                                         <td><?php echo $cat['resolved_count']; ?></td>
+                                         <td><?php echo round(($cat['avg_resolution_time'] ?? 0) / 168, 1); ?> weeks</td>
+                                     </tr>
+                                 <?php endforeach; ?>
+                             </tbody>
+                         </table>
+                     </div>
+
+                 <?php elseif ($reportType === 'crime_analysis'): ?>
+                     <div class="mb-4">
+                         <h4>Crime Patterns and Hotspot Analysis - <?php echo $reportData['period']; ?></h4>
+
+                         <div class="kpi-grid mb-4">
+                             <div class="kpi-card">
+                                 <div class="kpi-value"><?php echo $reportData['total_cases'] ?? 0; ?></div>
+                                 <div class="kpi-label">Total Cases</div>
+                             </div>
+                             <div class="kpi-card">
+                                 <div class="kpi-value"><?php echo count($reportData['hotspots'] ?? []); ?></div>
+                                 <div class="kpi-label">Hotspots Identified</div>
+                             </div>
+                             <div class="kpi-card">
+                                 <div class="kpi-value"><?php echo $reportData['most_common_category'] ?? 'N/A'; ?></div>
+                                 <div class="kpi-label">Most Common Crime</div>
+                             </div>
+                         </div>
+
+                         <h5>Hotspot Locations</h5>
+                         <table class="table">
+                             <thead>
+                                 <tr>
+                                     <th>Location</th>
+                                     <th>Case Count</th>
+                                     <th>Primary Crime</th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 <?php foreach ($reportData['hotspots'] ?? [] as $hotspot): ?>
+                                     <tr>
+                                         <td><?php echo htmlspecialchars($hotspot['location']); ?></td>
+                                         <td><?php echo $hotspot['case_count']; ?></td>
+                                         <td><?php echo htmlspecialchars($hotspot['category']); ?></td>
+                                     </tr>
+                                 <?php endforeach; ?>
+                             </tbody>
+                         </table>
+                     </div>
+                     
+
                 <?php endif; ?>
                 
                 <div class="mt-4 text-muted">

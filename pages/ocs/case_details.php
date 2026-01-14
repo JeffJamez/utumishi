@@ -1,5 +1,6 @@
 <?php
 define('UTUMISHI_WEB_APP', true);
+
 session_start();
 
 require_once __DIR__ . '/../../includes/config/constants.php';
@@ -19,7 +20,6 @@ $caseManager = new CaseManager();
 $caseId = (int)($_GET['id'] ?? 0);
 $caseDetails = null;
 $caseUpdates = [];
-$officers = [];
 $error = '';
 $success = '';
 
@@ -31,26 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $action = sanitizeText($_POST['action'] ?? '');
 
-        if ($action === 'update_status') {
-            $newStatus = sanitizeText($_POST['new_status']);
-            $updateText = sanitizeText($_POST['update_text'] ?? '');
+        if ($action === 'close_case') {
+            $updateText = sanitizeText($_POST['update_text'] ?? 'Case closed');
+            $caseManager->updateCaseStatus($caseId, 'closed', $currentUser['id'], $updateText);
+            $success = 'Case closed successfully';
 
-            $validStatuses = ['reported', 'assigned', 'in_progress', 'resolved', 'closed'];
-            if (!in_array($newStatus, $validStatuses)) {
-                throw new Exception('Invalid status selected');
-            }
-
-            $caseManager->updateCaseStatus($caseId, $newStatus, $currentUser['id'], $updateText);
-            $success = 'Case status updated successfully';
-
-        } elseif ($action === 'reassign_officer') {
-            $officerId = (int)$_POST['officer_id'];
-            if (!$officerId) {
-                throw new Exception('Please select an officer');
-            }
-
-            $caseManager->reassignCase($caseId, $officerId, $currentUser['id']);
-            $success = 'Case reassigned successfully';
+        } elseif ($action === 'reopen_case') {
+            $updateText = sanitizeText($_POST['update_text'] ?? 'Case reopened');
+            $caseManager->updateCaseStatus($caseId, 'in_progress', $currentUser['id'], $updateText);
+            $success = 'Case reopened successfully';
 
         } elseif ($action === 'add_update') {
             $updateText = sanitizeText($_POST['update_text']);
@@ -86,25 +75,21 @@ try {
         $error = 'Invalid case ID';
     }
 
-    // Get officers for reassignment
-    $station = new Station($stationId);
-    $officers = $station->getOfficers();
+
 
 } catch (Exception $e) {
-    error_log("Load Case Details Error: " . $e->getMessage());
-    $error = 'Unable to load case details';
+    error_log("Station Cases Error: " . $e->getMessage());
+    $error = "Unable to load case data";
 }
 
-$pageTitle = $caseDetails ? "Case Details - " . htmlspecialchars($caseDetails['ob_number']) : "Case Details";
-
+$pageTitle = "Case Details";
 require_once __DIR__ . '/../../includes/layout/layout.php';
+
 ?>
 
         <main class="app-main">
-            <?php flashMessage(); ?>
-
             <div class="mb-4">
-                <h2>Case Details</h2>
+                <h1>Case Details</h1>
                 <p class="text-muted">View and manage case information</p>
             </div>
 
@@ -121,60 +106,34 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
             <?php if ($caseDetails): ?>
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h3><?php echo htmlspecialchars($caseDetails['ob_number']); ?></h3>
-                        <span class="badge <?php echo STATUS_COLORS[$caseDetails['status']] ?? 'status-reported'; ?>">
-                            <?php echo ucfirst(str_replace('_', ' ', $caseDetails['status'])); ?>
-                        </span>
-                    </div>
-                    <div>
-                        <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-outline btn-secondary">
-                            ← Back to Cases
-                        </a>
-                    </div>
-                </div>
-
                 <!-- Case Actions -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <h4>Case Actions</h4>
+                        <h3>Case Actions</h3>
                     </div>
                     <div class="card-body">
-                        <div style="display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-start;">
-                            <form method="POST" style="display: inline;">
-                                <?php echo csrfField(); ?>
-                                <input type="hidden" name="action" value="update_status">
-                                <input type="hidden" name="new_status" value="closed">
-                                <button type="submit"
-                                        style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 120px;"
-                                        <?php echo $caseDetails['status'] === 'closed' ? 'disabled style="background-color: #6c757d; cursor: not-allowed;"' : ''; ?>>
-                                    Close Case
-                                </button>
-                            </form>
-
-                            <form method="POST" style="display: inline;">
-                                <?php echo csrfField(); ?>
-                                <input type="hidden" name="action" value="update_status">
-                                <input type="hidden" name="new_status" value="in_progress">
-                                <button type="submit"
-                                        style="background-color: #ffc107; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 120px;"
-                                        <?php echo in_array($caseDetails['status'], ['closed', 'in_progress']) ? 'disabled style="background-color: #6c757d; cursor: not-allowed;"' : ''; ?>>
-                                    Reopen Case
-                                </button>
-                            </form>
-
-                            <button type="button"
-                                    style="background-color: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 120px;"
-                                    data-toggle="modal" data-target="#statusModal">
-                                Update Status
-                            </button>
-
-                            <button type="button"
-                                    style="background-color: #17a2b8; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 120px;"
-                                    data-toggle="modal" data-target="#assignModal">
-                                Reassign Officer
-                            </button>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <?php if ($caseDetails['status'] !== 'closed'): ?>
+                                <form method="POST" style="display: inline;">
+                                    <?php echo csrfField(); ?>
+                                    <input type="hidden" name="action" value="close_case">
+                                    <input type="hidden" name="update_text" value="Case closed by OCS">
+                                    <button type="submit"
+                                            style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 120px;">
+                                        Close Case
+                                    </button>
+                                </form>
+                            <?php else: ?>
+                                <form method="POST" style="display: inline;">
+                                    <?php echo csrfField(); ?>
+                                    <input type="hidden" name="action" value="reopen_case">
+                                    <input type="hidden" name="update_text" value="Case reopened by OCS">
+                                    <button type="submit"
+                                            style="background-color: #ffc107; color: black; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 120px;">
+                                        Reopen Case
+                                    </button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -203,17 +162,19 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         </div>
                                         <div class="mb-3">
                                             <strong>Location:</strong>
-                                            <?php echo htmlspecialchars($caseDetails['location_county']); ?>, <?php echo htmlspecialchars($caseDetails['location_constituency']); ?>
+                                             <?php echo htmlspecialchars($caseDetails['incident_location_county']); ?>, <?php echo htmlspecialchars($caseDetails['incident_location_constituency']); ?>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <strong>Station:</strong>
-                                            <?php echo htmlspecialchars($caseDetails['station_name']); ?>
+                                            <strong>OB Number:</strong>
+                                            <span style="font-family: monospace; font-weight: bold;"><?php echo htmlspecialchars($caseDetails['ob_number']); ?></span>
                                         </div>
                                         <div class="mb-3">
-                                            <strong>OB Number:</strong>
-                                            <?php echo htmlspecialchars($caseDetails['ob_number']); ?>
+                                            <strong>Priority:</strong>
+                                            <span class="badge status-<?php echo $caseDetails['priority'] === 'high' ? 'warning' : ($caseDetails['priority'] === 'urgent' ? 'danger' : 'info'); ?>">
+                                                <?php echo ucfirst($caseDetails['priority']); ?>
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -336,75 +297,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 </div>
 
-                <!-- Status Update Modal -->
-                <div class="modal fade" id="statusModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Update Case Status</h5>
-                                <button type="button" class="btn-close" data-dismiss="modal"></button>
-                            </div>
-                            <form method="POST">
-                                <?php echo csrfField(); ?>
-                                <input type="hidden" name="action" value="update_status">
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label for="new_status" class="form-label">New Status</label>
-                                        <select name="new_status" id="new_status" class="form-control" required>
-                                            <option value="reported" <?php echo $caseDetails['status'] === 'reported' ? 'selected' : ''; ?>>Reported</option>
-                                            <option value="assigned" <?php echo $caseDetails['status'] === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
-                                            <option value="in_progress" <?php echo $caseDetails['status'] === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
-                                            <option value="resolved" <?php echo $caseDetails['status'] === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
-                                            <option value="closed" <?php echo $caseDetails['status'] === 'closed' ? 'selected' : ''; ?>>Closed</option>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="status_update_text" class="form-label">Update Notes (Optional)</label>
-                                        <textarea name="update_text" id="status_update_text" class="form-control" rows="3"></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-primary">Update Status</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Officer Assignment Modal -->
-                <div class="modal fade" id="assignModal" tabindex="-1">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Reassign Case</h5>
-                                <button type="button" class="btn-close" data-dismiss="modal"></button>
-                            </div>
-                            <form method="POST">
-                                <?php echo csrfField(); ?>
-                                <input type="hidden" name="action" value="reassign_officer">
-                                <div class="modal-body">
-                                    <div class="mb-3">
-                                        <label for="officer_id" class="form-label">Select Officer</label>
-                                        <select name="officer_id" id="officer_id" class="form-control" required>
-                                            <option value="">Choose an officer...</option>
-                                            <?php foreach ($officers as $officer): ?>
-                                                <option value="<?php echo $officer['id']; ?>"
-                                                        <?php echo $caseDetails['assigned_officer_id'] == $officer['id'] ? 'selected' : ''; ?>>
-                                                    <?php echo htmlspecialchars($officer['name']); ?> (Badge: <?php echo htmlspecialchars($officer['badge_number']); ?>)
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                                    <button type="submit" class="btn btn-primary">Reassign Case</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+
+
 
             <?php else: ?>
                 <div class="text-center p-5">
@@ -414,73 +309,72 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             <?php endif; ?>
         </main>
-
-        <style>
-            .case-timeline {
-                position: relative;
-                padding-left: 2rem;
+    </div>
+    
+    <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
+    <script>
+        setInterval(function() {
+            if (!document.hidden) {
+                location.reload();
             }
+        }, 180000);
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.table-danger').forEach(row => {
+                row.style.borderLeft = '4px solid var(--danger-red)';
+            });
+            
+            document.querySelectorAll('.table-warning').forEach(row => {
+                row.style.borderLeft = '4px solid var(--warning-orange)';
+            });
+            
+            document.querySelectorAll('.table-info').forEach(row => {
+                row.style.borderLeft = '4px solid var(--info-blue)';
+            });
+        });
+    </script>
+    
+    <style>
+        .case-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
 
-            .case-timeline::before {
-                content: '';
-                position: absolute;
-                left: 0.75rem;
-                top: 0;
-                bottom: 0;
-                width: 2px;
-                background: var(--primary-green);
-            }
+        .case-timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.75rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary-green);
+        }
 
-            .timeline-item {
-                position: relative;
-                margin-bottom: 1.5rem;
-                background: var(--primary-white);
-                padding: 1rem;
-                border-radius: var(--border-radius);
-                box-shadow: var(--shadow-sm);
-                border: 1px solid var(--light-gray);
-            }
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+            background: var(--primary-white);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--light-gray);
+        }
 
-            .timeline-item::before {
-                content: '';
-                position: absolute;
-                left: -1.5rem;
-                top: 1rem;
-                width: 12px;
-                height: 12px;
-                border-radius: 50%;
-                background: var(--primary-green);
-                border: 3px solid var(--primary-white);
-            }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 1rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary-green);
+            border: 3px solid var(--primary-white);
+        }
 
-            .timeline-item:last-child::before {
-                background: var(--medium-gray);
-            }
-
-            .timeline-date {
-                font-size: 0.875rem;
-                color: var(--medium-gray);
-                margin-bottom: 0.5rem;
-                font-weight: 600;
-            }
-
-            .timeline-content {
-                color: var(--dark-gray);
-                line-height: 1.5;
-            }
-
-            .btn-block {
-                width: 100%;
-            }
-        </style>
-
-        <script>
-            // Auto-refresh case data every 2 minutes if case is open
-            <?php if ($caseDetails && $caseDetails['status'] !== 'closed'): ?>
-            setInterval(function() {
-                if (!document.hidden) {
-                    location.reload();
-                }
-            }, 120000);
-            <?php endif; ?>
-        </script>
+        .timeline-item:last-child::before {
+            background: var(--medium-gray);
+        }
+    </style>
+</body>
+</html>

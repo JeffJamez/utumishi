@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 13, 2026 at 10:36 AM
+-- Generation Time: Jan 13, 2026 at 05:17 PM
 -- Server version: 10.11.13-MariaDB-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -67,24 +67,29 @@ CREATE TABLE `cases` (
   `actual_resolution_hours` int(11) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `closed_at` timestamp NULL DEFAULT NULL
+  `closed_at` timestamp NULL DEFAULT NULL,
+  `reporter_county` varchar(50) NOT NULL DEFAULT '',
+  `reporter_constituency` varchar(50) NOT NULL DEFAULT '',
+  `reporter_local_area` varchar(100) DEFAULT NULL,
+  `incident_local_area` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `cases`
 --
 
-INSERT INTO `cases` (`id`, `ob_number`, `title`, `description`, `category`, `location_county`, `location_constituency`, `reported_by_citizen_id`, `recorded_by_officer_id`, `assigned_officer_id`, `station_id`, `status`, `estimated_resolution_hours`, `actual_resolution_hours`, `created_at`, `updated_at`, `closed_at`) VALUES
-(1, 'OB-NRB-2025-00001', 'Theft of Mobile Phone', 'Phone stolen at bus stop near University Way', 'Theft', 'Nairobi', 'Starehe', 9, 4, 1, 1, 'in_progress', 72, NULL, '2025-01-15 06:30:00', '2025-09-16 17:19:36', NULL),
-(2, 'OB-NRB-2025-00002', 'House Break-in', 'Burglars broke into house and stole electronics', 'Burglary', 'Nairobi', 'Starehe', 10, 5, 1, 1, 'assigned', 96, NULL, '2025-01-16 11:20:00', '2025-09-16 17:19:36', NULL),
-(3, 'OB-LGT-2025-00001', 'Assault Case', 'Physical altercation between neighbors', 'Assault', 'Nairobi', 'Langata', 11, 6, 2, 2, 'resolved', 48, 46, '2025-01-14 13:45:00', '2025-09-16 17:19:36', '2025-01-16 11:45:00'),
-(4, 'OB-LGT-2025-00002', 'Car Theft', 'Vehicle stolen from parking lot', 'Theft', 'Nairobi', 'Langata', 12, 7, 3, 2, 'in_progress', 72, NULL, '2025-01-17 08:15:00', '2025-09-16 17:19:36', NULL),
-(5, 'OB-NRB-2025-00003', 'Cybercrime - Identity Theft', 'Someone using stolen identity for fraud', 'Cybercrime', 'Nairobi', 'Starehe', 13, 4, 3, 1, 'assigned', 96, NULL, '2025-01-18 05:30:00', '2025-09-16 17:19:36', NULL),
-(6, 'OB-LGT-2025-00003', 'Domestic Violence', 'Spousal abuse reported by neighbor', 'Domestic Violence', 'Nairobi', 'Langata', 14, 6, 2, 2, 'closed', 24, 22, '2025-01-10 16:30:00', '2025-09-16 17:19:37', '2025-01-11 14:30:00'),
-(7, 'OB-NRB-2025-00004', 'Fraud Case', 'M-Pesa fraud involving fake transactions', 'Fraud', 'Nairobi', 'Starehe', 15, 5, 1, 1, 'in_progress', 72, NULL, '2025-01-19 10:45:00', '2025-09-16 17:19:36', NULL),
-(8, 'OB-LGT-2025-00004', 'Public Disturbance', 'Noise complaint from residential area', 'Public Order', 'Nairobi', 'Langata', 16, 7, 4, 2, 'resolved', 12, NULL, '2025-01-20 17:15:00', '2025-09-16 17:19:36', NULL),
-(9, 'OB-NRB-2025-00005', 'Drug Possession', 'Suspected drug dealer caught with substances', 'Drug Offenses', 'Nairobi', 'Starehe', 17, 4, 5, 1, 'assigned', 48, NULL, '2025-01-21 12:20:00', '2025-09-16 17:19:36', NULL),
-(10, 'OB-LGT-2025-00005', 'Traffic Violation', 'Reckless driving causing property damage', 'Traffic Offenses', 'Nairobi', 'Langata', 18, 6, 4, 2, 'reported', 24, NULL, '2025-01-22 09:00:00', '2025-09-16 17:19:36', NULL);
+INSERT INTO `cases` (`id`, `ob_number`, `title`, `description`, `category`, `location_county`, `location_constituency`, `reported_by_citizen_id`, `recorded_by_officer_id`, `assigned_officer_id`, `station_id`, `status`, `estimated_resolution_hours`, `actual_resolution_hours`, `created_at`, `updated_at`, `closed_at`, `reporter_county`, `reporter_constituency`, `reporter_local_area`, `incident_local_area`) VALUES
+(1, 'OB-NRB-2025-00001', 'Theft of Mobile Phone', 'Phone stolen at bus stop near University Way', 'Theft', 'Nairobi', 'Starehe', 9, 4, 1, 1, 'in_progress', 72, NULL, '2025-01-15 06:30:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(2, 'OB-NRB-2025-00002', 'House Break-in', 'Burglars broke into house and stole electronics', 'Burglary', 'Nairobi', 'Starehe', 10, 5, 1, 1, 'assigned', 96, NULL, '2025-01-16 11:20:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(3, 'OB-LGT-2025-00001', 'Assault Case', 'Physical altercation between neighbors', 'Assault', 'Nairobi', 'Langata', 11, 6, 2, 2, 'resolved', 48, 46, '2025-01-14 13:45:00', '2025-09-16 17:19:36', '2025-01-16 11:45:00', '', '', NULL, NULL),
+(4, 'OB-LGT-2025-00002', 'Car Theft', 'Vehicle stolen from parking lot', 'Theft', 'Nairobi', 'Langata', 12, 7, 3, 2, 'in_progress', 72, NULL, '2025-01-17 08:15:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(5, 'OB-NRB-2025-00003', 'Cybercrime - Identity Theft', 'Someone using stolen identity for fraud', 'Cybercrime', 'Nairobi', 'Starehe', 13, 4, 3, 1, 'assigned', 96, NULL, '2025-01-18 05:30:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(6, 'OB-LGT-2025-00003', 'Domestic Violence', 'Spousal abuse reported by neighbor', 'Domestic Violence', 'Nairobi', 'Langata', 14, 6, 2, 2, 'closed', 24, 22, '2025-01-10 16:30:00', '2025-09-16 17:19:37', '2025-01-11 14:30:00', '', '', NULL, NULL),
+(7, 'OB-NRB-2025-00004', 'Fraud Case', 'M-Pesa fraud involving fake transactions', 'Fraud', 'Nairobi', 'Starehe', 15, 5, 1, 1, 'in_progress', 72, NULL, '2025-01-19 10:45:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(8, 'OB-LGT-2025-00004', 'Public Disturbance', 'Noise complaint from residential area', 'Public Order', 'Nairobi', 'Langata', 16, 7, 4, 2, 'resolved', 12, NULL, '2025-01-20 17:15:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(9, 'OB-NRB-2025-00005', 'Drug Possession', 'Suspected drug dealer caught with substances', 'Drug Offenses', 'Nairobi', 'Starehe', 17, 4, 5, 1, 'assigned', 48, NULL, '2025-01-21 12:20:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(10, 'OB-LGT-2025-00005', 'Traffic Violation', 'Reckless driving causing property damage', 'Traffic Offenses', 'Nairobi', 'Langata', 18, 6, 4, 2, 'reported', 24, NULL, '2025-01-22 09:00:00', '2025-09-16 17:19:36', NULL, '', '', NULL, NULL),
+(11, 'OB-NRB-2026-00001', 'Theft Testing', 'Detailed Descriptio Detailed Descriptio Detailed Descriptio Detailed Descriptio Detailed Descriptio', 'Theft', 'Kajiado', 'Kajiado West', 20, 4, 1, 1, 'assigned', 72, NULL, '2026-01-13 09:18:18', '2026-01-13 12:18:18', NULL, 'Nyandarua', 'Kipipiri', 'Local Area', 'Rongai');
 
 -- --------------------------------------------------------
 
@@ -129,7 +134,25 @@ INSERT INTO `case_updates` (`id`, `case_id`, `officer_id`, `update_text`, `statu
 (3, 3, 6, 'Suspect identified and arrested', 'assigned', 'in_progress', '2025-01-14 15:00:00'),
 (4, 3, 6, 'Case resolved, suspect charged in court', 'in_progress', 'resolved', '2025-01-16 11:45:00'),
 (5, 6, 6, 'Victim provided with protection and counseling', 'assigned', 'in_progress', '2025-01-10 18:00:00'),
-(6, 6, 6, 'Case closed after successful intervention', 'resolved', 'closed', '2025-01-11 14:30:00');
+(6, 6, 6, 'Case closed after successful intervention', 'resolved', 'closed', '2025-01-11 14:30:00'),
+(7, 11, 4, 'Case automatically assigned to Officer KPS-1145', 'reported', 'assigned', '2026-01-13 09:18:18');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `closure_requests`
+--
+
+CREATE TABLE `closure_requests` (
+  `id` int(11) NOT NULL,
+  `case_id` int(11) NOT NULL,
+  `requested_by` int(11) NOT NULL,
+  `requested_at` timestamp NULL DEFAULT current_timestamp(),
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
+  `reviewed_by` int(11) DEFAULT NULL,
+  `reviewed_at` timestamp NULL DEFAULT NULL,
+  `review_notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -166,8 +189,6 @@ INSERT INTO `crime_statistics` (`id`, `station_id`, `crime_category`, `county`, 
 
 -- --------------------------------------------------------
 
--- --------------------------------------------------------
-
 --
 -- Table structure for table `officers`
 --
@@ -188,11 +209,13 @@ CREATE TABLE `officers` (
 --
 
 INSERT INTO `officers` (`id`, `user_id`, `badge_number`, `expertise_categories`, `current_case_load`, `total_cases_resolved`, `avg_resolution_time_hours`, `joined_date`) VALUES
-(1, 4, 'KPS-1145', '[\"Theft\", \"Burglary\", \"Fraud\"]', 3, 25, 0.00, '2020-03-15'),
+(1, 4, 'KPS-1145', '[\"Theft\", \"Burglary\", \"Fraud\"]', 4, 25, 0.00, '2020-03-15'),
 (2, 5, 'KPS-1146', '[\"Assault\", \"Domestic Violence\", \"Public Order\"]', 2, 30, 0.00, '2019-08-22'),
 (3, 6, 'KPS-2201', '[\"Cybercrime\", \"Fraud\", \"Identity Theft\"]', 4, 18, 0.00, '2021-01-10'),
 (4, 7, 'KPS-2202', '[\"Traffic Offenses\", \"DUI\", \"Reckless Driving\"]', 1, 22, 0.00, '2020-11-05'),
-(5, 8, 'KPS-3301', '[\"Drug Offenses\", \"Trafficking\", \"Possession\"]', 2, 15, 0.00, '2022-06-18');
+(5, 8, 'KPS-3301', '[\"Drug Offenses\", \"Trafficking\", \"Possession\"]', 2, 15, 0.00, '2022-06-18'),
+(6, 22, 'OPS022', '[\"Sexual Offenses\", \"Property Damage\"]', 0, 0, 0.00, '2026-01-13'),
+(7, 24, 'OPS024', '[\"Other\"]', 0, 0, 0.00, '2026-01-13');
 
 -- --------------------------------------------------------
 
@@ -225,7 +248,6 @@ CREATE TABLE `stations` (
   `constituency` varchar(50) NOT NULL,
   `address` text NOT NULL,
   `contact_phone` varchar(15) DEFAULT NULL,
-  `budget_allocated` decimal(15,2) DEFAULT 0.00,
   `commander_id` int(11) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -234,12 +256,12 @@ CREATE TABLE `stations` (
 -- Dumping data for table `stations`
 --
 
-INSERT INTO `stations` (`id`, `name`, `station_code`, `county`, `constituency`, `address`, `contact_phone`, `budget_allocated`, `commander_id`, `created_at`) VALUES
-(1, 'Nairobi Central Police Station', 'NRB', 'Nairobi', 'Starehe', 'University Way, Nairobi', '+254202345600', 5000000.00, 2, '2025-09-16 17:19:36'),
-(2, 'Langata Police Station', 'LGT', 'Nairobi', 'Langata', 'Langata Road, Nairobi', '+254202345601', 3500000.00, 3, '2025-09-16 17:19:36'),
-(3, 'Kiambu Police Station', 'KMB', 'Kiambu', 'Kiambu Town', 'Kiambu Town Center', '+254202345602', 2800000.00, NULL, '2025-09-16 17:19:36'),
-(4, 'Mombasa Central Police Station', 'MSA', 'Mombasa', 'Mvita', 'Digo Road, Mombasa', '+254412345600', 4200000.00, NULL, '2025-09-16 17:19:36'),
-(5, 'Eldoret Police Station', 'ELD', 'Uasin Gishu', 'Eldoret East', 'Uganda Road, Eldoret', '+254532345600', 3000000.00, NULL, '2025-09-16 17:19:36');
+INSERT INTO `stations` (`id`, `name`, `station_code`, `county`, `constituency`, `address`, `contact_phone`, `commander_id`, `created_at`) VALUES
+(1, 'Nairobi Central Police Station', 'NRB', 'Nairobi', 'Starehe', 'University Way, Nairobi', '+254202345600', 2, '2025-09-16 17:19:36'),
+(2, 'Langata Police Station', 'LGT', 'Nairobi', 'Langata', 'Langata Road, Nairobi', '+254202345601', 3, '2025-09-16 17:19:36'),
+(3, 'Kiambu Police Station', 'KMB', 'Kiambu', 'Kiambu Town', 'Kiambu Town Center', '+254202345602', NULL, '2025-09-16 17:19:36'),
+(4, 'Mombasa Central Police Station', 'MSA', 'Mombasa', 'Mvita', 'Digo Road, Mombasa', '+254412345600', NULL, '2025-09-16 17:19:36'),
+(5, 'Eldoret Police Station', 'ELD', 'Uasin Gishu', 'Eldoret East', 'Uganda Road, Eldoret', '+254532345600', NULL, '2025-09-16 17:19:36');
 
 -- --------------------------------------------------------
 
@@ -286,33 +308,37 @@ CREATE TABLE `users` (
   `station_id` int(11) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `last_login` timestamp NULL DEFAULT NULL,
-  `is_active` tinyint(1) DEFAULT 1
+  `is_active` tinyint(1) DEFAULT 1,
+  `id_document_path` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `national_id`, `name`, `email`, `phone`, `password`, `role`, `station_id`, `created_at`, `last_login`, `is_active`) VALUES
-(1, '12345678', 'System Administrator', 'admin@police.go.ke', '+254700000000', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL, '2025-09-16 17:19:36', '2025-11-18 13:58:57', 1),
-(2, '23456789', 'John Kamau', 'j.kamau@police.go.ke', '+254701000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ocs', 1, '2025-09-16 17:19:36', '2025-11-18 13:58:07', 1),
-(3, '34567890', 'Mary Wanjiku', 'm.wanjiku@police.go.ke', '+254701000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ocs', 2, '2025-09-16 17:19:36', NULL, 1),
-(4, '45678901', 'Peter Mwangi', 'p.mwangi@police.go.ke', '+254702000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 1, '2025-09-16 17:19:36', '2026-01-10 01:38:42', 1),
-(5, '56789012', 'Grace Atieno', 'g.atieno@police.go.ke', '+254702000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 1, '2025-09-16 17:19:36', NULL, 1),
-(6, '67890123', 'David Kiprop', 'd.kiprop@police.go.ke', '+254702000003', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 2, '2025-09-16 17:19:36', NULL, 1),
-(7, '78901234', 'Alice Nyong\'o', 'a.nyongo@police.go.ke', '+254702000004', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 2, '2025-09-16 17:19:36', NULL, 1),
-(8, '89012345', 'James Kuria', 'j.kuria@police.go.ke', '+254702000005', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 3, '2025-09-16 17:19:36', NULL, 1),
-(9, '11111111', 'Francis Mutua', NULL, '+254703000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', '2025-11-18 13:56:25', 1),
-(10, '22222222', 'Sarah Kiprotich', NULL, '+254703000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(11, '33333333', 'Michael Ochieng', NULL, '+254703000003', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(12, '44444444', 'Jane Wambui', NULL, '+254703000004', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(13, '55555555', 'Robert Kibet', NULL, '+254703000005', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(14, '66666666', 'Christine Muthoni', NULL, '+254703000006', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(15, '77777777', 'Daniel Cherono', NULL, '+254703000007', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(16, '88888888', 'Rose Njoki', NULL, '+254703000008', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(17, '99999999', 'Samuel Rotich', NULL, '+254703000009', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(18, '10101010', 'Elizabeth Wanjiru', NULL, '+254703000010', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1),
-(19, '32894832', 'Paul Kagai', 'paul@gmail.com', '0729426791', '$2y$10$WyRBI/N1Yl0U3.4KI.P.ZeZ2UgPG4oz.xmOfFOjAc5q2R68hPfy0G', 'citizen', NULL, '2025-09-30 10:06:58', '2025-10-17 02:59:31', 1);
+INSERT INTO `users` (`id`, `national_id`, `name`, `email`, `phone`, `password`, `role`, `station_id`, `created_at`, `last_login`, `is_active`, `id_document_path`) VALUES
+(1, '12345678', 'System Administrator', 'admin@police.go.ke', '+254700000000', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', NULL, '2025-09-16 17:19:36', '2025-11-18 13:58:57', 1, NULL),
+(2, '23456789', 'John Kamau', 'j.kamau@police.go.ke', '+254701000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ocs', 1, '2025-09-16 17:19:36', '2026-01-13 13:04:51', 1, NULL),
+(3, '34567890', 'Mary Wanjiku', 'm.wanjiku@police.go.ke', '+254701000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ocs', 2, '2025-09-16 17:19:36', NULL, 1, NULL),
+(4, '45678901', 'Peter Mwangi', 'p.mwangi@police.go.ke', '+254702000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 1, '2025-09-16 17:19:36', '2026-01-13 08:55:53', 1, NULL),
+(5, '56789012', 'Grace Atieno', 'g.atieno@police.go.ke', '+254702000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 1, '2025-09-16 17:19:36', NULL, 1, NULL),
+(6, '67890123', 'David Kiprop', 'd.kiprop@police.go.ke', '+254702000003', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 2, '2025-09-16 17:19:36', NULL, 1, NULL),
+(7, '78901234', 'Alice Nyong\'o', 'a.nyongo@police.go.ke', '+254702000004', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 2, '2025-09-16 17:19:36', NULL, 1, NULL),
+(8, '89012345', 'James Kuria', 'j.kuria@police.go.ke', '+254702000005', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'officer', 3, '2025-09-16 17:19:36', NULL, 1, NULL),
+(9, '11111111', 'Francis Mutua', NULL, '+254703000001', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', '2026-01-13 10:07:52', 1, NULL),
+(10, '22222222', 'Sarah Kiprotich', NULL, '+254703000002', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(11, '33333333', 'Michael Ochieng', NULL, '+254703000003', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(12, '44444444', 'Jane Wambui', NULL, '+254703000004', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(13, '55555555', 'Robert Kibet', NULL, '+254703000005', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(14, '66666666', 'Christine Muthoni', NULL, '+254703000006', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(15, '77777777', 'Daniel Cherono', NULL, '+254703000007', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(16, '88888888', 'Rose Njoki', NULL, '+254703000008', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(17, '99999999', 'Samuel Rotich', NULL, '+254703000009', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(18, '10101010', 'Elizabeth Wanjiru', NULL, '+254703000010', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'citizen', NULL, '2025-09-16 17:19:36', NULL, 1, NULL),
+(19, '32894832', 'Paul Kagai', 'paul@gmail.com', '0729426791', '$2y$10$WyRBI/N1Yl0U3.4KI.P.ZeZ2UgPG4oz.xmOfFOjAc5q2R68hPfy0G', 'citizen', NULL, '2025-09-30 10:06:58', '2025-10-17 02:59:31', 1, NULL),
+(20, '98751318', 'Jeff James Kigotho', NULL, '0765422456', '$2y$10$lkbnN8E6HE2xLcwHDefJ0eLB6F5Si/YwhCKOHLMq5xL/TbwgObor.', 'citizen', NULL, '2026-01-13 09:18:18', '2026-01-13 11:24:38', 1, 'citizen_docs/citizen_98751318_20260113121818_a5786d.pdf'),
+(22, '34567891', 'Sarah Wanjiku', NULL, '0712345678', '$2y$10$dummyhash', 'officer', 1, '2026-01-13 12:31:51', NULL, 1, NULL),
+(24, '45678902', 'Michael Oduya', NULL, '0723456789', '$2y$10$dummyhash2', 'officer', 2, '2026-01-13 12:32:21', NULL, 1, NULL);
 
 -- --------------------------------------------------------
 
@@ -369,6 +395,15 @@ ALTER TABLE `case_updates`
   ADD KEY `idx_officer` (`officer_id`);
 
 --
+-- Indexes for table `closure_requests`
+--
+ALTER TABLE `closure_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `case_id` (`case_id`),
+  ADD KEY `requested_by` (`requested_by`),
+  ADD KEY `reviewed_by` (`reviewed_by`);
+
+--
 -- Indexes for table `crime_statistics`
 --
 ALTER TABLE `crime_statistics`
@@ -377,8 +412,6 @@ ALTER TABLE `crime_statistics`
   ADD KEY `idx_category` (`crime_category`),
   ADD KEY `idx_county_month` (`county`,`month`),
   ADD KEY `idx_crime_stats_month_category` (`month`,`crime_category`);
-
-
 
 --
 -- Indexes for table `officers`
@@ -426,7 +459,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `cases`
 --
 ALTER TABLE `cases`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `case_evidence`
@@ -438,7 +471,13 @@ ALTER TABLE `case_evidence`
 -- AUTO_INCREMENT for table `case_updates`
 --
 ALTER TABLE `case_updates`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `closure_requests`
+--
+ALTER TABLE `closure_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `crime_statistics`
@@ -446,13 +485,11 @@ ALTER TABLE `case_updates`
 ALTER TABLE `crime_statistics`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
-
-
 --
 -- AUTO_INCREMENT for table `officers`
 --
 ALTER TABLE `officers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `stations`
@@ -470,7 +507,7 @@ ALTER TABLE `system_settings`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- Constraints for dumped tables
@@ -500,12 +537,18 @@ ALTER TABLE `case_updates`
   ADD CONSTRAINT `case_updates_ibfk_2` FOREIGN KEY (`officer_id`) REFERENCES `users` (`id`);
 
 --
+-- Constraints for table `closure_requests`
+--
+ALTER TABLE `closure_requests`
+  ADD CONSTRAINT `closure_requests_ibfk_1` FOREIGN KEY (`case_id`) REFERENCES `cases` (`id`),
+  ADD CONSTRAINT `closure_requests_ibfk_2` FOREIGN KEY (`requested_by`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `closure_requests_ibfk_3` FOREIGN KEY (`reviewed_by`) REFERENCES `users` (`id`);
+
+--
 -- Constraints for table `crime_statistics`
 --
 ALTER TABLE `crime_statistics`
   ADD CONSTRAINT `crime_statistics_ibfk_1` FOREIGN KEY (`station_id`) REFERENCES `stations` (`id`);
-
-
 
 --
 -- Constraints for table `officers`

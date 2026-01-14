@@ -52,14 +52,14 @@ try {
 
     $countyStats = $db->fetchAll("
         SELECT 
-            location_county as county,
+            incident_location_county as county,
             COUNT(*) as total_cases,
             COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
             ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
             COUNT(DISTINCT station_id) as station_count
         FROM cases 
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
-        GROUP BY location_county
+        GROUP BY incident_location_county
         ORDER BY total_cases DESC
         LIMIT 15",
         ['timeframe' => $filters['timeframe']]
@@ -607,7 +607,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .kpi-card:hover {
-            transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
         }
 
@@ -656,6 +655,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         .form-select:focus {
             border-color: var(--primary-green);
             box-shadow: 0 0 0 0.2rem rgba(0, 107, 63, 0.25);
+        }
+
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
         }
 
         @media (max-width: 768px) {

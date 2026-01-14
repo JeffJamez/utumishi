@@ -406,14 +406,14 @@ class User {
     }
 
     private function getPublicStatistics() {
-    $sql = "SELECT 
-                location_county as county,
+    $sql = "SELECT
+                incident_location_county as county,
                 COUNT(*) as total_cases,
                 COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved_cases,
                 ROUND(COUNT(CASE WHEN status = 'resolved' THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
-            FROM cases 
+            FROM cases
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            GROUP BY location_county
+            GROUP BY incident_location_county
             ORDER BY total_cases DESC
             LIMIT 5";
     return $this->db->fetchAll($sql);

@@ -31,8 +31,8 @@ try {
     $hotspots = $crimeAnalyzer->findHotspots($timeframe, 3);
     
     $stationHotspots = array_filter($hotspots, function($spot) use ($stationInfo) {
-        return $spot['location_county'] === $stationInfo['county'] ||
-               $spot['location_constituency'] === $stationInfo['constituency'];
+        return $spot['incident_location_county'] === $stationInfo['county'] ||
+                $spot['incident_location_constituency'] === $stationInfo['constituency'];
     });
     
     $filters = [
@@ -57,14 +57,14 @@ try {
     $error = "Unable to load crime analysis data";
 }
 
-$pageTitle = "Crime Heatmap & Analysis";
+$pageTitle = "Crime Density & Analysis";
 require_once __DIR__ . '/../../includes/layout/layout.php';
 ?>
 
         <main class="app-main">
 
             <div class="mb-4">
-                <h2>Crime Heatmap & Analysis</h2>
+                <h2>Crime Density & Analysis</h2>
                 <p class="text-muted">
                     Crime pattern analysis for <?php echo htmlspecialchars($stationInfo['constituency'] ?? ''); ?>, 
                     <?php echo htmlspecialchars($stationInfo['county'] ?? ''); ?>
@@ -98,12 +98,60 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div>
+                        <div style="margin-top: 40px;">
                             <button type="submit" class="btn btn-primary">Update Analysis</button>
                         </div>
                     </form>
                 </div>
             </div>
+
+
+            <!-- Crime Density Map -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Crime Density Analysis</h3>
+                </div>
+                <div class="card-body">
+                    <?php if (!empty($densityData)): ?>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                     <tr>
+                                         <th>Area</th>
+                                         <th>Crime Category</th>
+                                         <th>Case Count</th>
+                                         <th>Monthly Rate</th>
+                                         <th>Density Level</th>
+                                     </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($densityData as $area): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?php echo htmlspecialchars($area['constituency']); ?></strong><br>
+                                                <small class="text-muted"><?php echo htmlspecialchars($area['county']); ?></small>
+                                            </td>
+                                             <td><?php echo htmlspecialchars($area['category']); ?></td>
+                                             <td><?php echo $area['case_count']; ?></td>
+                                             <td><?php echo round($area['cases_per_month']); ?></td>
+                                             <td>
+                                                <span class="badge" style="background-color: <?php echo $area['color']; ?>; color: white;">
+                                                    <?php echo ucfirst(str_replace('_', ' ', $area['density_level'])); ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center p-4">
+                            <p class="text-muted">No density data available for the selected filters.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
 
             <!-- Hotspots Overview -->
             <div class="card mb-4">
@@ -116,9 +164,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <div class="table-responsive">
                             <table class="table">
                                 <thead>
-                                    <tr>
-                                        <th>Area</th>
-                                        <th>Crime Type</th>
+                                     <tr>
+                                         <th>Area</th>
+                                         <th>Local Area</th>
+                                         <th>Crime Type</th>
                                         <th>Total Cases</th>
                                         <th>Cases/Month</th>
                                         <th>% of Total</th>
@@ -127,27 +176,33 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($stationHotspots as $hotspot): ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?php echo htmlspecialchars($hotspot['location_constituency']); ?></strong><br>
-                                                <small class="text-muted"><?php echo htmlspecialchars($hotspot['location_county']); ?></small>
-                                            </td>
-                                            <td><?php echo htmlspecialchars($hotspot['category']); ?></td>
-                                            <td><?php echo $hotspot['case_count']; ?></td>
-                                            <td><?php echo round($hotspot['cases_per_month'], 1); ?></td>
-                                            <td><?php echo $hotspot['percentage_of_total']; ?>%</td>
-                                            <td>
-                                                <span class="badge status-<?php echo $hotspot['severity'] === 'critical' ? 'danger' : ($hotspot['severity'] === 'high' ? 'warning' : 'info'); ?>">
-                                                    <?php echo ucfirst($hotspot['severity']); ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline btn-primary" onclick="showHotspotDetails('<?php echo htmlspecialchars($hotspot['location_constituency']); ?>', '<?php echo htmlspecialchars($hotspot['category']); ?>')">
-                                                    Details
-                                                </button>
-                                            </td>
-                                        </tr>
+                                     <?php foreach ($stationHotspots as $hotspot): ?>
+                                         <?php $caseId = $crimeAnalyzer->getHotspotCaseId($hotspot['incident_location_county'], $hotspot['incident_location_constituency'], $hotspot['category']); ?>
+                                         <tr>
+                                              <td>
+                                                   <strong><?php echo htmlspecialchars($hotspot['incident_location_constituency']); ?></strong><br>
+                                                   <small class="text-muted"><?php echo htmlspecialchars($hotspot['incident_location_county']); ?></small>
+                                              </td>
+                                              <td><?php echo htmlspecialchars($hotspot['incident_local_area'] ?? 'General'); ?></td>
+                                              <td><?php echo htmlspecialchars($hotspot['category']); ?></td>
+                                             <td><?php echo $hotspot['case_count']; ?></td>
+                                             <td><?php echo round($hotspot['cases_per_month'], 1); ?></td>
+                                             <td><?php echo $hotspot['percentage_of_total']; ?>%</td>
+                                             <td>
+                                                 <span class="badge status-<?php echo $hotspot['severity'] === 'critical' ? 'danger' : ($hotspot['severity'] === 'high' ? 'warning' : 'info'); ?>">
+                                                     <?php echo ucfirst($hotspot['severity']); ?>
+                                                 </span>
+                                             </td>
+                                             <td>
+                                                 <?php if ($caseId): ?>
+                                                     <a class="btn btn-sm btn-outline btn-primary" href="case_details.php?id=<?php echo $caseId; ?>">
+                                                         Details
+                                                     </a>
+                                                 <?php else: ?>
+                                                     <button class="btn btn-sm btn-outline btn-secondary" disabled>No Cases</button>
+                                                 <?php endif; ?>
+                                             </td>
+                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
                             </table>
@@ -203,69 +258,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             </div>
 
-            <!-- Crime Density Map -->
-            <div class="card">
-                <div class="card-header">
-                    <h3>Crime Density Analysis</h3>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($densityData)): ?>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Area</th>
-                                        <th>Crime Category</th>
-                                        <th>Case Count</th>
-                                        <th>Monthly Rate</th>
-                                        <th>Avg Resolution</th>
-                                        <th>Density Level</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($densityData as $area): ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?php echo htmlspecialchars($area['constituency']); ?></strong><br>
-                                                <small class="text-muted"><?php echo htmlspecialchars($area['county']); ?></small>
-                                            </td>
-                                            <td><?php echo htmlspecialchars($area['category']); ?></td>
-                                            <td><?php echo $area['case_count']; ?></td>
-                                            <td><?php echo round($area['cases_per_month'], 1); ?></td>
-                                            <td><?php echo $area['avg_resolution_hours']; ?>h</td>
-                                            <td>
-                                                <span class="badge" style="background-color: <?php echo $area['color']; ?>; color: white;">
-                                                    <?php echo ucfirst(str_replace('_', ' ', $area['density_level'])); ?>
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-center p-4">
-                            <p class="text-muted">No density data available for the selected filters.</p>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
         </main>
     </div>
     
-    <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
-    <script>
-        function showHotspotDetails(area, category) {
-            alert(`Detailed analysis for ${category} crimes in ${area} would be displayed here.\n\nThis could include:\n• Time-of-day patterns\n• Specific location clusters\n• Historical trends\n• Recommended patrol routes`);
-        }
-        
-        // Auto-refresh data every 5 minutes
-        setInterval(function() {
-            if (!document.hidden) {
-                location.reload();
-            }
-        }, 300000);
-    </script>
+     <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
+     </script>
 </body>
 </html>

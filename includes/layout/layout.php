@@ -27,9 +27,11 @@ $currentUser = getCurrentUser();
 <body>
     <div class="app-layout">
 
-       <?php renderCompleteHeader($userRole, $currentUser); ?>
+        <?php renderCompleteHeader($userRole, $currentUser); ?>
 
-        <aside class="app-sidebar">
-            <?php echo renderNavigation($userRole); ?>
-        </aside>
+         <aside class="app-sidebar">
+             <?php echo renderNavigation($userRole); ?>
+         </aside>
+         <main class="app-main">
+
 

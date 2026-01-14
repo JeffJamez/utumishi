@@ -17,49 +17,77 @@ class PredictiveAnalytics {
 
     /**
      * Generate comprehensive predictive dashboard data
-     */
-    public function getDashboardPredictions($stationId = null, $days = 7) {
-        return [
-            'crime_forecast' => $this->generateCrimeForecast($stationId, $days),
-            'hotspot_predictions' => $this->predictHotspots($stationId),
-            'resource_predictions' => $this->predictResourceNeeds($stationId, $days),
-            'risk_calendar' => $this->generateRiskCalendar($stationId, $days),
-            'early_warnings' => $this->generateEarlyWarnings($stationId),
-            'patrol_optimization' => $this->getPatrolOptimization($stationId)
-        ];
-    }
+      */
+     public function getDashboardPredictions($stationId = null, $days = 7) {
+         return [
+             'crime_forecast' => $this->generateCrimeForecast($stationId, $days),
+             'hotspot_predictions' => $this->predictHotspots($stationId),
+             'risk_calendar' => $this->generateRiskCalendar($stationId, $days),
+             'early_warnings' => $this->generateEarlyWarnings($stationId),
+             'patrol_optimization' => $this->getPatrolOptimization($stationId)
+         ];
+     }
 
     /**
      * Generate 7-day crime forecast
      */
-    public function generateCrimeForecast($stationId = null, $days = 7) {
+     public function generateCrimeForecast($stationId = null, $days = 7) {
         $forecast = [];
         $currentDate = new DateTime();
+
+        // Cache trend and seasonal for all days
+        $trendMultiplier = $this->calculateTrendMultiplier($stationId);
+
+        // Pre-fetch categories and hours for all days of week
+        $categoriesByDay = [];
+        $hoursByDay = [];
+        for ($d = 0; $d < 7; $d++) {
+            $categoriesByDay[$d] = $this->predictCategoryBreakdown($stationId, $d);
+            $hoursByDay[$d] = $this->predictPeakHours($stationId, $d);
+        }
 
         for ($i = 1; $i <= $days; $i++) {
             $targetDate = clone $currentDate;
             $targetDate->add(new DateInterval("P{$i}D"));
-            
+
             $dateStr = $targetDate->format('Y-m-d');
             $dayOfWeek = $targetDate->format('w');
-            
+
             // Get historical average for this day of week
             $historicalAvg = $this->getHistoricalAverage($stationId, $dayOfWeek);
-            
+
             // Apply trend and seasonal adjustments
-            $trendMultiplier = $this->calculateTrendMultiplier($stationId);
             $seasonalMultiplier = $this->getSeasonalMultiplier($targetDate);
-            
+
             $predictedCases = round($historicalAvg * $trendMultiplier * $seasonalMultiplier);
-            
+
+            // Generate up to 3 specific predicted cases
+            $predictedCaseDetails = [];
+            if ($predictedCases > 0) {
+                $categories = $categoriesByDay[$dayOfWeek];
+                $numCases = min(3, $predictedCases);
+                for ($j = 0; $j < $numCases; $j++) {
+                    $category = $categories[$j % count($categories)]['category'] ?? 'Unknown';
+                    // Simple severity assignment based on category
+                    $severity = 'medium';
+                    if (in_array($category, ['Murder', 'Rape', 'Assault', 'Domestic Violence'])) {
+                        $severity = 'high';
+                    } elseif (in_array($category, ['Theft', 'Burglary', 'Robbery'])) {
+                        $severity = 'medium';
+                    } else {
+                        $severity = 'low';
+                    }
+                    $predictedCaseDetails[] = ['category' => $category, 'severity' => $severity];
+                }
+            }
+
             $forecast[] = [
                 'date' => $dateStr,
                 'day_name' => $targetDate->format('l'),
-                'predicted_cases' => max(0, $predictedCases),
+                'predicted_cases' => $predictedCaseDetails,
                 'confidence_level' => $this->calculateConfidence($historicalAvg, $trendMultiplier),
                 'risk_level' => $this->classifyDailyRisk($predictedCases),
-                'peak_hours' => $this->predictPeakHours($stationId, $dayOfWeek),
-                'category_breakdown' => $this->predictCategoryBreakdown($stationId, $dayOfWeek)
+                'peak_hours' => $hoursByDay[$dayOfWeek]
             ];
         }
 
@@ -81,8 +109,8 @@ class PredictiveAnalytics {
             
             if ($confidenceScore >= $confidence_threshold) {
                 $predictions[] = [
-                    'location' => $area['location_constituency'],
-                    'county' => $area['location_county'],
+                    'location' => $area['incident_location_constituency'],
+                    'county' => $area['incident_location_county'],
                     'predicted_category' => $area['dominant_category'],
                     'current_trend' => $area['trend_direction'],
                     'acceleration_rate' => $area['acceleration_rate'],
@@ -99,44 +127,10 @@ class PredictiveAnalytics {
             return ($b['confidence_score'] * $b['acceleration_rate']) - ($a['confidence_score'] * $a['acceleration_rate']);
         });
 
-        return array_slice($predictions, 0, 10);
+        return array_slice($predictions, 0, 10); // Already limited in query
     }
 
-    /**
-     * Predict resource allocation needs
-     */
-    public function predictResourceNeeds($stationId, $days = 7) {
-        $predictions = [];
-        $currentWorkload = $this->getCurrentStationWorkload($stationId);
 
-        for ($i = 1; $i <= $days; $i++) {
-            $date = date('Y-m-d', strtotime("+{$i} days"));
-            $dayOfWeek = date('w', strtotime($date));
-            
-            // Predict case volume
-            $expectedCases = $this->predictDailyCaseVolume($stationId, $dayOfWeek);
-            
-            // Calculate officer requirements
-            $requiredOfficers = $this->calculateOfficerRequirement($expectedCases, $currentWorkload);
-            $availableOfficers = $this->getProjectedAvailability($stationId, $date);
-            
-            $gap = max(0, $requiredOfficers - $availableOfficers);
-            
-            $predictions[] = [
-                'date' => $date,
-                'day_name' => date('l', strtotime($date)),
-                'expected_cases' => $expectedCases,
-                'required_officers' => $requiredOfficers,
-                'available_officers' => $availableOfficers,
-                'officer_gap' => $gap,
-                'utilization_rate' => round(($requiredOfficers / max(1, $availableOfficers)) * 100, 1),
-                'workload_level' => $this->classifyWorkloadLevel($gap, $expectedCases),
-                'recommendations' => $this->generateResourceRecommendations($gap, $expectedCases)
-            ];
-        }
-
-        return $predictions;
-    }
 
     /**
      * Generate risk calendar
@@ -267,7 +261,7 @@ class PredictiveAnalytics {
         return $result['avg_cases'] ?? 0;
     }
 
-    private function calculateTrendMultiplier($stationId) {
+     private function calculateTrendMultiplier($stationId) {
         // Compare recent 30 days to previous 30 days
         $recentCount = $this->getCaseCount($stationId, 30, 0);
         $previousCount = $this->getCaseCount($stationId, 30, 30);
@@ -350,7 +344,7 @@ class PredictiveAnalytics {
         return min(60, 30 + ($stability * 30));
     }
 
-   private function predictPeakHours($stationId, $dayOfWeek) {
+    private function predictPeakHours($stationId, $dayOfWeek) {
         $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
@@ -363,7 +357,7 @@ class PredictiveAnalytics {
 
         $result = $this->db->fetchAll("
             SELECT HOUR(created_at) as hour, COUNT(*) as count
-            FROM cases 
+            FROM cases
             WHERE $whereClause
             AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
             GROUP BY HOUR(created_at)
@@ -374,7 +368,7 @@ class PredictiveAnalytics {
         return array_map(function($r) { return $r['hour']; }, $result);
     }
 
-    private function predictCategoryBreakdown($stationId, $dayOfWeek) {
+     private function predictCategoryBreakdown($stationId, $dayOfWeek) {
         $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
@@ -387,7 +381,7 @@ class PredictiveAnalytics {
 
         $result = $this->db->fetchAll("
             SELECT category, COUNT(*) as count
-            FROM cases 
+            FROM cases
             WHERE $whereClause
             AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
             GROUP BY category
@@ -398,38 +392,39 @@ class PredictiveAnalytics {
         return $result;
     }
 
-    private function analyzeAccelerationPatterns($stationId) {
+     private function analyzeAccelerationPatterns($stationId) {
         $whereClause = $stationId ? "AND station_id = :station_id" : "";
         $params = $stationId ? ['station_id' => $stationId] : [];
 
         return $this->db->fetchAll("
-            SELECT 
-                location_constituency,
-                location_county,
+            SELECT
+                incident_location_constituency,
+                incident_location_county,
                 category as dominant_category,
                 COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as recent_week,
-                COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) 
-                           AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as previous_week,
-                CASE 
-                    WHEN COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) 
-                               AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) > 0
+                COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                            AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as previous_week,
+                CASE
+                    WHEN COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                                AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) > 0
                     THEN (COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) /
-                          COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) 
-                               AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)) * 100
+                          COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                                AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)) * 100
                     ELSE 100
                 END as acceleration_rate,
-                CASE 
-                    WHEN COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) > 
-                         COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY) 
-                               AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)
+                CASE
+                    WHEN COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) >
+                         COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                                AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)
                     THEN 'increasing'
                     ELSE 'stable'
                 END as trend_direction
-            FROM cases 
+            FROM cases
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) $whereClause
-            GROUP BY location_constituency, location_county, category
+            GROUP BY incident_location_constituency, incident_location_county, category
             HAVING recent_week > 0
             ORDER BY acceleration_rate DESC
+            LIMIT 50
         ", $params);
     }
 
@@ -465,20 +460,9 @@ class PredictiveAnalytics {
         return $actions;
     }
 
-    private function getCurrentStationWorkload($stationId) {
-        $result = $this->db->fetchOne("
-            SELECT AVG(current_case_load) as avg_load
-            FROM officers o
-            JOIN users u ON o.user_id = u.id
-            WHERE u.station_id = :station_id AND u.is_active = 1
-        ", ['station_id' => $stationId]);
 
-        return $result['avg_load'] ?? 5;
-    }
 
-    private function predictDailyCaseVolume($stationId, $dayOfWeek) {
-        return round($this->getHistoricalAverage($stationId, $dayOfWeek) * $this->calculateTrendMultiplier($stationId));
-    }
+
 
     private function calculateOfficerRequirement($expectedCases, $currentWorkload) {
         $casesPerOfficer = 8; // Average cases per officer per day
@@ -497,23 +481,9 @@ class PredictiveAnalytics {
         return round(($result['officer_count'] ?? 5) * 0.8);
     }
 
-    private function classifyWorkloadLevel($gap, $expectedCases) {
-        if ($gap > 3) return 'critical';
-        if ($gap > 1) return 'high';
-        if ($expectedCases > 15) return 'busy';
-        return 'normal';
-    }
 
-    private function generateResourceRecommendations($gap, $expectedCases) {
-        $recommendations = [];
-        if ($gap > 0) {
-            $recommendations[] = "Request {$gap} additional officers";
-        }
-        if ($expectedCases > 12) {
-            $recommendations[] = "Prepare for high case volume";
-        }
-        return $recommendations ?: ['Current staffing adequate'];
-    }
+
+
 
     private function calculateCrimeRisk($stationId, $dayOfWeek) {
         return $this->getHistoricalAverage($stationId, $dayOfWeek) * 5; // Scale to 0-100
@@ -549,15 +519,16 @@ class PredictiveAnalytics {
 
     private function identifyHighRiskAreas($stationId) {
         return $this->db->fetchAll("
-            SELECT 
-                location_constituency as location,
+            SELECT
+                incident_location_constituency as location,
                 COUNT(*) * 10 as risk_score
-            FROM cases 
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" . 
+            FROM cases
+            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" .
             ($stationId ? " AND station_id = :station_id" : "") . "
-            GROUP BY location_constituency
+            GROUP BY incident_location_constituency
             HAVING risk_score > 50
             ORDER BY risk_score DESC
+            LIMIT 20
         ", $stationId ? ['station_id' => $stationId] : []);
     }
 

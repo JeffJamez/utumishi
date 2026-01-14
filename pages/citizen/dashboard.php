@@ -24,14 +24,14 @@ try {
     $db = Database::getInstance();
 
     $countyStats = $db->fetchAll("
-        SELECT 
-            location_county as county, 
+        SELECT
+            incident_location_county as county,
             COUNT(*) as case_count,
             COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
             ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
-        FROM cases 
+        FROM cases
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        GROUP BY location_county  
+        GROUP BY incident_location_county
         ORDER BY case_count DESC
         LIMIT 10
     ");
@@ -46,7 +46,6 @@ $pageTitle = "Citizen Dashboard";
 require_once __DIR__ . '/../../includes/layout/layout.php';
 ?>
 
-        <main class="app-main">
             <?php flashMessage(); ?>
 
             <?php if (isset($error)): ?>
@@ -82,21 +81,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             </div>
              <div>
-                <!-- <div class="card mb-3">
-                    <div class="card-header">
-                        <h3>Quick Actions</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex flex-column gap-2">
-                            <a href="<?php echo BASE_URL; ?>/pages/citizen/track_case.php" class="btn btn-outline btn-primary btn-block">
-                                Track Case
-                            </a>
-                            <a href="<?php echo BASE_URL; ?>/pages/citizen/public_stats.php" class="btn btn-outline btn-primary btn-block">
-                                View Crime Stats
-                            </a>
-                        </div>
-                    </div>
-                </div> -->
+
 
                     <!-- <div class="card">
                         <div class="card-header">
@@ -186,7 +171,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <h3>National Crime Statistics (Last 30 Days)</h3>
                 </div>
                 <div class="card-body">
-                    <div class="stats-grid">
+                   <!--  <div class="stats-grid">
                         <div class="stat-item">
                             <div class="stat-number"><?php echo number_format($publicStats['total_national_cases'] ?? 0); ?></div>
                             <div class="stat-label">Total Cases Reported</div>
@@ -203,7 +188,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <div class="stat-number"><?php echo round($publicStats['avg_resolution_time'] ?? 0, 1); ?>h</div>
                             <div class="stat-label">Avg Resolution Time</div>
                         </div>
-                    </div>
+                    </div> -->
 
                     <?php if (!empty($countyStats)): ?>
                     <h4 class="mt-4 mb-3">Resolution Rates by County</h4>
@@ -222,8 +207,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <?php foreach (array_slice($countyStats, 0, 8) as $county): ?>
                                     <?php
                                     $rate = $county['resolution_rate'];
-                                    $status = $rate >= 80 ? 'Excellent' : ($rate >= 70 ? 'Good' : ($rate >= 60 ? 'Fair' : 'Needs Improvement'));
-                                    $statusColor = $rate >= 80 ? 'success' : ($rate >= 70 ? 'warning' : 'danger');
+                                    $status = $rate >= 80 ? 'Highly Effective' : ($rate >= 70 ? 'Well Resolved' : ($rate >= 60 ? 'Moderately Resolved' : 'Being Addressed'));
+                                    $statusColor = $rate >= 80 ? 'success' : ($rate >= 70 ? 'warning' : ($rate >= 60 ? 'info' : 'danger'));
                                     ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($county['county']); ?></td>
@@ -243,85 +228,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <?php endif; ?>
                 </div>
                                 </div>
-
-            <!-- <div class="card">
-                <div class="card-header">
-                    <h3>Safety Tips & Crime Prevention</h3>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-                        <div class="alert alert-info">
-                            <h5> Home Security</h5>
-                            <ul style="margin-bottom: 0; font-size: 0.9rem;">
-                                <li>Install proper lighting around your property</li>
-                                <li>Use deadbolts and security cameras</li>
-                                <li>Don't advertise valuables or travel plans</li>
-                                <li>Know your neighbors and join community watch</li>
-                            </ul>
-                        </div>
-
-                        <div class="alert alert-warning">
-                            <h5> Vehicle Safety</h5>
-                            <ul style="margin-bottom: 0; font-size: 0.9rem;">
-                                <li>Always lock your vehicle</li>
-                                <li>Park in well-lit, busy areas</li>
-                                <li>Don't leave valuables visible</li>
-                                <li>Be aware of your surroundings</li>
-                            </ul>
-                        </div>
-
-                        <div class="alert alert-success">
-                            <h5> Cyber Security</h5>
-                            <ul style="margin-bottom: 0; font-size: 0.9rem;">
-                                <li>Use strong, unique passwords</li>
-                                <li>Be cautious with M-Pesa transactions</li>
-                                <li>Verify requests before sharing personal info</li>
-                                <li>Report suspicious online activities</li>
-                            </ul>
-                        </div>
-
-                        <div class="alert alert-danger">
-                            <h5> Personal Safety</h5>
-                            <ul style="margin-bottom: 0; font-size: 0.9rem;">
-                                <li>Stay alert in public places</li>
-                                <li>Avoid walking alone at night</li>
-                                <li>Trust your instincts</li>
-                                <li>Keep emergency contacts handy</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div> -->
-
-            <!-- <div class="card">
-                <div class="card-header">
-                    <h3>System Updates & Announcements</h3>
-                </div>
-                <div class="card-body">
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-date"><?php echo date('M d, Y'); ?></div>
-                            <div class="timeline-content">
-                                <strong>System Enhancement:</strong> Case tracking system has been improved with real-time updates and mobile-friendly interface.
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-date"><?php echo date('M d, Y', strtotime('-3 days')); ?></div>
-                            <div class="timeline-content">
-                                <strong>New Feature:</strong> Citizens can now view detailed crime statistics and safety reports for their areas.
-                            </div>
-                        </div>
-
-                        <div class="timeline-item">
-                            <div class="timeline-date"><?php echo date('M d, Y', strtotime('-1 week')); ?></div>
-                            <div class="timeline-content">
-                                <strong>Service Notice:</strong> Digital OB system now generates automatic OB numbers for all reported cases.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div> -->
         </main>
     </div>
 
@@ -462,47 +368,31 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             margin-bottom: 0.25rem;
         }
 
-        @media (max-width: 768px) {
-            .app-layout {
-                grid-template-areas: 
-                    "header"
-                    "main";
-                grid-template-columns: 1fr;
-            }
-
-            .kpi-grid {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 1rem;
-            }
-
-            .d-grid[style*="2fr 1fr"] {
-                grid-template-columns: 1fr !important;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        .badge-info {
+            background-color: #17a2b8;
+            color: white;
         }
 
-        @media (max-width: 480px) {
-            .kpi-grid {
-                grid-template-columns: 1fr;
-            }
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
 
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
+        @media (max-width: 768px) {
             .table-responsive {
-                font-size: 0.8rem;
+                font-size: 0.85rem;
             }
 
-            .alert {
-                padding: 0.75rem;
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .timeline {
+                padding-left: 1.5rem;
             }
         }
     </style>
 
-     <?php renderHeaderScripts(); ?>
+        </main>
+    </div>
 </body>
 </html>

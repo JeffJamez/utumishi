@@ -361,6 +361,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     </script>
     
     <style>
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
         .modal {
             position: fixed;
             z-index: 1000;

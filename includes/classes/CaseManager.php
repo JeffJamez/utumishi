@@ -15,9 +15,9 @@ class CaseManager {
         try {
             $this->db->beginTransaction();
 
-            $required = ['title', 'description', 'category', 'location_county', 'location_constituency',
-                        'reporter_county', 'reporter_constituency',
-                        'reported_by_citizen_id', 'recorded_by_officer_id', 'station_id'];
+            $required = ['title', 'description', 'category', 'incident_location_county', 'incident_location_constituency',
+                         'reporter_county', 'reporter_constituency',
+                         'reported_by_citizen_id', 'recorded_by_officer_id', 'station_id'];
 
             foreach ($required as $field) {
                 if (empty($data[$field])) {
@@ -33,8 +33,8 @@ class CaseManager {
                 'title' => sanitizeText($data['title']),
                 'description' => sanitizeText($data['description']),
                 'category' => sanitizeText($data['category']),
-                'location_county' => sanitizeText($data['location_county']),
-                'location_constituency' => sanitizeText($data['location_constituency']),
+                'incident_location_county' => sanitizeText($data['incident_location_county']),
+                 'incident_location_constituency' => sanitizeText($data['incident_location_constituency']),
                 'incident_local_area' => sanitizeText($data['incident_local_area'] ?? ''),
                 'reporter_county' => sanitizeText($data['reporter_county']),
                 'reporter_constituency' => sanitizeText($data['reporter_constituency']),
@@ -344,7 +344,39 @@ class CaseManager {
         return $this->db->fetchAll($sql, ['case_id' => $caseId]);
     }
 
-    public function addCaseUpdate($caseId, $officerId, $updateText, $statusBefore, $statusAfter) {
+    public function updateCaseStatus($caseId, $newStatus, $officerId, $updateText) {
+        try {
+            $this->db->beginTransaction();
+
+            // Get current status
+            $case = $this->db->fetchOne("SELECT status FROM cases WHERE id = :id", ['id' => $caseId]);
+            if (!$case) {
+                throw new Exception("Case not found");
+            }
+            $oldStatus = $case['status'];
+
+            // Update case
+            $updateData = ['status' => $newStatus, 'updated_at' => date('Y-m-d H:i:s')];
+            if ($newStatus === CASE_CLOSED) {
+                $updateData['closed_at'] = date('Y-m-d H:i:s');
+            }
+
+            $this->db->update('cases', $updateData, 'id = :id', ['id' => $caseId]);
+
+            // Add update
+            $this->addCaseUpdate($caseId, $officerId, $updateText, $oldStatus, $newStatus);
+
+            $this->db->commit();
+            return true;
+
+        } catch (Exception $e) {
+            $this->db->rollback();
+            error_log("Update Case Status Error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function addCaseUpdate($caseId, $officerId, $updateText, $statusBefore = null, $statusAfter = null) {
         try {
             $updateData = [
                 'case_id' => $caseId,
@@ -458,7 +490,7 @@ class CaseManager {
         }
 
         if (!empty($filters['county'])) {
-            $whereConditions[] = "c.location_county = :county";
+            $whereConditions[] = "c.incident_location_county = :county";
             $params['county'] = $filters['county'];
         }
 
@@ -480,7 +512,7 @@ class CaseManager {
         $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
 
         $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.created_at,
-                       c.location_county, c.location_constituency,
+                        c.incident_location_county, c.incident_location_constituency,
                        u.name as reporter_name, s.name as station_name
                 FROM cases c
                 JOIN users u ON c.reported_by_citizen_id = u.id

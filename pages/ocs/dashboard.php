@@ -40,8 +40,8 @@ try {
     $stationHotspots = array_filter($hotspots, function($spot) use ($currentUser) {
         $stationInfo = getDB()->fetchOne("SELECT county, constituency FROM stations WHERE id = :id", 
             ['id' => $currentUser['station_id']]);
-        return $spot['location_county'] === $stationInfo['county'] ||
-               $spot['location_constituency'] === $stationInfo['constituency'];
+        return $spot['incident_location_county'] === $stationInfo['county'] ||
+                $spot['incident_location_constituency'] === $stationInfo['constituency'];
     });
 
     $recommendations = $crimeAnalyzer->recommendDeployment($stationId, 30);
@@ -86,7 +86,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <?php foreach (array_slice($alerts, 0, 3) as $alert): ?>
                     <?php if ($alert['severity'] === 'high' || $alert['severity'] === 'critical'): ?>
                         <div class="alert alert-<?php echo $alert['severity'] === 'critical' ? 'danger' : 'warning'; ?>">
-                            <strong>🚨 <?php echo htmlspecialchars($alert['title']); ?>:</strong>
+                            <strong><?php echo htmlspecialchars($alert['title']); ?>:</strong>
                             <?php echo htmlspecialchars($alert['message']); ?>
                             <?php if ($alert['action_required']): ?>
                                 <br><small><strong>Action Required:</strong> Review and take appropriate measures</small>
@@ -100,61 +100,38 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div class="kpi-card">
                     <div class="kpi-value"><?php echo $stationStats['total_cases'] ?? 0; ?></div>
                     <div class="kpi-label">Total Cases This Month</div>
-                    <div class="kpi-change">
-                        Resolution Rate: 
-                        <span class="positive"><?php echo round(($stationStats['resolved_cases'] + $stationStats['closed_cases']) / max($stationStats['total_cases'], 1) * 100, 1); ?>%</span>
-                    </div>
                 </div>
 
                 <div class="kpi-card">
                     <div class="kpi-value"><?php echo count($officerPerformance); ?></div>
                     <div class="kpi-label">Active Officers</div>
-                    <div class="kpi-change">
-                        <?php 
-                        $overloaded = array_filter($officerPerformance, function($officer) {
-                            return ($officer['cases_handled'] ?? 0) > 15;
-                        });
-                        ?>
-                        <?php if (count($overloaded) > 0): ?>
-                            <span class="negative"><?php echo count($overloaded); ?> overloaded</span>
-                        <?php else: ?>
-                            <span class="positive">Workload balanced</span>
-                        <?php endif; ?>
-                    </div>
                 </div>
 
                 <div class="kpi-card">
                     <div class="kpi-value"><?php echo $stationStats['in_progress_cases'] + $stationStats['assigned_cases'] ?? 0; ?></div>
                     <div class="kpi-label">Active Cases</div>
-                    <div class="kpi-change">
-                        Urgent: 
-                        <span class="<?php echo count($stationHotspots) > 0 ? 'negative' : 'positive'; ?>">
-                            <?php echo count($stationHotspots); ?> hotspots
-                        </span>
-                    </div>
                 </div>
 
                 <div class="kpi-card">
                     <div class="kpi-value"><?php echo count($recommendations); ?></div>
                     <div class="kpi-label">Recommendations</div>
-                    <div class="kpi-change">
-                        <?php if (count($recommendations) > 0): ?>
-                            <span class="negative">Action needed</span>
-                        <?php else: ?>
-                            <span class="positive">Operations optimal</span>
-                        <?php endif; ?>
-                    </div>
                 </div>
             </div>
 
             <div class="d-grid" style="grid-template-columns: 2fr 1fr; gap: 2rem;">
 
                 <div class="card">
-                    <div class="card-header">
-                        <h3>Resource Deployment Recommendations</h3>
-                        <?php if (count($recommendations) > 0): ?>
-                            <span class="badge status-progress"><?php echo count($recommendations); ?> recommendations</span>
-                        <?php endif; ?>
+                    <div class="card-header" style="display: flex; gap: 10px;">
+                        <div>
+                            <h3>Resource Deployment Recommendations</h3>
+                        </div>
+                        
+                        <div>
+
+                            <?php if (count($recommendations) > 0): ?>
+                                <span class="badge status-progress"><?php echo count($recommendations); ?> recommendations</span>
+                                <?php endif; ?>
+                            </div>
                     </div>
                     <div class="card-body">
                         <?php if (!empty($recommendations)): ?>
@@ -203,31 +180,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 </div>
 
-                <div>
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h3>Quick Actions</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="d-flex flex-column gap-2">
-                                <a href="<?php echo BASE_URL; ?>/pages/ocs/officer_workload.php" class="btn btn-outline btn-primary btn-block">
-                                    Manage Officers
-                                </a>
-                                <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-outline btn-primary btn-block">
-                                    Review Cases
-                                </a>
-                                <a href="<?php echo BASE_URL; ?>/pages/ocs/crime_heatmap.php" class="btn btn-outline btn-primary btn-block">
-                                    Crime Analysis
-                                </a>
-
-                                <a href="<?php echo BASE_URL; ?>/pages/ocs/reports.php" class="btn btn-outline btn-primary btn-block">
-                                    Generate Report
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
+                <div><div class="card">
                         <div class="card-header">
                             <h3>Station Information</h3>
                         </div>
@@ -248,6 +201,64 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                         </div>
                     </div>
+                </div>
+            </div>
+
+             <div class="card">
+                <div class="card-header">
+                    <h3>Recent Cases (Last 7 Days)</h3>
+                    <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-sm btn-outline btn-primary">
+                        View All Cases
+                    </a>
+                </div>
+                <div class="card-body">
+                    <?php if (!empty($recentCases)): ?>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>OB Number</th>
+                                        <th>Case Details</th>
+                                        <th>Reporter</th>
+                                        <th>Assigned Officer</th>
+                                        <th>Status</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach (array_slice($recentCases, 0, 10) as $case): ?>
+                                        <tr>
+                                            <td>
+                                                <strong><?php echo htmlspecialchars($case['ob_number']); ?></strong>
+                                            </td>
+                                            <td>
+                                                <div><?php echo htmlspecialchars($case['title']); ?></div>
+                                                <small class="text-muted"><?php echo htmlspecialchars($case['category']); ?></small>
+                                            </td>
+                                            <td><?php echo htmlspecialchars($case['reporter_name']); ?></td>
+                                            <td>
+                                                <?php if ($case['assigned_officer']): ?>
+                                                    <?php echo htmlspecialchars($case['assigned_officer']); ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted">Not assigned</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <span class="badge <?php echo STATUS_COLORS[$case['status']] ?? 'status-reported'; ?>">
+                                                    <?php echo ucfirst(str_replace('_', ' ', $case['status'])); ?>
+                                                </span>
+                                            </td>
+                                            <td><?php echo date('M d, Y', strtotime($case['created_at'])); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-center p-4">
+                            <p class="text-muted">No recent cases to display.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -326,63 +337,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3>Recent Cases (Last 7 Days)</h3>
-                    <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-sm btn-outline btn-primary">
-                        View All Cases
-                    </a>
-                </div>
-                <div class="card-body">
-                    <?php if (!empty($recentCases)): ?>
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>OB Number</th>
-                                        <th>Case Details</th>
-                                        <th>Reporter</th>
-                                        <th>Assigned Officer</th>
-                                        <th>Status</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach (array_slice($recentCases, 0, 10) as $case): ?>
-                                        <tr>
-                                            <td>
-                                                <strong><?php echo htmlspecialchars($case['ob_number']); ?></strong>
-                                            </td>
-                                            <td>
-                                                <div><?php echo htmlspecialchars($case['title']); ?></div>
-                                                <small class="text-muted"><?php echo htmlspecialchars($case['category']); ?></small>
-                                            </td>
-                                            <td><?php echo htmlspecialchars($case['reporter_name']); ?></td>
-                                            <td>
-                                                <?php if ($case['assigned_officer']): ?>
-                                                    <?php echo htmlspecialchars($case['assigned_officer']); ?>
-                                                <?php else: ?>
-                                                    <span class="text-muted">Not assigned</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="badge <?php echo STATUS_COLORS[$case['status']] ?? 'status-reported'; ?>">
-                                                    <?php echo ucfirst(str_replace('_', ' ', $case['status'])); ?>
-                                                </span>
-                                            </td>
-                                            <td><?php echo date('M d', strtotime($case['created_at'])); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-center p-4">
-                            <p class="text-muted">No recent cases to display.</p>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
+           
         </main>
     </div>
 
@@ -480,13 +435,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     </script>
 
     <style>
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
         .status-success { background-color: var(--success-green); color: white; }
         .status-warning { background-color: var(--warning-orange); color: var(--primary-black); }
         .status-info { background-color: var(--info-blue); color: white; }
         .status-danger { background-color: var(--danger-red); color: white; }
 
         .kpi-card:hover {
-            transform: translateY(-3px);
             cursor: pointer;
         }
 

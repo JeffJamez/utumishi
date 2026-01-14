@@ -12,12 +12,21 @@ require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/utils/file_upload.php';
 require_once __DIR__ . '/../../includes/classes/Officer.php';
 require_once __DIR__ . '/../../includes/classes/CaseManager.php';
+require_once __DIR__ . '/../../includes/classes/Station.php';
 
-requireRole(ROLE_OFFICER);
+if (!in_array($_SESSION['role'] ?? '', [ROLE_OFFICER, ROLE_OCS])) {
+    die('Access denied');
+}
 
 $currentUser = getCurrentUser();
-$officer = new Officer($currentUser['id']);
 $caseManager = new CaseManager();
+$isOCS = ($_SESSION['role'] ?? '') === ROLE_OCS;
+
+if ($isOCS) {
+    $station = new Station($currentUser['station_id']);
+} else {
+    $officer = new Officer($currentUser['id']);
+}
 
 $errors = [];
 $success = '';
@@ -36,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = sanitizeText($_POST['action'] ?? '');
 
         if ($action === 'upload_evidence') {
+            if ($isOCS) {
+                throw new Exception('OCS users cannot upload evidence');
+            }
+
             $uploadCaseId = (int)$_POST['case_id'];
             $description = sanitizeText($_POST['description'] ?? '');
 
@@ -63,6 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
         } elseif ($action === 'delete_evidence') {
+            if ($isOCS) {
+                throw new Exception('OCS users cannot delete evidence');
+            }
+
             $evidenceId = (int)$_POST['evidence_id'];
 
             if ($evidenceId) {
@@ -84,7 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 try {
-    $officerCases = $officer->getAssignedCases();
+    if ($isOCS) {
+        $officerCases = $station->getCases([], 50); // Get recent cases for OCS
+    } else {
+        $officerCases = $officer->getAssignedCases();
+    }
 } catch (Exception $e) {
     $officerCases = [];
 }
@@ -93,11 +114,27 @@ if ($caseId > 0) {
     try {
         $selectedCase = $caseManager->getCaseById($caseId);
 
-        if ($selectedCase && $officer->canPerformAction('view_case', $caseId)) {
-            $caseEvidence = getCaseEvidence($caseId);
+        if ($selectedCase) {
+            if ($isOCS) {
+                // OCS can view if case is in their station
+                if ($selectedCase['station_id'] == $currentUser['station_id']) {
+                    $caseEvidence = getCaseEvidence($caseId);
+                } else {
+                    $selectedCase = null;
+                    $errors['case'] = 'Case not found or you do not have permission to view it';
+                }
+            } else {
+                // Officer logic
+                if ($officer->canPerformAction('view_case', $caseId)) {
+                    $caseEvidence = getCaseEvidence($caseId);
+                } else {
+                    $selectedCase = null;
+                    $errors['case'] = 'Case not found or you do not have permission to view it';
+                }
+            }
         } else {
             $selectedCase = null;
-            $errors['case'] = 'Case not found or you do not have permission to view it';
+            $errors['case'] = 'Case not found';
         }
     } catch (Exception $e) {
         error_log("Case Evidence Error: " . $e->getMessage());
@@ -133,9 +170,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php if (!$selectedCase && empty($caseId)): ?>
 
                 <div class="card">
-                    <div class="card-header">
-                        <h3> My Cases - Select to View Evidence</h3>
-                    </div>
+                     <div class="card-header">
+                         <h3> <?php echo $isOCS ? 'Station Cases' : 'My Cases'; ?> - Select to View Evidence</h3>
+                     </div>
                     <div class="card-body">
                         <?php if (!empty($officerCases)): ?>
                             <div class="table-responsive">
@@ -178,10 +215,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php?case_id=<?php echo $case['id']; ?>" 
-                                                       class="btn btn-sm btn-primary">
-                                                        View Evidence
-                                                    </a>
+                                             <a href="<?php echo BASE_URL; ?>/pages/<?php echo $isOCS ? 'ocs' : 'officer'; ?>/evidence.php?case_id=<?php echo $case['id']; ?>" 
+                                                class="btn btn-sm btn-primary">
+                                                 View Evidence
+                                             </a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -189,14 +226,14 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 </table>
                             </div>
                         <?php else: ?>
-                            <div class="text-center p-4">
-                                <div style="font-size: 3rem;"></div>
-                                <h4>No Cases Assigned</h4>
-                                <p class="text-muted">You don't have any cases assigned for evidence management.</p>
-                                <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-primary">
-                                    Return to Dashboard
-                                </a>
-                            </div>
+                             <div class="text-center p-4">
+                                 <div style="font-size: 3rem;"></div>
+                                 <h4><?php echo $isOCS ? 'No Cases in Station' : 'No Cases Assigned'; ?></h4>
+                                 <p class="text-muted"><?php echo $isOCS ? 'There are no cases in your station yet.' : 'You don\'t have any cases assigned for evidence management.'; ?></p>
+                                 <a href="<?php echo BASE_URL; ?>/pages/<?php echo $isOCS ? 'ocs' : 'officer'; ?>/dashboard.php" class="btn btn-primary">
+                                     Return to Dashboard
+                                 </a>
+                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -204,12 +241,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php elseif ($selectedCase): ?>
 
                 <div class="card">
-                    <div class="card-header">
-                        <h3>Evidence for Case: <?php echo htmlspecialchars($selectedCase['ob_number']); ?></h3>
-                        <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php" class="btn btn-sm btn-outline btn-secondary">
-                            ← Back to Cases
-                        </a>
-                    </div>
+                <div class="card-header">
+                    <h3>Evidence for Case: <?php echo htmlspecialchars($selectedCase['ob_number']); ?></h3>
+                    <a href="<?php echo BASE_URL; ?>/pages/<?php echo $isOCS ? 'ocs' : 'officer'; ?>/evidence.php" class="btn btn-sm btn-outline btn-secondary">
+                        ← Back to Cases
+                    </a>
+                </div>
                     <div class="card-body">
 
                         <div class="alert alert-info mb-4">
@@ -263,8 +300,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                     Uploaded by <?php echo htmlspecialchars($evidence['uploaded_by_name']); ?><br>
                                                     <?php echo date('M d, Y \a\t H:i', strtotime($evidence['uploaded_at'])); ?>
                                                 </small>
-                                            </div>
-                                        </div>
+                </div>
+             </div>
                                         <div class="evidence-actions">
                                             <a href="<?php echo BASE_URL; ?>/api/download_evidence.php?id=<?php echo $evidence['id']; ?>" 
                                                class="btn btn-sm btn-outline btn-primary"
@@ -272,15 +309,17 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                  Download
                                             </a>
                                             <?php if ($evidence['uploaded_by_officer_id'] == $currentUser['id']): ?>
-                                                <form method="POST" style="display: inline;" 
-                                                      onsubmit="return confirm('Are you sure you want to delete this evidence file? This action cannot be undone.')">
-                                                    <?php echo csrfField(); ?>
-                                                    <input type="hidden" name="action" value="delete_evidence">
-                                                    <input type="hidden" name="evidence_id" value="<?php echo $evidence['id']; ?>">
-                                                    <button type="submit" class="btn btn-sm btn-outline btn-danger">
-                                                         Delete
-                                                    </button>
-                                                </form>
+                                                 <?php if (!$isOCS): ?>
+                                                 <form method="POST" style="display: inline;" 
+                                                       onsubmit="return confirm('Are you sure you want to delete this evidence file? This action cannot be undone.')">
+                                                     <?php echo csrfField(); ?>
+                                                     <input type="hidden" name="action" value="delete_evidence">
+                                                     <input type="hidden" name="evidence_id" value="<?php echo $evidence['id']; ?>">
+                                                     <button type="submit" class="btn btn-sm btn-outline btn-danger">
+                                                          Delete
+                                                     </button>
+                                                 </form>
+                                                 <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -298,7 +337,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
 
-                <div class="card mb-4">
+                <div class="card mb-4" style="<?php echo $isOCS ? 'display: none;' : ''; ?>">
                 <div class="card-header">
                     <h3> Upload New Evidence</h3>
                 </div>

@@ -43,7 +43,7 @@ class Station {
     /**
      * Get all cases for this station with filtering options
      */
-    public function getCases($filters = []) {
+    public function getCases($filters = [], $limit = null, $offset = 0) {
         $whereConditions = ['c.station_id = :station_id'];
         $params = ['station_id' => $this->stationId];
         
@@ -72,7 +72,17 @@ class Station {
             $whereConditions[] = 'DATE(c.created_at) <= :date_to';
             $params['date_to'] = $filters['date_to'];
         }
-        
+
+        if (!empty($filters['constituency'])) {
+            $whereConditions[] = 'c.incident_location_constituency = :constituency';
+            $params['constituency'] = $filters['constituency'];
+        }
+
+        if (!empty($filters['county'])) {
+            $whereConditions[] = 'c.incident_location_county = :county';
+            $params['county'] = $filters['county'];
+        }
+
         $whereClause = implode(' AND ', $whereConditions);
         
         return $this->db->fetchAll("
@@ -95,9 +105,58 @@ class Station {
             JOIN users u2 ON c.recorded_by_officer_id = u2.id
             LEFT JOIN officers o ON c.assigned_officer_id = o.id
             LEFT JOIN users u3 ON o.user_id = u3.id
+             WHERE $whereClause
+             ORDER BY c.created_at DESC
+              " . ($limit ? " LIMIT :limit OFFSET :offset" : ""), array_merge($params, $limit ? ['limit' => $limit, 'offset' => $offset] : []));
+    }
+
+    public function getCasesCount($filters = []) {
+        $whereConditions = ['c.station_id = :station_id'];
+        $params = ['station_id' => $this->stationId];
+
+        // Apply filters (same as getCases)
+        if (!empty($filters['status']) && $filters['status'] !== 'all') {
+            $whereConditions[] = 'c.status = :status';
+            $params['status'] = $filters['status'];
+        }
+
+        if (!empty($filters['category'])) {
+            $whereConditions[] = 'c.category = :category';
+            $params['category'] = $filters['category'];
+        }
+
+        if (!empty($filters['officer_id'])) {
+            $whereConditions[] = 'c.assigned_officer_id = :officer_id';
+            $params['officer_id'] = $filters['officer_id'];
+        }
+
+        if (!empty($filters['date_from'])) {
+            $whereConditions[] = 'DATE(c.created_at) >= :date_from';
+            $params['date_from'] = $filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $whereConditions[] = 'DATE(c.created_at) <= :date_to';
+            $params['date_to'] = $filters['date_to'];
+        }
+
+        if (!empty($filters['constituency'])) {
+            $whereConditions[] = 'c.incident_location_constituency = :constituency';
+            $params['constituency'] = $filters['constituency'];
+        }
+
+        if (!empty($filters['county'])) {
+            $whereConditions[] = 'c.incident_location_county = :county';
+            $params['county'] = $filters['county'];
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        return $this->db->fetchOne("
+            SELECT COUNT(*) as total
+            FROM cases c
             WHERE $whereClause
-            ORDER BY c.created_at DESC
-        ", $params);
+        ", $params)['total'];
     }
 
     /**
@@ -299,14 +358,17 @@ class Station {
     /**
      * Search cases with advanced filters
      */
-    public function searchCases($searchTerm, $filters = []) {
+    public function searchCases($searchTerm, $filters = [], $limit = null, $offset = 0) {
         $whereConditions = ['c.station_id = :station_id'];
         $params = ['station_id' => $this->stationId];
-        
+
         // Add search conditions
         if ($searchTerm) {
-            $whereConditions[] = '(c.ob_number LIKE :search OR c.title LIKE :search OR c.description LIKE :search OR u1.name LIKE :search)';
-            $params['search'] = "%{$searchTerm}%";
+            $whereConditions[] = '(c.ob_number LIKE :search_ob OR c.title LIKE :search_title OR c.description LIKE :search_desc OR u1.name LIKE :search_name)';
+            $params['search_ob'] = "%{$searchTerm}%";
+            $params['search_title'] = "%{$searchTerm}%";
+            $params['search_desc'] = "%{$searchTerm}%";
+            $params['search_name'] = "%{$searchTerm}%";
         }
         
         // Apply additional filters
@@ -341,10 +403,48 @@ class Station {
             JOIN users u1 ON c.reported_by_citizen_id = u1.id
             LEFT JOIN officers o ON c.assigned_officer_id = o.id
             LEFT JOIN users u3 ON o.user_id = u3.id
+             WHERE $whereClause
+             ORDER BY c.created_at DESC
+             " . ($limit ? " LIMIT :limit OFFSET :offset" : " LIMIT 50"), array_merge($params, $limit ? ['limit' => $limit, 'offset' => $offset] : []));
+    }
+
+    public function getSearchCasesCount($searchTerm, $filters = []) {
+        $whereConditions = ['c.station_id = :station_id'];
+        $params = ['station_id' => $this->stationId];
+
+        // Add search conditions
+        if ($searchTerm) {
+            $whereConditions[] = '(c.ob_number LIKE :search_ob OR c.title LIKE :search_title OR c.description LIKE :search_desc OR u1.name LIKE :search_name)';
+            $params['search_ob'] = "%{$searchTerm}%";
+            $params['search_title'] = "%{$searchTerm}%";
+            $params['search_desc'] = "%{$searchTerm}%";
+            $params['search_name'] = "%{$searchTerm}%";
+        }
+
+        // Apply additional filters
+        foreach ($filters as $key => $value) {
+            if (!empty($value) && $value !== 'all') {
+                switch ($key) {
+                    case 'status':
+                        $whereConditions[] = 'c.status = :status';
+                        $params['status'] = $value;
+                        break;
+                    case 'category':
+                        $whereConditions[] = 'c.category = :category';
+                        $params['category'] = $value;
+                        break;
+                }
+            }
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        return $this->db->fetchOne("
+            SELECT COUNT(*) as total
+            FROM cases c
+            JOIN users u1 ON c.reported_by_citizen_id = u1.id
             WHERE $whereClause
-            ORDER BY c.created_at DESC
-            LIMIT 50
-        ", $params);
+        ", $params)['total'];
     }
 
     /**

@@ -21,13 +21,21 @@ $filters = [
     'category' => $_GET['category'] ?? '',
     'officer_id' => $_GET['officer'] ?? '',
     'date_from' => $_GET['date_from'] ?? '',
-    'date_to' => $_GET['date_to'] ?? ''
+    'date_to' => $_GET['date_to'] ?? '',
+    'constituency' => $_GET['constituency'] ?? '',
+    'county' => $_GET['county'] ?? ''
 ];
 
 $searchTerm = $_GET['search'] ?? '';
 
+$limit = 20;
+$page = (int)($_GET['page'] ?? 1);
+$offset = ($page - 1) * $limit;
+
 $cases = [];
 $caseStats = [];
+$totalCases = 0;
+$totalPages = 0;
 $officers = [];
 $categories = [];
 $error = '';
@@ -43,14 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $caseId = (int)($_POST['case_id'] ?? 0);
 
         if ($action === 'approve_closure' && $requestId && $caseId) {
-            // Update request to approved
             $db->update('closure_requests', [
                 'status' => 'approved',
                 'reviewed_by' => $currentUser['id'],
                 'reviewed_at' => date('Y-m-d H:i:s')
             ], 'id = ?', [$requestId]);
 
-            // Close the case
             $db->update('cases', [
                 'status' => CASE_CLOSED,
                 'closed_at' => date('Y-m-d H:i:s')
@@ -69,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlashMessage('success', 'Case closure request rejected.');
         }
 
-        // Redirect to refresh
         header('Location: ' . $_SERVER['REQUEST_URI']);
         exit;
     } catch (Exception $e) {
@@ -80,10 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 try {
     if ($searchTerm) {
-        $cases = $station->searchCases($searchTerm, $filters);
+        $totalCases = $station->getSearchCasesCount($searchTerm, $filters);
+        $cases = $station->searchCases($searchTerm, $filters, $limit, $offset);
     } else {
-        $cases = $station->getCases($filters);
+        $totalCases = $station->getCasesCount($filters);
+        $cases = $station->getCases($filters, $limit, $offset);
     }
+    $totalPages = ceil($totalCases / $limit);
     
     $caseStats = $station->getCaseStatistics();
     
@@ -122,33 +130,28 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
         <?php endif; ?>
 
-        <!-- Search and Filters -->
         <div class="card mb-4">
             <div class="card-header">
                 <h3>Search & Filter Cases</h3>
             </div>
-            <div class="card-body">
-                <!-- Search Bar -->
-                <form method="GET" class="mb-3">
-                    <div class="input-group">
-                        <input type="text" name="search" class="form-control" placeholder="Search by OB number, title, description, or reporter name..." 
-                            value="<?php echo htmlspecialchars($searchTerm); ?>">
-                        <button class="btn btn-primary" type="submit">Search</button>
-                        <?php if ($searchTerm): ?>
-                            <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn btn-outline btn-secondary">Clear</a>
-                        <?php endif; ?>
-                    </div>
-                    <!-- Preserve other filters in search -->
-                    <?php foreach ($filters as $key => $value): ?>
+             <div class="card-body">
+                  <form method="GET" class="mb-3">
+                     <div class="input-group" style="display:flex; gap: 8px;">
+                         <input type="text" name="search" class="form-control" style="max-width: 50%" placeholder="Search by OB number, title, description, or reporter name..."
+                             value="<?php echo htmlspecialchars($searchTerm); ?>" style="height: 3rem;">
+                         <button class="btn btn-primary" type="submit">Search</button>
+                         <?php if ($searchTerm): ?>
+                             <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn btn-outline-secondary">Clear</a>
+                         <?php endif; ?>
+                     </div>
+                     <?php foreach ($filters as $key => $value): ?>
                         <?php if ($value && $value !== 'all'): ?>
                             <input type="hidden" name="<?php echo htmlspecialchars($key === 'officer_id' ? 'officer' : $key); ?>" value="<?php echo htmlspecialchars($value); ?>">
                         <?php endif; ?>
                     <?php endforeach; ?>
-                </form>
-                
-                <!-- Filters -->
-                <form method="GET" class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <!-- Preserve search term -->
+                 </form>
+
+                 <form method="GET" class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
                     <?php if ($searchTerm): ?>
                         <input type="hidden" name="search" value="<?php echo htmlspecialchars($searchTerm); ?>">
                     <?php endif; ?>
@@ -347,9 +350,31 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 <?php endif; ?>
              </div>
-         </div>
+          </div>
 
-         <!-- Closure Requests -->
+          <?php if ($totalPages > 1): ?>
+          <nav aria-label="Case pagination" style="display: flex; justify-content: center; margin-top: 20px;">
+              <ul style="display: flex; list-style: none; padding: 0; margin: 0; border: 1px solid #ddd; border-radius: 5px; overflow: hidden;">
+                  <?php if ($page > 1): ?>
+                      <li style="margin: 0;">
+                          <a style="display: block; padding: 5px 10px; text-decoration: none; background-color: #007bff; color: white; border-right: 1px solid #ddd;" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page - 1])); ?>">Previous</a>
+                      </li>
+                  <?php endif; ?>
+
+                  <li style="margin: 0;">
+                       <span style="display: block; padding: 5px 10px; background-color: #f8f9fa; color: #6c757d; border-right: 1px solid #ddd;">Page <?php echo $page; ?> of <?php echo $totalPages; ?> (<?php echo $totalCases; ?> total)</span>
+                  </li>
+
+                  <?php if ($page < $totalPages): ?>
+                      <li style="margin: 0;">
+                          <a style="display: block; padding: 5px 10px; text-decoration: none; background-color: #007bff; color: white;" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $page + 1])); ?>">Next</a>
+                      </li>
+                  <?php endif; ?>
+              </ul>
+          </nav>
+          <?php endif; ?>
+
+          <!-- Closure Requests -->
          <?php if (!empty($closureRequests)): ?>
              <div class="card mt-4">
                  <div class="card-header">
@@ -507,7 +532,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
         
         .kpi-card:hover {
-            transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
         }
@@ -523,6 +547,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             border-radius: 2px;
         }
         
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
         @media (max-width: 768px) {
             .kpi-grid {
                 grid-template-columns: repeat(2, 1fr);

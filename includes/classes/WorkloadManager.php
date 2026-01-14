@@ -96,8 +96,8 @@ class WorkloadManager {
      * Get workload statistics for a station
      */
     public function getWorkloadStatistics($stationId) {
-        return $this->db->fetchOne("
-            SELECT 
+        $result = $this->db->fetchOne("
+            SELECT
                 COUNT(DISTINCT o.id) as total_officers,
                 AVG(o.current_case_load) as avg_case_load,
                 MAX(o.current_case_load) as max_case_load,
@@ -112,6 +112,19 @@ class WorkloadManager {
             JOIN users u ON o.user_id = u.id
             WHERE u.station_id = :station_id AND u.is_active = 1
         ", ['station_id' => $stationId]);
+
+        return $result ?: [
+            'total_officers' => 0,
+            'avg_case_load' => 0,
+            'max_case_load' => 0,
+            'min_case_load' => 0,
+            'overloaded_officers' => 0,
+            'idle_officers' => 0,
+            'light_load_officers' => 0,
+            'normal_load_officers' => 0,
+            'heavy_load_officers' => 0,
+            'total_active_cases' => 0
+        ];
     }
 
     /**

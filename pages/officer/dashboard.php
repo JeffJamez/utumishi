@@ -523,6 +523,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         .workload-normal { background-color: var(--warning-orange); }
         .workload-high { background-color: var(--danger-red); }
 
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
         @media (max-width: 768px) {
             .d-grid[style*="1fr 1fr"] {
                 grid-template-columns: 1fr !important;
@@ -648,7 +652,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .kpi-card:hover {
-            transform: translateY(-5px);
             box-shadow: var(--shadow-lg);
         }
 

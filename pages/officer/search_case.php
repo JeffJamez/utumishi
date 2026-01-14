@@ -63,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
                         'title' => $case['title'],
                         'category' => $case['category'],
                         'status' => $case['status'],
-                        'location_county' => $case['location_county'],
-                        'location_constituency' => $case['location_constituency'],
+                         'incident_location_county' => $case['incident_location_county'],
+                         'incident_location_constituency' => $case['incident_location_constituency'],
                         'created_at' => $case['created_at'],
                         'station_name' => $case['station_name'],
                         'limited_access' => true
@@ -144,7 +144,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Category:</strong> <?php echo htmlspecialchars($case['category']); ?></p>
-                                        <p class="mb-1"><strong>Location:</strong> <?php echo htmlspecialchars($case['location_county']); ?>, <?php echo htmlspecialchars($case['location_constituency']); ?></p>
+                                         <p class="mb-1"><strong>Location:</strong> <?php echo htmlspecialchars($case['incident_location_county']); ?>, <?php echo htmlspecialchars($case['incident_location_constituency']); ?></p>
                                         <p class="mb-1"><strong>Station:</strong> <?php echo htmlspecialchars($case['station_name']); ?></p>
                                     </div>
                                     <div class="col-md-6">

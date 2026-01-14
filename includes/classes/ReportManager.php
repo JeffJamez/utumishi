@@ -39,24 +39,25 @@ class ReportManager {
             WHERE $whereClause", $params);
 
         $categoryStats = $this->db->fetchAll("
-            SELECT 
+            SELECT
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
-            FROM cases 
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(AVG(COALESCE(estimated_resolution_hours, 72)), 1) as avg_resolution_time
+            FROM cases
             WHERE $whereClause
             GROUP BY category
             ORDER BY case_count DESC", $params);
 
         $locationStats = $this->db->fetchAll("
             SELECT 
-                location_county as county,
-                location_constituency as constituency,
+                incident_location_county as county,
+                incident_location_constituency as constituency,
                 COUNT(*) as case_count
             FROM cases 
             WHERE $whereClause
-            GROUP BY location_county, location_constituency
+            GROUP BY incident_location_county, incident_location_constituency
             ORDER BY case_count DESC
             LIMIT 10", $params);
 
@@ -92,13 +93,14 @@ class ReportManager {
         ", $params);
 
         $categoryBreakdown = $this->db->fetchAll("
-            SELECT 
+            SELECT
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
-            FROM cases 
-            WHERE station_id = :station_id 
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(AVG(COALESCE(estimated_resolution_hours, 72)), 1) as avg_resolution_time
+            FROM cases
+            WHERE station_id = :station_id
             AND created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
             GROUP BY category
             ORDER BY case_count DESC
@@ -133,13 +135,13 @@ class ReportManager {
 
         $hotspots = $this->db->fetchAll("
             SELECT 
-                location_constituency,
+                incident_location_constituency,
                 category,
                 COUNT(*) as case_count
             FROM cases 
             WHERE station_id = :station_id 
             AND created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
-            GROUP BY location_constituency, category
+            GROUP BY incident_location_constituency, category
             HAVING case_count > 2
             ORDER BY case_count DESC
         ", $params);
@@ -241,31 +243,31 @@ class ReportManager {
             'monthly' => [
                 'name' => 'Monthly Report',
                 'description' => 'Comprehensive monthly statistics and analysis',
-                'icon' => '📊',
+                'icon' => '',
                 'parameters' => ['year', 'month']
             ],
             'performance' => [
                 'name' => 'Performance Report',
                 'description' => 'Station performance metrics and trends',
-                'icon' => '📈',
+                'icon' => '',
                 'parameters' => ['timeframe']
             ],
             'crime_analysis' => [
                 'name' => 'Crime Analysis',
                 'description' => 'Crime patterns and hotspot analysis',
-                'icon' => '🔍',
+                'icon' => '',
                 'parameters' => ['timeframe']
             ],
             'officer_workload' => [
                 'name' => 'Officer Workload',
                 'description' => 'Current officer assignments and performance',
-                'icon' => '👥',
+                'icon' => '',
                 'parameters' => []
             ],
             'station_overview' => [
                 'name' => 'Station Overview',
                 'description' => 'Comprehensive station report',
-                'icon' => '🏢',
+                'icon' => '',
                 'parameters' => []
             ]
         ];

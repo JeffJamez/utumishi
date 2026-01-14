@@ -36,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'title' => sanitizeText($_POST['title'] ?? ''),
             'description' => sanitizeText($_POST['description'] ?? ''),
             'category' => sanitizeText($_POST['category'] ?? ''),
-            'location_county' => sanitizeText($_POST['location_county'] ?? ''),
-            'location_constituency' => sanitizeText($_POST['location_constituency'] ?? ''),
+             'incident_location_county' => sanitizeText($_POST['incident_location_county'] ?? ''),
+             'incident_location_constituency' => sanitizeText($_POST['incident_location_constituency'] ?? ''),
             'incident_local_area' => sanitizeText($_POST['incident_local_area'] ?? ''),
             'reporter_county' => sanitizeText($_POST['reporter_county'] ?? ''),
             'reporter_constituency' => sanitizeText($_POST['reporter_constituency'] ?? ''),
@@ -88,10 +88,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        if (empty($formData['location_county']) || empty($formData['location_constituency'])) {
+        if (empty($formData['incident_location_county']) || empty($formData['incident_location_constituency'])) {
             $errors['location'] = 'Location (county and constituency) is required';
         } else {
-            $locationValidation = validateLocation($formData['location_county'], $formData['location_constituency']);
+            $locationValidation = validateLocation($formData['incident_location_county'], $formData['incident_location_constituency']);
             if (!$locationValidation['valid']) {
                 $errors['location'] = $locationValidation['message'];
             }
@@ -162,8 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'title' => $formData['title'],
                     'description' => $formData['description'],
                     'category' => $formData['category'],
-                    'location_county' => $formData['location_county'],
-                    'location_constituency' => $formData['location_constituency'],
+                     'incident_location_county' => $formData['incident_location_county'],
+                     'incident_location_constituency' => $formData['incident_location_constituency'],
                     'incident_local_area' => $formData['incident_local_area'],
                     'reporter_county' => $formData['reporter_county'],
                     'reporter_constituency' => $formData['reporter_constituency'],
@@ -372,17 +372,17 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                         <div class="d-grid" style="grid-template-columns: 1fr 1fr 2fr; gap: 1.5rem;">
                             <div class="form-group">
-                                <label for="location_county" class="form-label">County *</label>
-                                <select
-                                    id="location_county"
-                                    name="location_county"
-                                    class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
-                                    required
-                                >
-                                    <option value="">Select county...</option>
-                                    <?php foreach (KENYAN_COUNTIES as $county => $constituencies): ?>
-                                        <option value="<?php echo htmlspecialchars($county); ?>"
-                                                <?php echo ($formData['location_county'] ?? '') === $county ? 'selected' : ''; ?>>
+                                 <label for="incident_location_county" class="form-label">County *</label>
+                                 <select
+                                     id="incident_location_county"
+                                     name="incident_location_county"
+                                     class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
+                                     required
+                                 >
+                                     <option value="">Select county...</option>
+                                     <?php foreach (KENYAN_COUNTIES as $county => $constituencies): ?>
+                                         <option value="<?php echo htmlspecialchars($county); ?>"
+                                                 <?php echo ($formData['incident_location_county'] ?? '') === $county ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($county); ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -390,13 +390,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
 
                             <div class="form-group">
-                                <label for="location_constituency" class="form-label">Constituency *</label>
-                                <select
-                                    id="location_constituency"
-                                    name="location_constituency"
-                                    class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
-                                    required
-                                >
+                                 <label for="incident_location_constituency" class="form-label">Constituency *</label>
+                                 <select
+                                     id="incident_location_constituency"
+                                     name="incident_location_constituency"
+                                     class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
+                                     required
+                                 >
                                     <option value="">Select constituency...</option>
 
                                 </select>
@@ -498,9 +498,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         const kenyanCounties = <?php echo json_encode(KENYAN_COUNTIES); ?>;
 
-        document.getElementById('location_county').addEventListener('change', function() {
+        document.getElementById('incident_location_county').addEventListener('change', function() {
             const county = this.value;
-            const constituencySelect = document.getElementById('location_constituency');
+            const constituencySelect = document.getElementById('incident_location_constituency');
 
             constituencySelect.innerHTML = '<option value="">Select constituency...</option>';
 
@@ -510,7 +510,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     option.value = constituency;
                     option.textContent = constituency;
 
-                    if ('<?php echo $formData['location_constituency']     ?? ''; ?>' === constituency) {
+                     if ('<?php echo $formData['incident_location_constituency']     ?? ''; ?>' === constituency) {
                         option.selected = true;
                     }
 
@@ -548,9 +548,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 return; // Don't load old data
             }
 
-            const selectedCounty = document.getElementById('location_county').value;
+            const selectedCounty = document.getElementById('incident_location_county').value;
             if (selectedCounty) {
-                document.getElementById('location_county').dispatchEvent(new Event('change'));
+                document.getElementById('incident_location_county').dispatchEvent(new Event('change'));
             }
 
             const selectedReporterCounty = document.getElementById('reporter_county').value;
@@ -567,8 +567,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 title: document.getElementById('title').value.trim(),
                 description: document.getElementById('description').value.trim(),
                 category: document.getElementById('category').value,
-                county: document.getElementById('location_county').value,
-                constituency: document.getElementById('location_constituency').value,
+                 county: document.getElementById('incident_location_county').value,
+                 constituency: document.getElementById('incident_location_constituency').value,
                 incidentLocalArea: document.getElementById('incident_local_area').value.trim(),
                 reporterCounty: document.getElementById('reporter_county').value,
                 reporterConstituency: document.getElementById('reporter_constituency').value,
@@ -682,9 +682,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         updateCharCount();
 
         document.addEventListener('DOMContentLoaded', function() {
-            const selectedCounty = document.getElementById('location_county').value;
+            const selectedCounty = document.getElementById('incident_location_county').value;
             if (selectedCounty) {
-                document.getElementById('location_county').dispatchEvent(new Event('change'));
+                document.getElementById('incident_location_county').dispatchEvent(new Event('change'));
             }
 
             const selectedReporterCounty = document.getElementById('reporter_county').value;
@@ -699,7 +699,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         document.getElementById('citizen_national_id').focus();
 
-        const tabOrder = ['citizen_national_id', 'citizen_name', 'citizen_phone', 'title', 'category', 'description', 'location_county', 'location_constituency', 'incident_local_area', 'reporter_county', 'reporter_constituency', 'reporter_local_area'];
+        const tabOrder = ['citizen_national_id', 'citizen_name', 'citizen_phone', 'title', 'category', 'description', 'incident_location_county', 'incident_location_constituency', 'incident_local_area', 'reporter_county', 'reporter_constituency', 'reporter_local_area'];
 
         tabOrder.forEach((fieldId, index) => {
             const field = document.getElementById(fieldId);

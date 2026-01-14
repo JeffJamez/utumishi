@@ -70,9 +70,14 @@ $navigation_menus = [
             'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'
         ],
         [
-            'title' => 'Crime Heatmap', 
+            'title' => 'Crime Density', 
             'url' => '/pages/ocs/crime_heatmap.php', 
             'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>'
+        ],
+         [
+            'title' => 'Predictive Analysis', 
+            'url' => '/pages/ocs/predictive_analytics.php', 
+            'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>'
         ],
         [
             'title' => 'Officer Management', 
@@ -84,11 +89,7 @@ $navigation_menus = [
             'url' => '/pages/ocs/station_cases.php', 
             'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>'
         ],
-        [
-            'title' => 'Predictive Analysis', 
-            'url' => '/pages/ocs/predictive_analytics.php', 
-            'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>'
-        ],
+       
 
         [
             'title' => 'Reports', 
@@ -104,14 +105,9 @@ $navigation_menus = [
             'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>'
         ],
         [
-            'title' => 'Track My Case', 
-            'url' => '/pages/citizen/track_case.php', 
+            'title' => 'Track My Case',
+            'url' => '/pages/citizen/track_case.php',
             'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>'
-        ],
-        [
-            'title' => 'Crime Statistics', 
-            'url' => '/pages/citizen/public_stats.php', 
-            'icon' => '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>'
         ],
     ]
 ];
@@ -269,147 +265,85 @@ function renderFlashMessage() {
 function renderHeaderStyles() {
     ?>
     <style>
-        .flash-message {
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            padding: 1rem 2rem 1rem 1rem;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-lg);
-            transition: all 0.3s ease;
-        }
-
-        .flash-success {
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-
-        .flash-error, .flash-danger {
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-
-        .flash-warning {
-            background-color: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
-        }
-
-        .flash-info {
-            background-color: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-        }
-
-        .flash-close {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: inherit;
-            font-size: 1.2em;
-            cursor: pointer;
-            opacity: 0.7;
+        .nav-menu {
+            list-style: none;
             padding: 0;
-            line-height: 1;
+            margin: 0;
         }
 
-        .flash-close:hover {
-            opacity: 1;
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: var(--text-color);
+            text-decoration: none;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+        }
+
+        .nav-link:hover {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        .nav-link.active {
+            background-color: #006b3f;
+            color: white;
+        }
+
+        .nav-icon {
+            margin-right: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-text {
+            font-weight: 500;
         }
 
         .dropdown {
             position: relative;
-            display: inline-block;
-        }
-
-        .dropdown-toggle {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--primary-white);
-            padding: 0.5rem 0.75rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 38px;
-            min-height: 38px;
-        }
-
-        .dropdown-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
-            transform: translateY(-1px);
-        }
-
-        .dropdown-toggle:active {
-            transform: translateY(0);
         }
 
         .dropdown-menu {
             display: none;
             position: absolute;
             right: 0;
-            top: calc(100% + 8px);
-            min-width: 200px;
-            background: var(--primary-white);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            top: 100%;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             z-index: 1000;
+            min-width: 160px;
             padding: 0.5rem 0;
-            margin-top: 0;
-            animation: dropdownFadeIn 0.2s ease;
-        }
-
-        @keyframes dropdownFadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .dropdown-menu::before {
-            content: '';
-            position: absolute;
-            top: -6px;
-            right: 12px;
-            width: 12px;
-            height: 12px;
-            background: var(--primary-white);
-            transform: rotate(45deg);
-            box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.05);
+            margin: 0;
+            list-style: none;
         }
 
         .dropdown-item {
             display: block;
-            padding: 0.65rem 1.25rem;
-            color:"",
+            padding: 0.5rem 1rem;
+            color: #333;
+            text-decoration: none;
         }
 
-        @media (max-width: 768px) {
-            .flash-message {
-                right: 10px;
-                left: 10px;
-                min-width: auto;
-            }
-            
-            .dropdown-menu {
-                right: -10px;
-            }
+        .dropdown-item:hover {
+            background-color: #f0f0f0;
+            color: #333;
         }
+
+        .dropdown-divider {
+            height: 1px;
+            margin: 0.25rem 0;
+            background-color: #ddd;
+        }
+
     </style>
     <?php
 }
@@ -423,7 +357,6 @@ function renderAllStyles() {
 }
 
 function renderHeaderScripts() {
-    $csrfToken = function_exists('csrfToken') ? csrfToken() : '';
     ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -453,49 +386,6 @@ function renderHeaderScripts() {
         }
 
         setTimeout(closeFlashMessage, 5000);
-
-        function changePassword() {
-            const currentPassword = prompt('Enter your current password:');
-            if (!currentPassword) return;
-
-            const newPassword = prompt('Enter your new password:');
-            if (!newPassword) return;
-
-            const confirmPassword = prompt('Confirm your new password:');
-            if (newPassword !== confirmPassword) {
-                alert('Passwords do not match!');
-                return;
-            }
-
-            if (newPassword.length < 8) {
-                alert('Password must be at least 8 characters long!');
-                return;
-            }
-
-            fetch('<?php echo BASE_URL; ?>/pages/auth/change_password.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({
-                    current_password: currentPassword,
-                    new_password: newPassword,
-                    csrf_token: '<?php echo $csrfToken; ?>'
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('Password changed successfully!');
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while changing password');
-            });
-        }
     </script>
     <?php
 }

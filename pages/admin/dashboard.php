@@ -65,14 +65,14 @@ try {
 
     $countyStats = $db->fetchAll("
         SELECT 
-            location_county as county,
+            incident_location_county as county,
             COUNT(*) as total_cases,
             COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
             ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
             COUNT(DISTINCT station_id) as station_count
         FROM cases 
         WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-        GROUP BY location_county
+         GROUP BY incident_location_county
         ORDER BY total_cases DESC
         LIMIT 10
     ");
@@ -178,7 +178,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <div class="d-grid" style="grid-template-columns: 1fr; gap: 2rem;">
                  <div class="card mb-3">
                         <div class="card-header">
-                            <h3>⚡ Quick Actions</h3>
+                            <h3> Quick Actions</h3>
                         </div>
                         <div class="card-body">
                             <div class="d-flex flex-column gap-2">
@@ -251,8 +251,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             ?>
                                             <tr class="<?php echo $rank <= 3 ? 'table-success' : ''; ?>">
                                                 <td>
-                                                    <strong><?php echo $rank; ?></strong>
-                                                    <?php if ($rank === 1): ?><?php elseif ($rank === 2): ?>🥈<?php elseif ($rank === 3): ?>🥉<?php endif; ?>
+                                                     <strong><?php echo $rank; ?></strong>
                                                 </td>
                                                 <td><?php echo htmlspecialchars($station['station_name']); ?></td>
                                                 <td><?php echo htmlspecialchars($station['county']); ?></td>
@@ -533,7 +532,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .kpi-card:hover {
-            transform: translateY(-5px);
             cursor: pointer;
             box-shadow: var(--shadow-lg);
         }
@@ -553,6 +551,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         .rank-medal {
             font-size: 1.2em;
             margin-left: 0.5rem;
+        }
+
+        .kpi-grid {
+            grid-template-columns: repeat(4, 1fr);
         }
 
         @media (max-width: 768px) {

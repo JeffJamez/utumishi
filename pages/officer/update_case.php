@@ -302,8 +302,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                             <div class="mt-3">
                                 <strong>Location:</strong><br>
-                                <?php echo htmlspecialchars($case['location_constituency']); ?>, 
-                                <?php echo htmlspecialchars($case['location_county']); ?>
+                                 <?php echo htmlspecialchars($case['incident_location_constituency']); ?>,
+                                 <?php echo htmlspecialchars($case['incident_location_county']); ?>
                             </div>
 
                             <div class="mt-3">
