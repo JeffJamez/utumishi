@@ -46,6 +46,7 @@ $pageTitle = "Citizen Dashboard";
 require_once __DIR__ . '/../../includes/layout/layout.php';
 ?>
 
+        <main class="app-main">
             <?php flashMessage(); ?>
 
             <?php if (isset($error)): ?>
@@ -55,7 +56,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
 
             <div class="mb-4">
-                <h2>Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?></h2>
+                <h2>Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?> (ID No: <?php echo htmlspecialchars($currentUser['national_id']); ?>)</h2>
                 <p class="text-muted">Here's an overview of your cases and public safety information.</p>
             </div>
 
@@ -392,7 +393,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
     </style>
 
-        </main>
-    </div>
+     <?php renderHeaderScripts(); ?>
 </body>
 </html>
