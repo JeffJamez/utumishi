@@ -23,7 +23,25 @@ $caseUpdates = [];
 $error = '';
 $success = '';
 
+// Fetch case data BEFORE processing POST requests
+if ($caseId > 0) {
+    $caseDetails = $caseManager->getCaseById($caseId);
+
+    if (!$caseDetails || $caseDetails['station_id'] != $stationId) {
+        $error = 'Case not found or you do not have permission to view it';
+        $caseDetails = null;
+    } else {
+        $caseUpdates = $caseManager->getCaseUpdates($caseId);
+    }
+} else {
+    $error = 'Invalid case ID';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!$caseDetails) {
+        throw new Exception('Invalid case - cannot process update');
+    }
+
     try {
         if (!validateCSRF($_POST['csrf_token'] ?? '')) {
             throw new Exception('Invalid request. Please try again.');
@@ -47,7 +65,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Please enter update text');
             }
 
-            $caseManager->addCaseUpdate($caseId, $currentUser['id'], $updateText);
+            // Pass current status for both before/after since no status change occurs
+            $currentStatus = $caseDetails['status'];
+            $caseManager->addCaseUpdate($caseId, $currentUser['id'], $updateText, $currentStatus, $currentStatus);
             $success = 'Case update added successfully';
         }
 
@@ -61,26 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-try {
-    if ($caseId > 0) {
-        $caseDetails = $caseManager->getCaseById($caseId);
-
-        if (!$caseDetails || $caseDetails['station_id'] != $stationId) {
-            $error = 'Case not found or you do not have permission to view it';
-            $caseDetails = null;
-        } else {
-            $caseUpdates = $caseManager->getCaseUpdates($caseId);
-        }
-    } else {
-        $error = 'Invalid case ID';
-    }
-
-
-
-} catch (Exception $e) {
-    error_log("Station Cases Error: " . $e->getMessage());
-    $error = "Unable to load case data";
-}
 
 $pageTitle = "Case Details";
 require_once __DIR__ . '/../../includes/layout/layout.php';
@@ -169,12 +169,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <div class="mb-3">
                                             <strong>OB Number:</strong>
                                             <span style="font-family: monospace; font-weight: bold;"><?php echo htmlspecialchars($caseDetails['ob_number']); ?></span>
-                                        </div>
-                                        <div class="mb-3">
-                                            <strong>Priority:</strong>
-                                            <span class="badge status-<?php echo $caseDetails['priority'] === 'high' ? 'warning' : ($caseDetails['priority'] === 'urgent' ? 'danger' : 'info'); ?>">
-                                                <?php echo ucfirst($caseDetails['priority']); ?>
-                                            </span>
                                         </div>
                                     </div>
                                 </div>

@@ -144,10 +144,10 @@ class CrimeAnalyzer {
 
 
 
-    public function generateAlerts($stationId = null) {
+    public function generateAlerts($county = null) {
         $alerts = [];
 
-        $crimeSpikes = $this->detectCrimeSpikes($stationId);
+        $crimeSpikes = $this->detectCrimeSpikes($county);
         foreach ($crimeSpikes as $spike) {
             $alerts[] = [
                 'type' => 'crime_spike',
@@ -161,7 +161,7 @@ class CrimeAnalyzer {
             ];
         }
 
-        $resourceShortages = $this->detectResourceShortages($stationId);
+        $resourceShortages = $this->detectResourceShortages($county);
         foreach ($resourceShortages as $shortage) {
             $alerts[] = [
                 'type' => 'resource_shortage',
@@ -175,7 +175,7 @@ class CrimeAnalyzer {
             ];
         }
 
-        $resolutionAlerts = $this->detectResolutionDelays($stationId);
+        $resolutionAlerts = $this->detectResolutionDelays($county);
         foreach ($resolutionAlerts as $alert) {
             $alerts[] = [
                 'type' => 'resolution_delay',
@@ -287,7 +287,7 @@ class CrimeAnalyzer {
         ]);
     }
 
-    private function detectCrimeSpikes($stationId) {
+    private function detectCrimeSpikes($county) {
     $sql = "SELECT
                 CONCAT(COALESCE(incident_local_area, ''), ', ', incident_location_constituency) as area,
                 category,
@@ -302,9 +302,9 @@ class CrimeAnalyzer {
             WHERE c1.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
 
     $params = [];
-    if ($stationId) {
-        $sql .= " AND c1.station_id = :station_id";
-        $params['station_id'] = $stationId;
+    if ($county) {
+        $sql .= " AND c1.incident_location_county = :county";
+        $params['county'] = $county;
     }
 
      $sql .= " GROUP BY incident_location_constituency, LOWER(incident_local_area), category
@@ -322,7 +322,7 @@ class CrimeAnalyzer {
     return $spikes;
 }
 
-    private function detectResourceShortages($stationId) {
+    private function detectResourceShortages($county) {
         $sql = "SELECT 
                     s.id as station_id,
                     s.name as station_name,
@@ -335,9 +335,9 @@ class CrimeAnalyzer {
                 LEFT JOIN cases c ON o.id = c.assigned_officer_id AND c.status NOT IN ('closed')";
 
         $params = [];
-        if ($stationId) {
-            $sql .= " WHERE s.id = :station_id";
-            $params['station_id'] = $stationId;
+        if ($county) {
+            $sql .= " WHERE s.county = :county";
+            $params['county'] = $county;
         }
 
         $sql .= " GROUP BY s.id, s.name
@@ -348,7 +348,7 @@ class CrimeAnalyzer {
         return $this->db->fetchAll($sql, $params);
     }
 
-    private function detectResolutionDelays($stationId) {
+    private function detectResolutionDelays($county) {
     $sql = "SELECT 
                 category,
                 AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) as avg_time,
@@ -358,9 +358,9 @@ class CrimeAnalyzer {
             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
 
     $params = [];
-    if ($stationId) {
-        $sql .= " AND station_id = :station_id";
-        $params['station_id'] = $stationId;
+    if ($county) {
+        $sql .= " AND incident_location_county = :county";
+        $params['county'] = $county;
     }
 
      $sql .= " GROUP BY category

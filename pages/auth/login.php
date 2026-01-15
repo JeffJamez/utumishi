@@ -23,7 +23,7 @@ $auth = getAuth();
 if ($auth->isLoggedIn()) {
     $user = getCurrentUser();
     $redirectUrls = [
-        ROLE_ADMIN => BASE_URL . '/pages/admin/dashboard.php',
+        ROLE_ADMIN => BASE_URL . '/pages/cc/dashboard.php',
         ROLE_OCS => BASE_URL . '/pages/ocs/dashboard.php',
         ROLE_OFFICER => BASE_URL . '/pages/officer/dashboard.php',
         ROLE_CITIZEN => BASE_URL . '/pages/citizen/dashboard.php'

@@ -34,7 +34,8 @@ define('MAX_FILE_SIZE', 5242880);
 define('ALLOWED_FILE_TYPES', ['pdf', 'jpg', 'jpeg', 'png']);
 define('EVIDENCE_MAX_FILES_PER_CASE', 10);
 
-define('ROLE_ADMIN', 'admin');
+define('ROLE_ADMIN', 'county_commander');
+define('ROLE_COUNTY_COMMANDER', 'county_commander');
 define('ROLE_OCS', 'ocs');
 define('ROLE_OFFICER', 'officer');
 define('ROLE_CITIZEN', 'citizen');

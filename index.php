@@ -22,7 +22,7 @@ if ($auth->isLoggedIn()) {
 
     switch ($user['role']) {
         case ROLE_ADMIN:
-            header('Location: ' . BASE_URL . '/pages/admin/dashboard.php');
+            header('Location: ' . BASE_URL . '/pages/cc/dashboard.php');
             break;
         case ROLE_OCS:
             header('Location: ' . BASE_URL . '/pages/ocs/dashboard.php');

@@ -11,10 +11,23 @@ require_once __DIR__ . '/../../includes/utils/validation.php';
 require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/classes/Officer.php';
 
-requireRole(ROLE_OFFICER);
+requireRole([ROLE_OFFICER, ROLE_ADMIN]);
 
 $currentUser = getCurrentUser();
-$officer = new Officer($currentUser['id']);
+$viewOfficerId = $_GET['id'] ?? $currentUser['id'];
+
+// For county commanders viewing other officers, check county
+if ($currentUser['role'] === 'county_commander' && $viewOfficerId !== $currentUser['id']) {
+    $userDetails = getDB()->fetchOne("SELECT county_in_charge FROM users WHERE id = :id", ['id' => $currentUser['id']]);
+    $county = $userDetails['county_in_charge'] ?? null;
+
+    $officerStation = getDB()->fetchOne("SELECT s.county FROM users u JOIN stations s ON u.station_id = s.id WHERE u.id = :id", ['id' => $viewOfficerId]);
+    if (!$officerStation || $officerStation['county'] !== $county) {
+        die("Access denied: Officer not in your county.");
+    }
+}
+
+$officer = new Officer($viewOfficerId);
 
 $errors = [];
 $success = '';

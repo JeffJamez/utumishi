@@ -202,7 +202,7 @@ class CaseManager {
     public function getCaseById($caseId, $userId = null) {
 
     if (!$userId) {
-        $sql = "SELECT c.*, 
+        $sql = "SELECT c.*,
                        u1.name as reporter_name, u1.phone as reporter_phone,
                        u2.name as recorded_by_name,
                        u3.name as assigned_officer_name, o.badge_number,
@@ -215,7 +215,11 @@ class CaseManager {
                 JOIN stations s ON c.station_id = s.id
                 WHERE c.id = :id";
 
-        return $this->db->fetchOne($sql, ['id' => $caseId]);
+        $result = $this->db->fetchOne($sql, ['id' => $caseId]);
+        if ($result) {
+            $result['priority'] = $this->calculateCasePriority($result);
+        }
+        return $result;
     }
 
     $sql = "
@@ -245,7 +249,11 @@ class CaseManager {
         'user_id_3' => $userId
     ];
 
-    return $this->db->fetchOne($sql, $params);
+    $result = $this->db->fetchOne($sql, $params);
+    if ($result) {
+        $result['priority'] = $this->calculateCasePriority($result);
+    }
+    return $result;
 }
 
     public function getCaseByOBNumber($obNumber) {
@@ -557,6 +565,10 @@ class CaseManager {
                 WHERE $whereClause";
 
         return $this->db->fetchOne($sql, $params);
+    }
+
+    private function calculateCasePriority($caseData) {
+        return ($caseData['estimated_resolution_hours'] <= 24) ? 'urgent' : 'high';
     }
 }
 ?>

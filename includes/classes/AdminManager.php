@@ -23,6 +23,11 @@ class AdminManager {
             $params['station_id'] = $filters['station_id'];
         }
 
+        if (!empty($filters['county'])) {
+            $whereConditions[] = "s.county = :county";
+            $params['county'] = $filters['county'];
+        }
+
         if (!empty($filters['status'])) {
             if ($filters['status'] === 'active') {
                 $whereConditions[] = "u.is_active = 1";
@@ -33,8 +38,10 @@ class AdminManager {
 
         $whereClause = implode(' AND ', $whereConditions);
 
+        error_log("AdminManager::getAllOfficers - Filters: " . json_encode($filters) . " | WHERE: $whereClause | Params: " . json_encode($params));
+
         return $this->db->fetchAll("
-            SELECT 
+            SELECT
                 u.id,
                 u.name,
                 u.email,
@@ -62,7 +69,7 @@ class AdminManager {
     /**
      * Create new officer
      */
-    public function createOfficer($userData, $officerData) {
+    public function createOfficer($userData, $officerData, $currentCounty = null) {
         try {
             $this->db->beginTransaction();
 
@@ -73,12 +80,25 @@ class AdminManager {
 
             $userId = $this->db->insert('users', $userData);
 
+            // Validate station county
+            if ($currentCounty) {
+                $station = $this->db->fetchOne("SELECT county FROM stations WHERE id = :id", ['id' => $userData['station_id']]);
+                if (!$station || $station['county'] !== $currentCounty) {
+                    return ['success' => false, 'message' => 'Cannot assign officer to station outside your county.'];
+                }
+            }
+
             // Create officer record
             $officerData['user_id'] = $userId;
             $officerData['joined_date'] = $officerData['joined_date'] ?? date('Y-m-d');
             $officerData['current_case_load'] = 0;
             $officerData['total_cases_resolved'] = 0;
             $officerData['avg_resolution_time_hours'] = 0;
+
+            // Auto-generate badge number if not provided
+            if (empty($officerData['badge_number'])) {
+                $officerData['badge_number'] = 'KEN' . str_pad($userId, 4, '0', STR_PAD_LEFT);
+            }
 
             if (isset($officerData['expertise_categories']) && is_array($officerData['expertise_categories'])) {
                 $officerData['expertise_categories'] = json_encode($officerData['expertise_categories']);
@@ -99,7 +119,7 @@ class AdminManager {
     /**
      * Update officer information
      */
-    public function updateOfficer($officerId, $userData, $officerData) {
+    public function updateOfficer($officerId, $userData, $officerData, $currentCounty = null) {
         try {
             $this->db->beginTransaction();
 
@@ -107,6 +127,14 @@ class AdminManager {
             $officer = $this->db->fetchOne("SELECT user_id FROM officers WHERE id = :id", ['id' => $officerId]);
             if (!$officer) {
                 throw new Exception("Officer not found");
+            }
+
+            // Validate station county if changing station
+            if ($currentCounty && isset($userData['station_id'])) {
+                $station = $this->db->fetchOne("SELECT county FROM stations WHERE id = :id", ['id' => $userData['station_id']]);
+                if (!$station || $station['county'] !== $currentCounty) {
+                    return ['success' => false, 'message' => 'Cannot assign officer to station outside your county.'];
+                }
             }
 
             // Update user data
@@ -135,7 +163,7 @@ class AdminManager {
     /**
      * Transfer officer to different station
      */
-    public function transferOfficer($officerId, $newStationId, $transferReason = '') {
+    public function transferOfficer($officerId, $newStationId, $transferReason = '', $currentCounty = null) {
         try {
             $this->db->beginTransaction();
 
@@ -148,6 +176,14 @@ class AdminManager {
 
             if (!$officer) {
                 throw new Exception("Officer not found");
+            }
+
+            // Validate new station county
+            if ($currentCounty) {
+                $station = $this->db->fetchOne("SELECT county FROM stations WHERE id = :id", ['id' => $newStationId]);
+                if (!$station || $station['county'] !== $currentCounty) {
+                    return ['success' => false, 'message' => 'Cannot transfer officer to station outside your county.'];
+                }
             }
 
             // Update station assignment
@@ -212,21 +248,29 @@ class AdminManager {
     /**
      * Get all stations with details
      */
-    public function getAllStations() {
+    public function getAllStations($county = null) {
+        $where = "1=1";
+        $params = [];
+
+        if ($county) {
+            $where .= " AND s.county = :county";
+            $params['county'] = $county;
+        }
+
         return $this->db->fetchAll("
-            SELECT 
+            SELECT
                 s.*,
                 u.name as commander_name,
                 COUNT(DISTINCT users.id) as officer_count,
-                COUNT(DISTINCT cases.id) as total_cases,
-                ROUND(AVG(cases.actual_resolution_hours), 1) as avg_resolution_time
+                COUNT(DISTINCT cases.id) as total_cases
             FROM stations s
             LEFT JOIN users u ON s.commander_id = u.id
             LEFT JOIN users ON s.id = users.station_id AND users.role = 'officer' AND users.is_active = 1
             LEFT JOIN cases ON s.id = cases.station_id
+            WHERE $where
             GROUP BY s.id
             ORDER BY s.county ASC, s.name ASC
-        ");
+        ", $params);
     }
 
     /**
