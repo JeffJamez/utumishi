@@ -1,5 +1,13 @@
-Test Accounts:
-Admin: 12345678 / password
+Test Accounts:  
+
+COUNTY      ID NUMBER
+County Commander: 12345678 / 12345678
+NAKURU - 20987645
+NAIROBI - 27897657
+MOMBASA - 20984676
+KISUMU - 29875538
+ELDORET - 29567564
+
 OCS: 23456789 / password
 Officer: 45678901 / password
 Citizen: 11111111 / password

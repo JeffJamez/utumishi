@@ -1,4 +1,0 @@
-Officer records case, system auto assigns.
-
-Officer can see:
-i) Cases they either recorded or those assigned to them

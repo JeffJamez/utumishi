@@ -152,11 +152,11 @@ try {
     ", $county ? ['county' => $county] : []);
 
 } catch (Exception $e) {
-    error_log("Admin Dashboard Error: " . $e->getMessage());
+    error_log("County Command Error: " . $e->getMessage());
     $error = "Unable to load dashboard data";
 }
 
-$pageTitle = "Admin Dashboard";
+$pageTitle = "County Command Dashboard";
 
 require_once __DIR__ . '/../../includes/layout/layout.php';
 
@@ -173,7 +173,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
 
             <div class="mb-4">
-                <h2>County Command Center</h2>
+                <h2><?php echo htmlspecialchars($county); ?> County Command Center</h2>
                 <p class="text-muted">Kenya Police Service - Strategic Overview & Management</p>
             </div>
 

@@ -68,7 +68,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     <main class="app-main">
          <div class="mb-4">
              <h2>Police Officers<?php if ($county) echo " - $county County"; ?></h2>
-             <p class="text-muted">View and manage police officers in your county</p>
+             <p class="text-muted">View police officers in your county</p>
          </div>
 
         <?php if ($error): ?>
@@ -107,7 +107,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </select>
                     </div>
                     
-                    <div>
+                    <div style="margin-top: 35px;">
                         <button type="submit" class="btn btn-primary">Apply Filters</button>
                         <a href="<?php echo $_SERVER['PHP_SELF']; ?>" class="btn btn-outline btn-secondary">Clear</a>
                     </div>
@@ -169,11 +169,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 <span class="text-muted">Never</span>
                                             <?php endif; ?>
                                         </td>
-                                         <td>
-                                             <a href="/pages/officer/profile.php?id=<?php echo $officer['id']; ?>" class="btn btn-sm btn-primary">
-                                                 View Details
-                                             </a>
-                                         </td>
+                                          <td>
+                                              <a href="<?php echo BASE_URL; ?>/pages/cc/officer_details.php?id=<?php echo $officer['officer_id']; ?>" class="btn btn-sm btn-primary">
+                                                  View
+                                              </a>
+                                          </td>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>

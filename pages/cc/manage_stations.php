@@ -166,13 +166,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <!-- View Station Modal -->
             <div id="viewStationModal" class="modal" style="display: none;">
                 <div class="modal-content">
-                    <h3>Station Details</h3>
-                </div>
-                <div class="card-body">
-                    <div id="stationDetailsContent">
-                        <!-- Content will be loaded here -->
+                    <div class="modal-header">
+                        <h3 class="modal-title">Station Details</h3>
+                        <button type="button" class="btn-close" onclick="closeModal('viewStationModal')">&times;</button>
                     </div>
-                    <div class="d-flex gap-2 mt-3">
+                    <div class="modal-body">
+                        <div id="stationDetailsContent">
+                            <!-- Content will be loaded here -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" onclick="closeModal('viewStationModal')">Close</button>
                     </div>
                 </div>
@@ -247,19 +250,58 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
-        
+
         .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background-color: white;
-            padding: 20px;
             border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
             width: 90%;
-            max-width: 600px;
+            max-width: 700px;
             max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .modal-body {
+            padding: 20px;
             overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
         }
         
         .badge-info {

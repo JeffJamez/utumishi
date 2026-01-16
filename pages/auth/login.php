@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!empty($role)) {
-            $roleValidation = validateRole($role);
+            $roleValidation = Validator::validateRole($role);
             if (!$roleValidation['valid']) {
                 throw new Exception($roleValidation['message']);
             }
@@ -131,13 +131,13 @@ $flashMessage = getFlashMessage();
                         id="national_id" 
                         name="national_id" 
                         class="form-control"
-                        placeholder="Enter your 8-digit National ID"
-                        value="<?php echo htmlspecialchars($_POST['national_id'] ?? ''); ?>"
-                        maxlength="8"
-                        pattern="[0-9]{8}"
-                        required
-                    >
-                    <div class="form-help">Enter your 8-digit National ID number</div>
+                         placeholder="Enter your 8-digit National ID"
+                         value="<?php echo htmlspecialchars($_POST['national_id'] ?? ''); ?>"
+                         maxlength="8"
+                         pattern="[0-9]{8}"
+                         required
+                     >
+                     <div class="form-help">Enter your 8-digit National ID number</div>
                 </div>
 
                 <div class="form-group">
@@ -179,7 +179,7 @@ $flashMessage = getFlashMessage();
         </div>
     </div>
 
-    <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
+
     <script>
 
         document.getElementById('loginForm').addEventListener('submit', function(e) {
@@ -193,12 +193,7 @@ $flashMessage = getFlashMessage();
                 return false;
             }
 
-            if (password.length < <?php echo PASSWORD_MIN_LENGTH; ?>) {
-                e.preventDefault();
-                alert('Password must be at least <?php echo PASSWORD_MIN_LENGTH; ?> characters');
-                document.getElementById('password').focus();
-                return false;
-            }
+
 
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.textContent;

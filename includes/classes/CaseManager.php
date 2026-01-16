@@ -257,16 +257,16 @@ class CaseManager {
 }
 
     public function getCaseByOBNumber($obNumber) {
-        $sql = "SELECT c.*, 
-                       u1.name as reporter_name, u1.national_id as reporter_national_id,
-                       u3.name as assigned_officer_name, o.badge_number,
-                       s.name as station_name
-                FROM cases c
-                JOIN users u1 ON c.reported_by_citizen_id = u1.id
-                LEFT JOIN officers o ON c.assigned_officer_id = o.id
-                LEFT JOIN users u3 ON o.user_id = u3.id
-                JOIN stations s ON c.station_id = s.id
-                WHERE c.ob_number = :ob_number";
+        $sql = "SELECT c.*,
+                        u1.name as reporter_name, u1.national_id as reporter_national_id,
+                        u3.name as assigned_officer_name, o.badge_number,
+                        s.name as station_name, s.county as station_county
+                 FROM cases c
+                 JOIN users u1 ON c.reported_by_citizen_id = u1.id
+                 LEFT JOIN officers o ON c.assigned_officer_id = o.id
+                 LEFT JOIN users u3 ON o.user_id = u3.id
+                 JOIN stations s ON c.station_id = s.id
+                 WHERE c.ob_number = :ob_number";
 
         return $this->db->fetchOne($sql, ['ob_number' => $obNumber]);
     }

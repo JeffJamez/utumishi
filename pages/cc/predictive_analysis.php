@@ -28,32 +28,7 @@ try {
         throw new Exception("No county assigned to your account.");
     }
 
-    // Get county-wide case data for predictions
-    $db = getDB();
-    $recentCases = $db->fetchOne("
-        SELECT COUNT(*) as total_cases, AVG(actual_resolution_hours) as avg_resolution
-        FROM cases
-        WHERE incident_location_county = :county
-        AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-    ", ['county' => $county]);
-
-    // Simple prediction logic based on recent trends
-    $baseCases = $recentCases['total_cases'] ?? 0;
-    $dailyAverage = $baseCases / 30;
-
-    $predictions = [];
-    for ($i = 1; $i <= $forecastDays; $i++) {
-        $date = date('Y-m-d', strtotime("+$i days"));
-        $predictedCases = round($dailyAverage * (1 + ($i * 0.05))); // Simple upward trend
-        $riskLevel = $predictedCases > 15 ? 'High' : ($predictedCases > 10 ? 'Medium' : 'Low');
-
-        $predictions[] = [
-            'date' => $date,
-            'predicted_cases' => $predictedCases,
-            'risk_level' => $riskLevel,
-            'confidence' => 75
-        ];
-    }
+    $predictions = $predictiveAnalytics->getCountyDashboardPredictions($county, $forecastDays);
 
 } catch (Exception $e) {
     error_log("Predictive Analytics Error: " . $e->getMessage());

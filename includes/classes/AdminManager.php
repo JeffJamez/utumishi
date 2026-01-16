@@ -43,6 +43,7 @@ class AdminManager {
         return $this->db->fetchAll("
             SELECT
                 u.id,
+                o.id as officer_id,
                 u.name,
                 u.email,
                 u.phone,
@@ -326,7 +327,7 @@ class AdminManager {
      */
     public function getUsersSummary() {
         return $this->db->fetchOne("
-            SELECT 
+            SELECT
                 COUNT(*) as total_users,
                 COUNT(CASE WHEN role = 'admin' THEN 1 END) as admin_count,
                 COUNT(CASE WHEN role = 'ocs' THEN 1 END) as ocs_count,
@@ -336,6 +337,83 @@ class AdminManager {
                 COUNT(CASE WHEN is_active = 0 THEN 1 END) as inactive_users
             FROM users
         ");
+    }
+
+    /**
+     * Get officer by ID
+     */
+    public function getOfficerById($officerId) {
+        $officer = $this->db->fetchOne("
+            SELECT
+                u.id,
+                u.name,
+                u.email,
+                u.phone,
+                u.is_active,
+                u.created_at,
+                u.last_login,
+                o.badge_number,
+                o.current_case_load,
+                o.total_cases_resolved,
+                o.avg_resolution_time_hours,
+                o.expertise_categories,
+                o.joined_date,
+                s.name as station_name,
+                s.county,
+                s.constituency
+            FROM officers o
+            JOIN users u ON o.user_id = u.id
+            LEFT JOIN stations s ON u.station_id = s.id
+            WHERE o.id = :id
+        ", ['id' => $officerId]);
+
+        if ($officer) {
+            // Calculate resolution rate
+            $totalCases = $officer['total_cases_resolved'] + $officer['current_case_load'];
+            $officer['resolution_rate'] = $totalCases > 0 ? round(($officer['total_cases_resolved'] / $totalCases) * 100, 1) : 0;
+        }
+
+        return $officer;
+    }
+
+    /**
+     * Get officer's cases
+     */
+    public function getOfficerCases($officerId) {
+        $current = $this->db->fetchAll("
+            SELECT
+                c.id,
+                c.ob_number,
+                c.title,
+                c.category,
+                c.status,
+                c.assigned_at,
+                c.created_at
+            FROM cases c
+            WHERE c.assigned_officer_id = :officer_id
+            AND c.status NOT IN ('resolved', 'closed')
+            ORDER BY c.assigned_at DESC
+        ", ['officer_id' => $officerId]);
+
+        $resolved = $this->db->fetchAll("
+            SELECT
+                c.id,
+                c.ob_number,
+                c.title,
+                c.category,
+                c.actual_resolution_hours,
+                c.closed_at
+            FROM cases c
+            WHERE c.assigned_officer_id = :officer_id
+            AND c.status IN ('resolved', 'closed')
+            ORDER BY c.closed_at DESC
+            LIMIT 50
+        ", ['officer_id' => $officerId]);
+
+        return [
+            'current' => $current,
+            'resolved' => $resolved
+        ];
     }
 }
 ?>

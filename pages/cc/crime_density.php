@@ -48,7 +48,15 @@ try {
 
     $densityData = $crimeAnalyzer->getCrimeDensityMap($filters);
 
-    $recommendations = []; // Skip station-specific recommendations for county view
+    // Generate county-level recommendations
+    $recommendations = $crimeAnalyzer->recommendDeployment(null, $timeframe);
+
+    // Filter recommendations to only show those in the commander's county
+    $recommendations = array_filter($recommendations, function($rec) use ($county) {
+        // Extract county from area string (format: "local_area, constituency, county")
+        $parts = explode(', ', $rec['area']);
+        return end($parts) === $county;
+    });
 
     $categories = getDB()->fetchAll(
         "SELECT DISTINCT category FROM cases WHERE incident_location_county = :county ORDER BY category",
@@ -65,7 +73,15 @@ try {
 
         $densityData = $crimeAnalyzer->getCrimeDensityMap($filters);
 
-        $recommendations = []; // Skip station-specific recommendations for county view
+        // Generate county-level recommendations
+        $recommendations = $crimeAnalyzer->recommendDeployment(null, $timeframe);
+
+        // Filter recommendations to only show those in the commander's county
+        $recommendations = array_filter($recommendations, function($rec) use ($county) {
+            // Extract county from area string (format: "local_area, constituency, county")
+            $parts = explode(', ', $rec['area']);
+            return end($parts) === $county;
+        });
 
         $categories = getDB()->fetchAll(
             "SELECT DISTINCT category FROM cases WHERE incident_location_county = :county ORDER BY category",

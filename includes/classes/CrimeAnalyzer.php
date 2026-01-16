@@ -140,10 +140,6 @@ class CrimeAnalyzer {
         return array_slice($recommendations, 0, 10);
     }
 
-
-
-
-
     public function generateAlerts($county = null) {
         $alerts = [];
 

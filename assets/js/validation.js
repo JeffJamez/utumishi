@@ -53,6 +53,10 @@ function validateEmail(email) {
 }
 
 function validatePassword(password) {
+  if (document.getElementById("loginForm")) {
+    return { valid: true, message: "Valid password" }; // Skip strength check on login
+  }
+
   if (!password) {
     return { valid: false, message: "Password is required" };
   }
@@ -348,6 +352,8 @@ function setupRealTimeValidation() {
   document.querySelectorAll(".form-control").forEach((input) => {
     input.addEventListener("blur", function () {
       const fieldName = this.getAttribute("name");
+      if (document.getElementById("loginForm") && fieldName === "password") return; // Skip password validation on login
+
       let result = { valid: true, message: "" };
 
       this.classList.remove("error");
@@ -364,9 +370,9 @@ function setupRealTimeValidation() {
         case "email":
           if (this.value) result = validateEmail(this.value);
           break;
-        case "password":
-          if (this.value) result = validatePassword(this.value);
-          break;
+         case "password":
+           if (this.value && !document.getElementById("loginForm")) result = validatePassword(this.value);
+           break;
         case "name":
           if (this.value) result = validateName(this.value);
           break;

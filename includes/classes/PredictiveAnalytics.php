@@ -28,22 +28,34 @@ class PredictiveAnalytics {
          ];
      }
 
+     /**
+      * Generate county-level predictive dashboard data
+      */
+     public function getCountyDashboardPredictions($county, $days = 7) {
+         return [
+             'crime_forecast' => $this->generateCrimeForecast(null, $days, $county),
+             'hotspot_predictions' => $this->predictHotspots(null, 60, $county),
+             'early_warnings' => $this->generateEarlyWarnings(null, $county),
+             'patrol_optimization' => $this->getPatrolOptimization(null, $county)
+         ];
+     }
+
     /**
      * Generate 7-day crime forecast
      */
-     public function generateCrimeForecast($stationId = null, $days = 7) {
+     public function generateCrimeForecast($stationId = null, $days = 7, $county = null) {
         $forecast = [];
         $currentDate = new DateTime();
 
         // Cache trend and seasonal for all days
-        $trendMultiplier = $this->calculateTrendMultiplier($stationId);
+        $trendMultiplier = $this->calculateTrendMultiplier($stationId, $county);
 
         // Pre-fetch categories and hours for all days of week
         $categoriesByDay = [];
         $hoursByDay = [];
         for ($d = 0; $d < 7; $d++) {
-            $categoriesByDay[$d] = $this->predictCategoryBreakdown($stationId, $d);
-            $hoursByDay[$d] = $this->predictPeakHours($stationId, $d);
+            $categoriesByDay[$d] = $this->predictCategoryBreakdown($stationId, $d, $county);
+            $hoursByDay[$d] = $this->predictPeakHours($stationId, $d, $county);
         }
 
         for ($i = 1; $i <= $days; $i++) {
@@ -54,7 +66,7 @@ class PredictiveAnalytics {
             $dayOfWeek = $targetDate->format('w');
 
             // Get historical average for this day of week
-            $historicalAvg = $this->getHistoricalAverage($stationId, $dayOfWeek);
+            $historicalAvg = $this->getHistoricalAverage($stationId, $dayOfWeek, $county);
 
             // Apply trend and seasonal adjustments
             $seasonalMultiplier = $this->getSeasonalMultiplier($targetDate);
@@ -97,11 +109,11 @@ class PredictiveAnalytics {
     /**
      * Predict emerging hotspots
      */
-    public function predictHotspots($stationId = null, $confidence_threshold = 60) {
+     public function predictHotspots($stationId = null, $confidence_threshold = 60, $county = null) {
         $predictions = [];
 
         // Analyze crime acceleration patterns
-        $accelerationData = $this->analyzeAccelerationPatterns($stationId);
+        $accelerationData = $this->analyzeAccelerationPatterns($stationId, $county);
         
         foreach ($accelerationData as $area) {
             $riskFactors = $this->calculateRiskFactors($area);
@@ -167,11 +179,11 @@ class PredictiveAnalytics {
     /**
      * Generate early warning alerts
      */
-    public function generateEarlyWarnings($stationId) {
+    public function generateEarlyWarnings($stationId, $county = null) {
         $warnings = [];
 
         // Crime spike predictions
-        $spikePredictions = $this->predictCrimeSpikes($stationId);
+        $spikePredictions = $this->predictCrimeSpikes($stationId, $county);
         foreach ($spikePredictions as $spike) {
             $warnings[] = [
                 'type' => 'crime_spike_prediction',
@@ -187,7 +199,7 @@ class PredictiveAnalytics {
         }
 
         // Resource shortage predictions
-        $resourceWarnings = $this->predictResourceShortages($stationId);
+        $resourceWarnings = $this->predictResourceShortages($stationId, $county);
         foreach ($resourceWarnings as $warning) {
             $warnings[] = [
                 'type' => 'resource_shortage_prediction',
@@ -212,11 +224,11 @@ class PredictiveAnalytics {
     /**
      * Get patrol optimization recommendations
      */
-    public function getPatrolOptimization($stationId) {
+    public function getPatrolOptimization($stationId, $county = null) {
         $recommendations = [];
         
         // Get high-risk areas and times
-        $riskAreas = $this->identifyHighRiskAreas($stationId);
+        $riskAreas = $this->identifyHighRiskAreas($stationId, $county);
         
         foreach ($riskAreas as $area) {
             $recommendations[] = [
@@ -236,13 +248,16 @@ class PredictiveAnalytics {
      * HELPER METHODS
      */
 
-    private function getHistoricalAverage($stationId, $dayOfWeek) {
+    private function getHistoricalAverage($stationId, $dayOfWeek, $county = null) {
         $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
         if ($stationId) {
             $whereConditions[] = "station_id = :station_id";
             $params['station_id'] = $stationId;
+        } elseif ($county) {
+            $whereConditions[] = "incident_location_county = :county";
+            $params['county'] = $county;
         }
 
         $whereClause = implode(' AND ', $whereConditions);
@@ -251,8 +266,8 @@ class PredictiveAnalytics {
             SELECT AVG(daily_count) as avg_cases
             FROM (
                 SELECT DATE(created_at) as date, COUNT(*) as daily_count
-                FROM cases 
-                WHERE $whereClause 
+                FROM cases
+                WHERE $whereClause
                 AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
                 GROUP BY DATE(created_at)
             ) daily_counts
@@ -261,10 +276,10 @@ class PredictiveAnalytics {
         return $result['avg_cases'] ?? 0;
     }
 
-     private function calculateTrendMultiplier($stationId) {
+     private function calculateTrendMultiplier($stationId, $county = null) {
         // Compare recent 30 days to previous 30 days
-        $recentCount = $this->getCaseCount($stationId, 30, 0);
-        $previousCount = $this->getCaseCount($stationId, 30, 30);
+        $recentCount = $this->getCaseCount($stationId, 30, 0, $county);
+        $previousCount = $this->getCaseCount($stationId, 30, 30, $county);
 
         if ($previousCount > 0) {
             return $recentCount / $previousCount;
@@ -290,7 +305,7 @@ class PredictiveAnalytics {
         return $seasonalFactors[$month] ?? 1.0;
     }
 
-    private function getCaseCount($stationId, $days, $offset = 0) {
+    private function getCaseCount($stationId, $days, $offset = 0, $county = null) {
         $whereConditions = [
             "created_at >= DATE_SUB(NOW(), INTERVAL :end_days DAY)",
             "created_at < DATE_SUB(NOW(), INTERVAL :start_days DAY)"
@@ -303,13 +318,16 @@ class PredictiveAnalytics {
         if ($stationId) {
             $whereConditions[] = "station_id = :station_id";
             $params['station_id'] = $stationId;
+        } elseif ($county) {
+            $whereConditions[] = "incident_location_county = :county";
+            $params['county'] = $county;
         }
 
         $whereClause = implode(' AND ', $whereConditions);
 
         $result = $this->db->fetchOne("
-            SELECT COUNT(*) as case_count 
-            FROM cases 
+            SELECT COUNT(*) as case_count
+            FROM cases
             WHERE $whereClause
         ", $params);
 
@@ -344,13 +362,16 @@ class PredictiveAnalytics {
         return min(60, 30 + ($stability * 30));
     }
 
-    private function predictPeakHours($stationId, $dayOfWeek) {
+     private function predictPeakHours($stationId, $dayOfWeek, $county = null) {
         $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
         if ($stationId) {
             $whereConditions[] = "station_id = :station_id";
             $params['station_id'] = $stationId;
+        } elseif ($county) {
+            $whereConditions[] = "incident_location_county = :county";
+            $params['county'] = $county;
         }
 
         $whereClause = implode(' AND ', $whereConditions);
@@ -368,13 +389,16 @@ class PredictiveAnalytics {
         return array_map(function($r) { return $r['hour']; }, $result);
     }
 
-     private function predictCategoryBreakdown($stationId, $dayOfWeek) {
+     private function predictCategoryBreakdown($stationId, $dayOfWeek, $county = null) {
         $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
         if ($stationId) {
             $whereConditions[] = "station_id = :station_id";
             $params['station_id'] = $stationId;
+        } elseif ($county) {
+            $whereConditions[] = "incident_location_county = :county";
+            $params['county'] = $county;
         }
 
         $whereClause = implode(' AND ', $whereConditions);
@@ -392,9 +416,17 @@ class PredictiveAnalytics {
         return $result;
     }
 
-     private function analyzeAccelerationPatterns($stationId) {
-        $whereClause = $stationId ? "AND station_id = :station_id" : "";
-        $params = $stationId ? ['station_id' => $stationId] : [];
+     private function analyzeAccelerationPatterns($stationId, $county = null) {
+        $whereClause = "";
+        $params = [];
+
+        if ($stationId) {
+            $whereClause = "AND station_id = :station_id";
+            $params['station_id'] = $stationId;
+        } elseif ($county) {
+            $whereClause = "AND incident_location_county = :county";
+            $params['county'] = $county;
+        }
 
         return $this->db->fetchAll("
             SELECT
@@ -517,19 +549,29 @@ class PredictiveAnalytics {
         return []; // Placeholder - resource shortage prediction logic
     }
 
-    private function identifyHighRiskAreas($stationId) {
+    private function identifyHighRiskAreas($stationId, $county = null) {
+        $whereClause = "created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        $params = [];
+
+        if ($stationId) {
+            $whereClause .= " AND station_id = :station_id";
+            $params['station_id'] = $stationId;
+        } elseif ($county) {
+            $whereClause .= " AND incident_location_county = :county";
+            $params['county'] = $county;
+        }
+
         return $this->db->fetchAll("
             SELECT
                 incident_location_constituency as location,
                 COUNT(*) * 10 as risk_score
             FROM cases
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" .
-            ($stationId ? " AND station_id = :station_id" : "") . "
+            WHERE $whereClause
             GROUP BY incident_location_constituency
             HAVING risk_score > 50
             ORDER BY risk_score DESC
             LIMIT 20
-        ", $stationId ? ['station_id' => $stationId] : []);
+        ", $params);
     }
 
     private function calculateOptimalPatrolTimes($area) {
