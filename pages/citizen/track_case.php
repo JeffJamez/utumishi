@@ -387,6 +387,21 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
        
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Dropdown toggle
+            const dropdownToggle = document.querySelector('.dropdown-toggle');
+            const dropdownMenu = document.querySelector('.dropdown-menu');
+            if (dropdownToggle && dropdownMenu) {
+                dropdownToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+                });
+                document.addEventListener('click', function(e) {
+                    if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                        dropdownMenu.style.display = 'none';
+                    }
+                });
+            }
+
             document.querySelectorAll('tbody tr').forEach(row => {
                 const statusBadge = row.querySelector('.badge');
                 const dateCell = row.cells[4];
@@ -496,6 +511,49 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 }
             });
         });
+
+        function changePassword() {
+            const currentPassword = prompt('Enter your current password:');
+            if (!currentPassword) return;
+
+            const newPassword = prompt('Enter your new password:');
+            if (!newPassword) return;
+
+            const confirmPassword = prompt('Confirm your new password:');
+            if (newPassword !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            if (newPassword.length < <?php echo PASSWORD_MIN_LENGTH; ?>) {
+                alert('Password must be at least <?php echo PASSWORD_MIN_LENGTH; ?> characters long!');
+                return;
+            }
+
+            fetch('<?php echo BASE_URL; ?>/pages/auth/change_password.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    csrf_token: '<?php echo csrfToken(); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Password changed successfully!');
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while changing password');
+            });
+        }
     </script>
 
     <style>

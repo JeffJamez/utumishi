@@ -8,6 +8,5 @@ MOMBASA - 20984676
 KISUMU - 29875538
 ELDORET - 29567564
 
-OCS: 23456789 / password
-Officer: 45678901 / password
-Citizen: 11111111 / password
+Office : 78350117 / 78350117
+Citizen: 21115632 / 21115632
