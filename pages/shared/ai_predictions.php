@@ -1,0 +1,1070 @@
+<?php
+define('UTUMISHI_WEB_APP', true);
+
+session_start();
+require_once __DIR__ . '/../../includes/config/constants.php';
+require_once __DIR__ . '/../../includes/core/db.php';
+require_once __DIR__ . '/../../includes/core/auth.php';
+require_once __DIR__ . '/../../includes/utils/sanitization.php';
+require_once __DIR__ . '/../../includes/classes/AIPredictionEngine.php';
+
+// Allow access to Officers (view-only), OCS, and County Commanders
+$currentUser = getCurrentUser();
+$isOfficer = ($currentUser['role'] ?? '') === ROLE_OFFICER;
+$isOCS = ($currentUser['role'] ?? '') === ROLE_OCS;
+$isCountyCommander = ($currentUser['role'] ?? '') === ROLE_COUNTY_COMMANDER;
+
+if (!$isOfficer && !$isOCS && !$isCountyCommander) {
+    requireRole(ROLE_OFFICER);
+}
+
+$predictionEngine = new AIPredictionEngine();
+
+// Get all predictions (PHP provides initial data, Brain.js handles real-time predictions)
+try {
+    $predictions = $predictionEngine->getPredictions();
+} catch (Exception $e) {
+    error_log("AI Prediction Error: " . $e->getMessage());
+    $predictions = [
+        'total_crimes' => 0,
+        'hotspot_count' => 0,
+        'peak_hours' => 'N/A',
+        'model_accuracy' => 'N/A',
+        'forecast_7day' => [],
+        'hourly_distribution' => array_fill(0, 24, 0),
+        'weekly_trend' => array_fill(0, 7, 0),
+        'top_hotspots' => [],
+        'recent_incidents' => [],
+        'categories' => [],
+        'locations' => []
+    ];
+}
+
+$pageTitle = "AI Crime Predictions";
+
+require_once __DIR__ . '/../../includes/layout/layout.php';
+
+// Prepare data for JavaScript
+$weeklyData = json_encode($predictions['weekly_trend']);
+$days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+$dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+// Get previous week's trend for comparison
+$prevWeekTrend = [];
+try {
+    $db = Database::getInstance();
+    $sql = "SELECT 
+            (DAYOFWEEK(COALESCE(occurred_at, created_at)) + 5) % 7 as day_index,
+            COUNT(*) as count
+        FROM cases
+        WHERE COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+        AND COALESCE(occurred_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DAYOFWEEK(COALESCE(occurred_at, created_at))
+        ORDER BY day_index ASC";
+    
+    $results = $db->fetchAll($sql);
+    $prevWeekTrend = array_fill(0, 7, 0);
+    foreach ($results as $row) {
+        $day = (int)$row['day_index'];
+        $prevWeekTrend[$day] = (int)$row['count'];
+    }
+} catch (Exception $e) {
+    error_log("Error fetching previous week trend: " . $e->getMessage());
+    $prevWeekTrend = array_fill(0, 7, 0);
+}
+
+$prevWeekData = json_encode($prevWeekTrend);
+
+// Calculate weekly comparison
+$currentWeekTotal = array_sum($predictions['weekly_trend']);
+$prevWeekTotal = array_sum($prevWeekTrend);
+$weeklyChange = $prevWeekTotal > 0 ? round((($currentWeekTotal - $prevWeekTotal) / $prevWeekTotal) * 100) : 0;
+$weeklyTrendDirection = $weeklyChange > 0 ? 'up' : ($weeklyChange < 0 ? 'down' : 'same');
+
+// Fetch real hotspot data with GPS coordinates from database
+$hotspotData = [];
+try {
+    $db = Database::getInstance();
+    
+    // Get recent cases with coordinates for the heatmap (last 90 days)
+    $sql = "SELECT 
+        c.latitude,
+        c.longitude,
+        c.category,
+        c.incident_location_constituency as constituency,
+        c.incident_location_county as county,
+        c.created_at
+    FROM cases c
+    WHERE c.latitude IS NOT NULL 
+        AND c.longitude IS NOT NULL
+        AND c.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+    ORDER BY c.created_at DESC
+    LIMIT 200";
+    
+    $casesWithCoords = $db->fetchAll($sql);
+    
+    // Build hotspot data for map markers
+    foreach ($casesWithCoords as $case) {
+        $hotspotData[] = [
+            'lat' => (float)$case['latitude'],
+            'lng' => (float)$case['longitude'],
+            'category' => $case['category'],
+            'location' => $case['constituency'] . ', ' . $case['county'],
+            'date' => $case['created_at']
+        ];
+    }
+    
+    // If no coordinates in database, fall back to constituency centers
+    if (empty($hotspotData)) {
+        $constituencyCoordinates = [
+            'Westlands' => ['lat' => -1.2676, 'lng' => 36.8047],
+            'Soy' => ['lat' => 0.5500, 'lng' => 35.2800],
+            'Mvita' => ['lat' => -4.0435, 'lng' => 39.6682],
+            'Central' => ['lat' => -0.3031, 'lng' => 36.0800],
+            'Langata' => ['lat' => -1.3284, 'lng' => 36.7807],
+            'Naivasha' => ['lat' => -0.7167, 'lng' => 36.4333],
+            'Eldoret East' => ['lat' => 0.5200, 'lng' => 35.2700],
+            'Starehe' => ['lat' => -1.2833, 'lng' => 36.8333],
+            'Likoni' => ['lat' => -4.0833, 'lng' => 39.6667],
+            'Milimani' => ['lat' => -0.0917, 'lng' => 34.7680],
+            'Kiambu Town' => ['lat' => -1.1748, 'lng' => 36.8304],
+            'Eastlands' => ['lat' => -1.3000, 'lng' => 36.8667],
+            'Kajiado West' => ['lat' => -1.8500, 'lng' => 36.7800],
+            'Kaloleni' => ['lat' => -3.7833, 'lng' => 39.8500],
+            'Mandera North' => ['lat' => 3.9333, 'lng' => 41.8500]
+        ];
+        
+        foreach (array_slice($predictions['top_hotspots'], 0, 15) as $hotspot) {
+            $constituency = $hotspot['constituency'];
+            if (isset($constituencyCoordinates[$constituency])) {
+                $coords = $constituencyCoordinates[$constituency];
+                $hotspotData[] = [
+                    'lat' => $coords['lat'],
+                    'lng' => $coords['lng'],
+                    'category' => $hotspot['category'],
+                    'location' => $constituency . ', ' . $hotspot['county'],
+                    'date' => date('Y-m-d')
+                ];
+            }
+        }
+    }
+} catch (Exception $e) {
+    error_log("Error fetching hotspot coordinates: " . $e->getMessage());
+    $hotspotData = [];
+}
+
+$hotspotDataJson = json_encode($hotspotData);
+
+// Category colors matching crimeprediction.html
+$categoryColors = [
+    'Theft' => '#f0a500',
+    'Assault' => '#e84a2e',
+    'Domestic Violence' => '#e84a2e',
+    'Burglary' => '#9b59b6',
+    'Sexual Offenses' => '#e84a2e',
+    'Fraud' => '#4a90e2',
+    'Traffic Offenses' => '#2ecc71',
+    'Drug Related' => '#2ecc71',
+    'Robbery' => '#e74c3c',
+    'Vandalism' => '#4a90e2'
+];
+?>
+
+<!-- External Libraries -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Brain.js for Neural Network Predictions -->
+<script src="https://cdn.jsdelivr.net/npm/brain.js/dist/brain-browser.js"></script>
+<script src="<?php echo BASE_URL; ?>/pages/shared/crime-predictor.js"></script>
+
+<style>
+.stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.stat-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #111827;
+}
+
+.stat-sub {
+    font-size: 0.68rem;
+    color: #6b7280;
+}
+
+/* Main Grid */
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Panels */
+.panel {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.panel-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #111827;
+}
+
+.badge {
+    font-size: 0.62rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.badge-red {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.badge-amber {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-blue {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-green {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+/* Map */
+#map {
+    height: 400px;
+    width: 100%;
+}
+
+.map-controls {
+    padding: 0.8rem 1.2rem;
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+    flex-wrap: wrap;
+}
+
+.ctrl-label {
+    font-size: 0.68rem;
+    color: #6b7280;
+    margin-right: 0.3rem;
+}
+
+.toggle-btn {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 5px;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.toggle-btn.active, .toggle-btn:hover {
+    border-color: #dc2626;
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.08);
+}
+
+/* Sidebar */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Prediction Form */
+.predict-form {
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.form-row label {
+    font-size: 0.65rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.form-row select {
+    font-size: 0.85rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    color: #111827;
+    padding: 0.5rem 0.7rem;
+    border-radius: 6px;
+    appearance: none;
+    width: 100%;
+}
+
+.form-row select:focus {
+    outline: none;
+    border-color: #dc2626;
+}
+
+.predict-btn {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    padding: 0.65rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-top: 0.25rem;
+}
+
+.predict-btn:hover {
+    opacity: 0.88;
+}
+
+/* Risk Result */
+.risk-result {
+    margin: 0 1.2rem 1rem;
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.risk-result.show {
+    display: flex;
+}
+
+.risk-result.high {
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.risk-result.medium {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.risk-result.low {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.risk-label {
+    font-size: 0.62rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.risk-score {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.risk-bar-wrap {
+    background: #e5e7eb;
+    border-radius: 99px;
+    height: 5px;
+    overflow: hidden;
+}
+
+.risk-bar {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.risk-text {
+    font-size: 0.7rem;
+    color: #6b7280;
+}
+
+/* Crime List */
+.crime-list {
+    padding: 0;
+    list-style: none;
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.crime-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.crime-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.crime-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 99px;
+}
+
+.crime-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.7rem 1.2rem;
+    border-bottom: 1px solid #e5e7eb;
+    transition: background 0.15s;
+}
+
+.crime-item:hover {
+    background: #f9fafb;
+}
+
+.crime-item:last-child {
+    border-bottom: none;
+}
+
+.crime-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.crime-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.crime-type {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.crime-meta {
+    font-size: 0.62rem;
+    color: #6b7280;
+}
+
+.crime-time {
+    font-size: 0.62rem;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+/* Charts */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.chart-wrap {
+    padding: 1rem 1.2rem;
+    height: 200px;
+    position: relative;
+}
+
+/* Forecast Table */
+.forecast-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.72rem;
+    color: #111827;
+}
+
+.forecast-table th {
+    text-align: left;
+    font-size: 0.62rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 1.2rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 400;
+    background: #f9fafb;
+}
+
+.forecast-table td {
+    padding: 0.55rem 1.2rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.forecast-table tr:last-child td {
+    border-bottom: none;
+}
+
+.forecast-table tr:hover td {
+    background: #f9fafb;
+}
+
+.risk-chip {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.62rem;
+}
+
+.chip-high {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+}
+
+.chip-medium {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.chip-low {
+    background: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+}
+
+/* Model Status */
+.model-status {
+    font-size: 0.65rem;
+    color: #6b7280;
+    padding: 0.5rem 1.2rem;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .main-grid {
+        grid-template-columns: 1fr;
+    }
+    .stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .charts-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .stats-bar {
+        grid-template-columns: 1fr;
+    }
+    .app-main {
+        padding: 1rem;
+    }
+}
+</style>
+
+<main class="app-main">
+    <div class="mb-4">
+        <h2>AI Crime Predictions</h2>
+        <p class="text-muted">Statistical forecasting for proactive policing</p>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="stats-bar">
+        <div class="stat-card red">
+            <div class="stat-label">Total Crimes (Dataset)</div>
+            <div class="stat-value"><?php echo number_format($predictions['total_crimes']); ?></div>
+            <div class="stat-sub">Across all categories</div>
+        </div>
+        <div class="stat-card amber">
+            <div class="stat-label">High-Risk Hours</div>
+            <div class="stat-value"><?php echo htmlspecialchars($predictions['peak_hours']); ?></div>
+            <div class="stat-sub">Peak window today</div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-label">Hotspot Zones</div>
+            <div class="stat-value"><?php echo $predictions['hotspot_count']; ?></div>
+            <div class="stat-sub">Active clusters</div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-label">Neural Network Status</div>
+            <div class="stat-value" id="modelStatus" style="font-size: 1.2rem;">Loading...</div>
+            <div class="stat-sub">Brain.js AI Model</div>
+        </div>
+    </div>
+
+    <!-- Map Panel (Full Width) -->
+    <div class="panel" style="margin-bottom: 1rem;">
+        <div class="panel-header">
+            <span class="panel-title">Crime Hotspot Map</span>
+            <span class="badge badge-red">Live Heatmap</span>
+        </div>
+        <div id="map"></div>
+        <div class="map-controls">
+            <span class="ctrl-label">Show:</span>
+            <button class="toggle-btn active" onclick="toggleLayer('heat', this)">Heatmap</button>
+            <button class="toggle-btn" onclick="toggleLayer('markers', this)">Incidents</button>
+            <button class="toggle-btn" onclick="toggleLayer('predicted', this)">Predicted Zones</button>
+        </div>
+    </div>
+
+    <!-- Charts Row: Risk Predictor + Weekly Trend -->
+    <div class="charts-row" style="margin-bottom: 1rem;">
+        <!-- Risk Predictor (Brain.js Neural Network) -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Risk Predictor</span>
+            </div>
+            <div style="display: flex;">
+                <div class="predict-form" style="flex: 1; border-right: 1px solid #e5e7eb;">
+                    <div class="form-row">
+                        <label>Day of Week</label>
+                        <select id="predDay">
+                            <?php foreach ($dayNames as $i => $day): ?>
+                                <option value="<?php echo $i; ?>" <?php echo $i === 4 ? 'selected' : ''; ?>><?php echo $day; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="form-row">
+                        <label>Hour of Day</label>
+                        <select id="predHour">
+                            <?php for ($h = 0; $h < 24; $h++): ?>
+                                <option value="<?php echo $h; ?>" <?php echo $h === 20 ? 'selected' : ''; ?>><?php echo sprintf('%02d:00', $h); ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="form-row">
+                        <label>Area / Zone</label>
+                        <select id="predZone" required>
+                            <option value="">Select location...</option>
+                            <?php 
+                            // Get top 15 most active constituencies
+                            $topLocations = array_slice($predictions['top_hotspots'], 0, 15);
+                            $zoneIndex = 0;
+                            foreach ($topLocations as $location): 
+                                $zoneValue = $location['constituency'] . ', ' . $location['county'];
+                            ?>
+                                <option value="<?php echo $zoneIndex++; ?>">
+                                    <?php echo htmlspecialchars($location['constituency']); ?> 
+                                    <small style="color: #6b7280;">(<?php echo htmlspecialchars($location['county']); ?>)</small>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <button type="button" class="predict-btn" onclick="window.CrimePredictor.runPrediction()">Run Prediction</button>
+                </div>
+
+                <div id="riskResult" class="risk-result" style="flex: 1; margin: 0; display: none; justify-content: center;">
+                    <div style="text-align: center;">
+                        <div class="risk-label">Predicted Risk Score</div>
+                        <div id="riskScore" class="risk-score" style="font-size: 3rem;">—</div>
+                        <div class="risk-bar-wrap" style="width: 200px; margin: 1rem auto;">
+                            <div id="riskBar" class="risk-bar"></div>
+                        </div>
+                        <div id="riskText" class="risk-text" style="font-size: 0.85rem;">—</div>
+                    </div>
+                </div>
+
+                <div id="predictionPlaceholder" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280; text-align: center;">
+                    <div>
+                        <div style="font-size: 0.85rem;">Select day, hour, and location<br>then click "Run Prediction"</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Trend -->
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-title">Weekly Trend</span>
+                <span class="badge badge-blue">7-Day</span>
+            </div>
+            <div style="padding: 1rem 1.2rem; border-bottom: 1px solid #e5e7eb;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">This Week</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: #111827;"><?php echo $currentWeekTotal; ?> <small style="font-size: 0.75rem; color: #6b7280;">cases</small></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">vs Last Week</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: <?php echo $weeklyChange > 0 ? '#dc2626' : ($weeklyChange < 0 ? '#22c55e' : '#6b7280'); ?>">
+                            <?php echo $weeklyChange > 0 ? '↑' : ($weeklyChange < 0 ? '↓' : '→'); ?> <?php echo abs($weeklyChange); ?>%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7-Day Forecast Table (Full Width) -->
+    <div class="panel" style="margin-bottom: 1rem;">
+        <div class="panel-header">
+            <span class="panel-title">7-Day Risk Forecast</span>
+            <span class="badge badge-red">AI Prediction</span>
+        </div>
+        <table class="forecast-table">
+            <thead>
+                <tr>
+                    <th>Day</th>
+                    <th>Predicted Risk</th>
+                    <th>Peak Hour</th>
+                    <th>Likely Type</th>
+                    <th>Location</th>
+                    <th>Confidence</th>
+                    <th>Trend</th>
+                </tr>
+            </thead>
+            <tbody id="forecastBody">
+                <?php foreach ($predictions['forecast_7day'] as $index => $forecast): 
+                    $prevRisk = $index > 0 ? $predictions['forecast_7day'][$index - 1]['risk_score'] : $forecast['risk_score'];
+                    $trendChange = $forecast['risk_score'] - $prevRisk;
+                    $trendIcon = $trendChange > 5 ? '↑' : ($trendChange < -5 ? '↓' : '→');
+                    $trendColor = $trendChange > 5 ? '#dc2626' : ($trendChange < -5 ? '#22c55e' : '#6b7280');
+                ?>
+                    <tr>
+                        <td>
+                            <strong><?php echo htmlspecialchars($forecast['label']); ?></strong><br>
+                            <small style="color: #6b7280;"><?php echo date('M d', strtotime($forecast['date'])); ?></small>
+                        </td>
+                        <td>
+                            <?php 
+                            $chipClass = $forecast['risk_level'] === 'high' ? 'chip-high' : ($forecast['risk_level'] === 'medium' ? 'chip-medium' : 'chip-low');
+                            ?>
+                            <span class="risk-chip <?php echo $chipClass; ?>">
+                                <?php echo $forecast['risk_score']; ?>% <?php echo ucfirst($forecast['risk_level']); ?>
+                            </span>
+                        </td>
+                        <td style="color: #6b7280;"><?php echo htmlspecialchars($forecast['peak_hour']); ?></td>
+                        <td><?php echo htmlspecialchars($forecast['likely_type']); ?></td>
+                        <td style="font-size: 0.85rem;"><?php echo htmlspecialchars($forecast['likely_location']); ?></td>
+                        <td style="color: #6b7280;"><?php echo htmlspecialchars($forecast['confidence']); ?></td>
+                        <td style="color: <?php echo $trendColor; ?>; font-weight: bold;"><?php echo $trendIcon; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <div class="model-status">
+            Statistical frequency analysis — trained on <?php echo number_format($predictions['total_crimes']); ?> historical crime records
+        </div>
+    </div>
+</main>
+
+<script>
+// Map Setup - Centered on Kenya to show all crime locations
+const map = L.map('map', { zoomControl: true }).setView([-0.5, 37.0], 6);
+
+// Dark theme map tiles (matching predict.html style)
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    maxZoom: 19
+}).addTo(map);
+
+// Crime data with coordinates from database
+const crimeData = <?php echo $hotspotDataJson; ?>;
+
+// Category colors for markers
+const categoryColors = {
+    'Theft': '#f0a500',
+    'Assault': '#e84a2e',
+    'Domestic Violence': '#e84a2e',
+    'Burglary': '#9b59b6',
+    'Sexual Offenses': '#e84a2e',
+    'Fraud': '#4a90e2',
+    'Traffic Offenses': '#2ecc71',
+    'Drug Related': '#2ecc71',
+    'Robbery': '#e74c3c',
+    'Vandalism': '#4a90e2'
+};
+
+// Heatmap layer using real coordinates - Bright reddish theme
+const heatData = crimeData.map(c => [c.lat, c.lng, 1.0]);
+const heatLayer = L.heatLayer(heatData, {
+    radius: 35,
+    blur: 25,
+    maxZoom: 15,
+    gradient: {
+        0.1: '#ff6600',   // Orange
+        0.3: '#ff3300',   // Red-orange
+        0.5: '#ff0000',   // Pure red
+        0.7: '#ff0044',   // Hot red-pink
+        0.9: '#ff0088',   // Bright pink-red
+        1.0: '#ffffff'    // White hot center
+    }
+});
+heatLayer.addTo(map);
+
+// Marker layer with individual crime dots
+const markerGroup = L.layerGroup();
+crimeData.forEach(c => {
+    const color = categoryColors[c.category] || '#888';
+    const icon = L.divIcon({
+        html: `<div style="width:10px;height:10px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,.8);box-shadow:0 0 6px ${color}88;"></div>`,
+        className: '',
+        iconSize: [10, 10],
+        iconAnchor: [5, 5]
+    });
+    
+    const date = new Date(c.date);
+    const dateStr = date.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' });
+    
+    L.marker([c.lat, c.lng], { icon })
+        .bindPopup(`<b style="color:${color}">${c.category}</b><br>${c.location}<br><small>${dateStr}</small>`)
+        .addTo(markerGroup);
+});
+
+// Predicted zones layer (high-risk clusters)
+const predictedGroup = L.layerGroup();
+if (crimeData.length > 0) {
+    // Create 3 predicted zones based on highest crime density areas
+    const clusters = [
+        { index: 0, r: 5000, risk: 'High' },
+        { index: Math.floor(crimeData.length / 3), r: 4000, risk: 'Medium' },
+        { index: Math.floor(crimeData.length * 2 / 3), r: 3500, risk: 'Medium' }
+    ];
+    
+    clusters.forEach(cluster => {
+        if (crimeData[cluster.index]) {
+            const c = crimeData[cluster.index];
+            L.circle([c.lat, c.lng], {
+                radius: cluster.r,
+                color: cluster.risk === 'High' ? '#e84a2e' : '#f0a500',
+                fillColor: cluster.risk === 'High' ? '#e84a2e' : '#f0a500',
+                fillOpacity: 0.12,
+                weight: 1.5,
+                dashArray: '5,5'
+            }).bindPopup(`<b>Predicted ${cluster.risk}-Risk Zone</b><br>Based on historical patterns`).addTo(predictedGroup);
+        }
+    });
+}
+
+// Layer toggle functionality
+const layers = {
+    heat: heatLayer,
+    markers: markerGroup,
+    predicted: predictedGroup
+};
+
+function toggleLayer(name, btn) {
+    const layer = layers[name];
+    if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+        btn.classList.remove('active');
+    } else {
+        map.addLayer(layer);
+        btn.classList.add('active');
+    }
+}
+
+// Fit map bounds to show all markers if we have data
+if (crimeData.length > 0) {
+    const bounds = L.latLngBounds(crimeData.map(c => [c.lat, c.lng]));
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+}
+
+// Chart Setup
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+        x: {
+            grid: { color: "rgba(0,0,0,.04)" },
+            ticks: { color: "#6b7280", font: { size: 10 } }
+        },
+        y: {
+            grid: { color: "rgba(0,0,0,.04)" },
+            ticks: { color: "#6b7280", font: { size: 10 } }
+        }
+    }
+};
+
+// Trend Chart - This Week vs Last Week
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+const weeklyData = <?php echo $weeklyData; ?>;
+const prevWeekData = <?php echo $prevWeekData; ?>;
+
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: <?php echo json_encode($days); ?>,
+        datasets: [
+            {
+                label: 'This Week',
+                data: weeklyData,
+                borderColor: "#e84a2e",
+                backgroundColor: "rgba(232,74,46,.08)",
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: "#e84a2e",
+                fill: true,
+                tension: 0.4
+            },
+            {
+                label: 'Last Week',
+                data: prevWeekData,
+                borderColor: "#6b7280",
+                backgroundColor: "rgba(107,114,128,.05)",
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 3,
+                pointBackgroundColor: "#6b7280",
+                fill: false,
+                tension: 0.4
+            }
+        ]
+    },
+    options: {
+        ...chartDefaults,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'bottom',
+                labels: {
+                    boxWidth: 12,
+                    padding: 10,
+                    font: { size: 10 }
+                }
+            }
+        }
+    }
+});
+
+// ===========================================
+// Brain.js Neural Network Initialization
+// ===========================================
+
+// Prepare crime data for neural network training
+// Use the same crimeData that's used for the map
+const nnTrainingData = crimeData.map(c => {
+    // Handle different date field names
+    const dateStr = c.date || new Date().toISOString();
+    return {
+        lat: c.lat,
+        lng: c.lng,
+        category: c.category,
+        location: c.location,
+        date: dateStr
+    };
+}).filter(c => c.lat && c.lng); // Only include records with coordinates
+
+console.log('Prepared', nnTrainingData.length, 'training records from', crimeData.length, 'total crimes');
+
+// Initialize neural network when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing Brain.js...');
+    console.log('Brain.js available:', typeof brain !== 'undefined');
+    console.log('Crime data available:', crimeData.length, 'records');
+    console.log('Training data prepared:', nnTrainingData.length, 'records');
+    
+    // Wait a moment to ensure brain.js is loaded
+    setTimeout(() => {
+        if (typeof window.CrimePredictor !== 'undefined') {
+            console.log('CrimePredictor module loaded, initializing...');
+            window.CrimePredictor.init(nnTrainingData);
+            
+            // Listen for model ready event
+            document.addEventListener('crimeModelReady', function(e) {
+                console.log('Brain.js model ready:', e.detail);
+                
+                // Optionally update 7-day forecast with neural network predictions
+                // Uncomment the line below to use NN-generated forecast instead of PHP
+                // window.CrimePredictor.updateForecast();
+            });
+        } else {
+            console.error('CrimePredictor not loaded');
+            const statusEl = document.getElementById('modelStatus');
+            if (statusEl) {
+                statusEl.textContent = 'Module Error';
+                statusEl.style.color = '#dc2626';
+            }
+        }
+    }, 500);
+});
+
+// Update prediction UI display function
+window.showPredictionResult = function(result) {
+    const resultEl = document.getElementById('riskResult');
+    const placeholderEl = document.getElementById('predictionPlaceholder');
+    const scoreEl = document.getElementById('riskScore');
+    const barEl = document.getElementById('riskBar');
+    const textEl = document.getElementById('riskText');
+    
+    if (!resultEl || !placeholderEl) return;
+    
+    // Hide placeholder, show result
+    placeholderEl.style.display = 'none';
+    resultEl.style.display = 'flex';
+    resultEl.classList.add('show');
+    resultEl.className = 'risk-result show ' + result.level;
+    
+    // Update values
+    if (scoreEl) {
+        scoreEl.textContent = result.score + '%';
+        scoreEl.style.color = result.score >= 65 ? '#dc2626' : result.score >= 35 ? '#f59e0b' : '#22c55e';
+    }
+    
+    if (barEl) {
+        barEl.style.width = result.score + '%';
+        barEl.style.background = result.score >= 65 ? '#dc2626' : result.score >= 35 ? '#f59e0b' : '#22c55e';
+    }
+};
+</script>

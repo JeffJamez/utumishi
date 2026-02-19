@@ -64,12 +64,12 @@ class Station {
         }
         
         if (!empty($filters['date_from'])) {
-            $whereConditions[] = 'DATE(c.created_at) >= :date_from';
+            $whereConditions[] = 'DATE(COALESCE(c.occurred_at, c.created_at)) >= :date_from';
             $params['date_from'] = $filters['date_from'];
         }
-        
+
         if (!empty($filters['date_to'])) {
-            $whereConditions[] = 'DATE(c.created_at) <= :date_to';
+            $whereConditions[] = 'DATE(COALESCE(c.occurred_at, c.created_at)) <= :date_to';
             $params['date_to'] = $filters['date_to'];
         }
 
@@ -106,7 +106,7 @@ class Station {
             LEFT JOIN officers o ON c.assigned_officer_id = o.id
             LEFT JOIN users u3 ON o.user_id = u3.id
              WHERE $whereClause
-             ORDER BY c.created_at DESC
+             ORDER BY COALESCE(c.occurred_at, c.created_at) DESC
               " . ($limit ? " LIMIT :limit OFFSET :offset" : ""), array_merge($params, $limit ? ['limit' => $limit, 'offset' => $offset] : []));
     }
 
@@ -165,16 +165,16 @@ class Station {
     public function getCaseStatistics($timeframe = null) {
         $whereConditions = ['station_id = :station_id'];
         $params = ['station_id' => $this->stationId];
-        
+
         if ($timeframe) {
-            $whereConditions[] = 'created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)';
+            $whereConditions[] = 'COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)';
             $params['timeframe'] = $timeframe;
         }
-        
+
         $whereClause = implode(' AND ', $whereConditions);
-        
+
         return $this->db->fetchOne("
-            SELECT 
+            SELECT
                 COUNT(*) as total_cases,
                 COUNT(CASE WHEN status = 'reported' THEN 1 END) as reported_cases,
                 COUNT(CASE WHEN status = 'assigned' THEN 1 END) as assigned_cases,
@@ -183,7 +183,7 @@ class Station {
                 COUNT(CASE WHEN status = 'closed' THEN 1 END) as closed_cases,
                 ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
-            FROM cases 
+            FROM cases
             WHERE $whereClause
         ", $params);
     }
@@ -193,15 +193,15 @@ class Station {
      */
     public function getCasesByCategory($timeframe = 30) {
         return $this->db->fetchAll("
-            SELECT 
+            SELECT
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
                 ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
-            FROM cases 
-            WHERE station_id = :station_id 
-            AND created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            FROM cases
+            WHERE station_id = :station_id
+            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
             GROUP BY category
             ORDER BY case_count DESC
         ", ['station_id' => $this->stationId, 'timeframe' => $timeframe]);
@@ -240,22 +240,23 @@ class Station {
      */
     public function getRecentCases($days = 7) {
         return $this->db->fetchAll("
-            SELECT 
+            SELECT
                 c.id,
                 c.ob_number,
                 c.title,
                 c.category,
                 c.status,
                 c.created_at,
+                c.occurred_at,
                 u1.name as reporter_name,
                 CONCAT(u3.name, ' (', o.badge_number, ')') as assigned_officer
             FROM cases c
             JOIN users u1 ON c.reported_by_citizen_id = u1.id
             LEFT JOIN officers o ON c.assigned_officer_id = o.id
             LEFT JOIN users u3 ON o.user_id = u3.id
-            WHERE c.station_id = :station_id 
-            AND c.created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
-            ORDER BY c.created_at DESC
+            WHERE c.station_id = :station_id
+            AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :days DAY)
+            ORDER BY COALESCE(c.occurred_at, c.created_at) DESC
         ", ['station_id' => $this->stationId, 'days' => $days]);
     }
 
@@ -326,29 +327,29 @@ class Station {
      */
     public function getCaseTrends($days = 30) {
         $dailyTrends = $this->db->fetchAll("
-            SELECT 
-                DATE(created_at) as date,
+            SELECT
+                DATE(COALESCE(occurred_at, created_at)) as date,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count
-            FROM cases 
-            WHERE station_id = :station_id 
-            AND created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
-            GROUP BY DATE(created_at)
+            FROM cases
+            WHERE station_id = :station_id
+            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :days DAY)
+            GROUP BY DATE(COALESCE(occurred_at, created_at))
             ORDER BY date ASC
         ", ['station_id' => $this->stationId, 'days' => $days]);
-        
+
         $categoryTrends = $this->db->fetchAll("
-            SELECT 
+            SELECT
                 category,
-                DATE(created_at) as date,
+                DATE(COALESCE(occurred_at, created_at)) as date,
                 COUNT(*) as case_count
-            FROM cases 
-            WHERE station_id = :station_id 
-            AND created_at >= DATE_SUB(NOW(), INTERVAL :days DAY)
-            GROUP BY category, DATE(created_at)
+            FROM cases
+            WHERE station_id = :station_id
+            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :days DAY)
+            GROUP BY category, DATE(COALESCE(occurred_at, created_at))
             ORDER BY date ASC, category ASC
         ", ['station_id' => $this->stationId, 'days' => $days]);
-        
+
         return [
             'daily_trends' => $dailyTrends,
             'category_trends' => $categoryTrends
@@ -493,32 +494,32 @@ class Station {
     private function generateMonthlyReport($parameters) {
         $year = $parameters['year'] ?? date('Y');
         $month = $parameters['month'] ?? date('m');
-        
+
         $monthlyStats = $this->db->fetchOne("
-            SELECT 
+            SELECT
                 COUNT(*) as total_cases,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
                 ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
-            FROM cases 
-            WHERE station_id = :station_id 
-            AND YEAR(created_at) = :year 
-            AND MONTH(created_at) = :month
+            FROM cases
+            WHERE station_id = :station_id
+            AND YEAR(COALESCE(occurred_at, created_at)) = :year
+            AND MONTH(COALESCE(occurred_at, created_at)) = :month
         ", [
             'station_id' => $this->stationId,
             'year' => $year,
             'month' => $month
         ]);
-        
+
         $categoryBreakdown = $this->db->fetchAll("
-            SELECT 
+            SELECT
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count
-            FROM cases 
-            WHERE station_id = :station_id 
-            AND YEAR(created_at) = :year 
-            AND MONTH(created_at) = :month
+            FROM cases
+            WHERE station_id = :station_id
+            AND YEAR(COALESCE(occurred_at, created_at)) = :year
+            AND MONTH(COALESCE(occurred_at, created_at)) = :month
             GROUP BY category
             ORDER BY case_count DESC
         ", [
@@ -573,7 +574,7 @@ class Station {
     public static function getAllStations() {
         $db = Database::getInstance();
         return $db->fetchAll("
-            SELECT 
+            SELECT
                 s.*,
                 u.name as commander_name,
                 COUNT(DISTINCT o.id) as officer_count,
@@ -582,7 +583,7 @@ class Station {
             LEFT JOIN users u ON s.commander_id = u.id
             LEFT JOIN users u2 ON s.id = u2.station_id AND u2.role = 'officer' AND u2.is_active = 1
             LEFT JOIN officers o ON u2.id = o.user_id
-            LEFT JOIN cases c ON s.id = c.station_id AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            LEFT JOIN cases c ON s.id = c.station_id AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)
             GROUP BY s.id
             ORDER BY s.name
         ");

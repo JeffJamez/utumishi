@@ -98,6 +98,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <?php echo ucfirst(str_replace('_', ' ', $case['status'])); ?>
                                     </span>
                                 </p>
+                                <p><strong>Date/Time of Incident:</strong> <?php echo !empty($case['occurred_at']) ? date('M j, Y \a\t g:i A', strtotime($case['occurred_at'])) : 'Not recorded'; ?></p>
                                 <p><strong>Reported:</strong> <?php echo htmlspecialchars($case['created_at']); ?></p>
                                 <p><strong>Last Updated:</strong> <?php echo htmlspecialchars($case['updated_at'] ?? $case['created_at']); ?></p>
                             </div>

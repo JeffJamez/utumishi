@@ -15,7 +15,7 @@ class CaseManager {
         try {
             $this->db->beginTransaction();
 
-            $required = ['title', 'description', 'category', 'incident_location_county', 'incident_location_constituency',
+            $required = ['title', 'description', 'category', 'occurred_at', 'incident_location_county', 'incident_location_constituency',
                          'reporter_county', 'reporter_constituency',
                          'reported_by_citizen_id', 'recorded_by_officer_id', 'station_id'];
 
@@ -33,8 +33,9 @@ class CaseManager {
                 'title' => sanitizeText($data['title']),
                 'description' => sanitizeText($data['description']),
                 'category' => sanitizeText($data['category']),
+                'occurred_at' => $data['occurred_at'],
                 'incident_location_county' => sanitizeText($data['incident_location_county']),
-                 'incident_location_constituency' => sanitizeText($data['incident_location_constituency']),
+                'incident_location_constituency' => sanitizeText($data['incident_location_constituency']),
                 'incident_local_area' => sanitizeText($data['incident_local_area'] ?? ''),
                 'reporter_county' => sanitizeText($data['reporter_county']),
                 'reporter_constituency' => sanitizeText($data['reporter_constituency']),
@@ -46,6 +47,12 @@ class CaseManager {
                 'estimated_resolution_hours' => $this->getEstimatedResolutionTime($data['category']),
                 'created_at' => date('Y-m-d H:i:s')
             ];
+            
+            // Add GPS coordinates if provided (from Google Places)
+            if (!empty($data['latitude']) && !empty($data['longitude'])) {
+                $caseData['latitude'] = (float)$data['latitude'];
+                $caseData['longitude'] = (float)$data['longitude'];
+            }
 
             $caseId = $this->db->insert('cases', $caseData);
 
@@ -272,7 +279,7 @@ class CaseManager {
     }
 
     public function getCasesForCitizen($citizenId, $limit = 10) {
-        $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.created_at, c.updated_at,
+        $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.occurred_at, c.created_at, c.updated_at,
                        CONCAT(u.name, ' (', o.badge_number, ')') as assigned_officer,
                        s.name as station_name
                 FROM cases c
@@ -280,7 +287,7 @@ class CaseManager {
                 LEFT JOIN users u ON o.user_id = u.id
                 JOIN stations s ON c.station_id = s.id
                 WHERE c.reported_by_citizen_id = :citizen_id
-                ORDER BY c.created_at DESC
+                ORDER BY COALESCE(c.occurred_at, c.created_at) DESC
                 LIMIT :limit";
 
         return $this->db->fetchAll($sql, [
@@ -303,13 +310,13 @@ class CaseManager {
         $sql = "SELECT c.*, 
                     u.name as reporter_name,   
                     s.name as station_name,
-                    TIMESTAMPDIFF(HOUR, c.created_at, NOW()) as hours_since_reported
+                    TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) as hours_since_reported
                 FROM cases c
                 JOIN officers o ON c.assigned_officer_id = o.id
                 LEFT JOIN users u ON c.reported_by_citizen_id = u.id  
                 JOIN stations s ON c.station_id = s.id
                  WHERE $whereClause
-                 ORDER BY c.created_at ASC";
+                 ORDER BY COALESCE(c.occurred_at, c.created_at) ASC";
 
      return $this->db->fetchAll($sql, $params);
 }
@@ -319,12 +326,12 @@ class CaseManager {
         $params = ['station_id' => $stationId];
 
         if ($dateFrom) {
-            $whereClause .= " AND c.created_at >= :date_from";
+            $whereClause .= " AND COALESCE(c.occurred_at, c.created_at) >= :date_from";
             $params['date_from'] = $dateFrom;
         }
 
         if ($dateTo) {
-            $whereClause .= " AND c.created_at <= :date_to";
+            $whereClause .= " AND COALESCE(c.occurred_at, c.created_at) <= :date_to";
             $params['date_to'] = $dateTo;
         }
 
@@ -336,7 +343,7 @@ class CaseManager {
                 LEFT JOIN officers o ON c.assigned_officer_id = o.id
                 LEFT JOIN users u2 ON o.user_id = u2.id
                 WHERE $whereClause
-                ORDER BY c.created_at DESC";
+                ORDER BY COALESCE(c.occurred_at, c.created_at) DESC";
 
         return $this->db->fetchAll($sql, $params);
     }

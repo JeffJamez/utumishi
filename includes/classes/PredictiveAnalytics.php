@@ -249,7 +249,7 @@ class PredictiveAnalytics {
      */
 
     private function getHistoricalAverage($stationId, $dayOfWeek, $county = null) {
-        $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
+        $whereConditions = ["DAYOFWEEK(COALESCE(occurred_at, created_at)) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
         if ($stationId) {
@@ -265,11 +265,11 @@ class PredictiveAnalytics {
         $result = $this->db->fetchOne("
             SELECT AVG(daily_count) as avg_cases
             FROM (
-                SELECT DATE(created_at) as date, COUNT(*) as daily_count
+                SELECT DATE(COALESCE(occurred_at, created_at)) as date, COUNT(*) as daily_count
                 FROM cases
                 WHERE $whereClause
-                AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-                GROUP BY DATE(created_at)
+                AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+                GROUP BY DATE(COALESCE(occurred_at, created_at))
             ) daily_counts
         ", $params);
 
@@ -307,8 +307,8 @@ class PredictiveAnalytics {
 
     private function getCaseCount($stationId, $days, $offset = 0, $county = null) {
         $whereConditions = [
-            "created_at >= DATE_SUB(NOW(), INTERVAL :end_days DAY)",
-            "created_at < DATE_SUB(NOW(), INTERVAL :start_days DAY)"
+            "COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :end_days DAY)",
+            "COALESCE(occurred_at, created_at) < DATE_SUB(NOW(), INTERVAL :start_days DAY)"
         ];
         $params = [
             'end_days' => $offset + $days,
@@ -363,7 +363,7 @@ class PredictiveAnalytics {
     }
 
      private function predictPeakHours($stationId, $dayOfWeek, $county = null) {
-        $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
+        $whereConditions = ["DAYOFWEEK(COALESCE(occurred_at, created_at)) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
         if ($stationId) {
@@ -377,11 +377,11 @@ class PredictiveAnalytics {
         $whereClause = implode(' AND ', $whereConditions);
 
         $result = $this->db->fetchAll("
-            SELECT HOUR(created_at) as hour, COUNT(*) as count
+            SELECT HOUR(COALESCE(occurred_at, created_at)) as hour, COUNT(*) as count
             FROM cases
             WHERE $whereClause
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-            GROUP BY HOUR(created_at)
+            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+            GROUP BY HOUR(COALESCE(occurred_at, created_at))
             ORDER BY count DESC
             LIMIT 3
         ", $params);
@@ -390,7 +390,7 @@ class PredictiveAnalytics {
     }
 
      private function predictCategoryBreakdown($stationId, $dayOfWeek, $county = null) {
-        $whereConditions = ["DAYOFWEEK(created_at) = :day_of_week"];
+        $whereConditions = ["DAYOFWEEK(COALESCE(occurred_at, created_at)) = :day_of_week"];
         $params = ['day_of_week' => $dayOfWeek];
 
         if ($stationId) {
@@ -407,7 +407,7 @@ class PredictiveAnalytics {
             SELECT category, COUNT(*) as count
             FROM cases
             WHERE $whereClause
-            AND created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 90 DAY)
             GROUP BY category
             ORDER BY count DESC
             LIMIT 5
@@ -433,26 +433,26 @@ class PredictiveAnalytics {
                 incident_location_constituency,
                 incident_location_county,
                 category as dominant_category,
-                COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as recent_week,
-                COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
-                            AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as previous_week,
+                COUNT(CASE WHEN COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as recent_week,
+                COUNT(CASE WHEN COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                            AND COALESCE(occurred_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as previous_week,
                 CASE
-                    WHEN COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
-                                AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) > 0
-                    THEN (COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) /
-                          COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
-                                AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)) * 100
+                    WHEN COUNT(CASE WHEN COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                                AND COALESCE(occurred_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) > 0
+                    THEN (COUNT(CASE WHEN COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) /
+                          COUNT(CASE WHEN COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                                AND COALESCE(occurred_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)) * 100
                     ELSE 100
                 END as acceleration_rate,
                 CASE
-                    WHEN COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) >
-                         COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
-                                AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)
+                    WHEN COUNT(CASE WHEN COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) >
+                         COUNT(CASE WHEN COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                                AND COALESCE(occurred_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END)
                     THEN 'increasing'
                     ELSE 'stable'
                 END as trend_direction
             FROM cases
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) $whereClause
+            WHERE COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY) $whereClause
             GROUP BY incident_location_constituency, incident_location_county, category
             HAVING recent_week > 0
             ORDER BY acceleration_rate DESC
@@ -550,7 +550,7 @@ class PredictiveAnalytics {
     }
 
     private function identifyHighRiskAreas($stationId, $county = null) {
-        $whereClause = "created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        $whereClause = "COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
         $params = [];
 
         if ($stationId) {

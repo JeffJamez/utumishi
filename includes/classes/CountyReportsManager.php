@@ -38,7 +38,7 @@ class CountyReportsManager {
      * Get county crime statistics
      */
     public function getCountyStatistics($timeframe = 30, $county = null) {
-        $where = "created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
+        $where = "COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
         $params = ['timeframe' => $timeframe];
 
         if ($county) {
@@ -65,7 +65,7 @@ class CountyReportsManager {
      * Get station statistics for county
      */
     public function getStationStatistics($timeframe = 30, $county = null) {
-        $where = "c.created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
+        $where = "COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
         $params = ['timeframe' => $timeframe];
 
         if ($county) {
@@ -94,7 +94,7 @@ class CountyReportsManager {
      * Get category trends
      */
     public function getCategoryTrends($timeframe = 30, $county = null) {
-        $where = "created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
+        $where = "COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
         $params = ['timeframe' => $timeframe];
 
         if ($county) {
@@ -140,7 +140,7 @@ class CountyReportsManager {
                 COUNT(DISTINCT o.id) as officer_count,
                 ROUND(COUNT(c.id) / NULLIF(COUNT(DISTINCT o.id), 0), 1) as cases_per_officer
             FROM stations s
-            LEFT JOIN cases c ON s.id = c.station_id AND c.created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            LEFT JOIN cases c ON s.id = c.station_id AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
             LEFT JOIN users u ON s.id = u.station_id AND u.role = 'officer' AND u.is_active = 1
             LEFT JOIN officers o ON u.id = o.user_id
             WHERE $where
@@ -153,7 +153,7 @@ class CountyReportsManager {
      * Get monthly trends
      */
     public function getMonthlyTrends($county = null) {
-        $where = "created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)";
+        $where = "COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 12 MONTH)";
         $params = [];
 
         if ($county) {
@@ -163,12 +163,12 @@ class CountyReportsManager {
 
         return $this->db->fetchAll("
             SELECT
-                DATE_FORMAT(created_at, '%Y-%m') as month_year,
+                DATE_FORMAT(COALESCE(occurred_at, created_at), '%Y-%m') as month_year,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count
             FROM cases
             WHERE $where
-            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+            GROUP BY DATE_FORMAT(COALESCE(occurred_at, created_at), '%Y-%m')
             ORDER BY month_year DESC
             LIMIT 12
         ", $params);
@@ -181,7 +181,7 @@ class CountyReportsManager {
         $startDate = sprintf('%04d-%02d-01', $year, $month);
         $endDate = date('Y-m-t', strtotime($startDate));
 
-        $where = "DATE(created_at) BETWEEN :start AND :end";
+        $where = "DATE(COALESCE(occurred_at, created_at)) BETWEEN :start AND :end";
         $params = ['start' => $startDate, 'end' => $endDate];
 
         if ($county) {

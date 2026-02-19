@@ -36,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'title' => sanitizeText($_POST['title'] ?? ''),
             'description' => sanitizeText($_POST['description'] ?? ''),
             'category' => sanitizeText($_POST['category'] ?? ''),
+            'occurred_at' => $_POST['occurred_at'] ?? '',
              'incident_location_county' => sanitizeText($_POST['incident_location_county'] ?? ''),
              'incident_location_constituency' => sanitizeText($_POST['incident_location_constituency'] ?? ''),
             'incident_local_area' => sanitizeText($_POST['incident_local_area'] ?? ''),
@@ -85,6 +86,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $categoryValidation = validateCrimeCategory($formData['category']);
             if (!$categoryValidation['valid']) {
                 $errors['category'] = $categoryValidation['message'];
+            }
+        }
+
+        if (empty($formData['occurred_at'])) {
+            $errors['occurred_at'] = 'Date and time when the crime occurred is required';
+        } else {
+            $datetimeValidation = Validator::validateDateTime($formData['occurred_at'], 'Date and time of incident', false);
+            if (!$datetimeValidation['valid']) {
+                $errors['occurred_at'] = $datetimeValidation['message'];
             }
         }
 
@@ -162,15 +172,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'title' => $formData['title'],
                     'description' => $formData['description'],
                     'category' => $formData['category'],
-                     'incident_location_county' => $formData['incident_location_county'],
-                     'incident_location_constituency' => $formData['incident_location_constituency'],
+                    'occurred_at' => $formData['occurred_at'],
+                    'incident_location_county' => $formData['incident_location_county'],
+                    'incident_location_constituency' => $formData['incident_location_constituency'],
                     'incident_local_area' => $formData['incident_local_area'],
                     'reporter_county' => $formData['reporter_county'],
                     'reporter_constituency' => $formData['reporter_constituency'],
                     'reporter_local_area' => $formData['reporter_local_area'],
                     'reported_by_citizen_id' => $citizenId,
                     'recorded_by_officer_id' => $currentUser['id'],
-                    'station_id' => $currentUser['station_id']
+                    'station_id' => $currentUser['station_id'],
+                    'latitude' => !empty($_POST['incident_latitude']) ? (float)$_POST['incident_latitude'] : null,
+                    'longitude' => !empty($_POST['incident_longitude']) ? (float)$_POST['incident_longitude'] : null
                 ];
 
                 $result = $caseManager->createCase($caseData);
@@ -350,6 +363,23 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
 
                         <div class="form-group">
+                            <label for="occurred_at" class="form-label">Date and Time of Incident *</label>
+                            <input 
+                                type="datetime-local" 
+                                id="occurred_at" 
+                                name="occurred_at" 
+                                class="form-control <?php echo isset($errors['occurred_at']) ? 'error' : ''; ?>"
+                                value="<?php echo htmlspecialchars($formData['occurred_at'] ?? ''); ?>"
+                                max="<?php echo date('Y-m-d\TH:i'); ?>"
+                                required
+                            >
+                            <?php if (isset($errors['occurred_at'])): ?>
+                                <div class="form-error"><?php echo htmlspecialchars($errors['occurred_at']); ?></div>
+                            <?php endif; ?>
+                            <div class="form-help">When did the crime actually occur? Format: Jan 15, 2026 at 3:30 PM. Cannot be in the future.</div>
+                        </div>
+
+                        <div class="form-group">
                             <label for="description" class="form-label">Detailed Description *</label>
                             <textarea 
                                 id="description" 
@@ -417,14 +447,37 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
                         </div>
 
-                         <?php if (isset($errors['location'])): ?>
-                             <div class="form-error"><?php echo htmlspecialchars($errors['location']); ?></div>
-                         <?php endif; ?>
-                         <div class="form-help">Select the county and constituency where the incident occurred</div>
-                     </fieldset>
+                          <?php if (isset($errors['location'])): ?>
+                              <div class="form-error"><?php echo htmlspecialchars($errors['location']); ?></div>
+                          <?php endif; ?>
+                          <div class="form-help">Select the county and constituency where the incident occurred</div>
 
-                     <fieldset class="mb-4">
-                         <legend class="h4 mb-3">Reporter's Residence</legend>
+                          <!-- Google Places Autocomplete for Incident Location -->
+                          <div class="form-group google-places-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--light-gray);">
+                              <label for="incident_place_search" class="form-label">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                  Search Incident Location (Optional)
+                              </label>
+                              <input 
+                                  type="text" 
+                                  id="incident_place_search" 
+                                  class="form-control"
+                                  placeholder="Start typing to search location in Kenya..."
+                                  autocomplete="off"
+                              >
+                              <div class="form-help">Use Google Places for precise GPS coordinates on the map</div>
+                              <div id="incident_place_details" class="place-details" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #3b82f6; font-size: 0.85rem;">
+                                  <strong style="color: #1e40af;">Selected:</strong> <span id="incident_place_name" style="color: #1e40af;"></span><br>
+                                  <small style="color: #6b7280;">GPS: <span id="incident_coords"></span></small>
+                              </div>
+                              <!-- Hidden fields for coordinates -->
+                              <input type="hidden" name="incident_latitude" id="incident_latitude">
+                              <input type="hidden" name="incident_longitude" id="incident_longitude">
+                          </div>
+                      </fieldset>
+
+                      <fieldset class="mb-4">
+                          <legend class="h4 mb-3">Reporter's Residence</legend>
 
                          <div class="d-grid" style="grid-template-columns: 1fr 1fr 2fr; gap: 1.5rem;">
                              <div class="form-group">
@@ -472,20 +525,43 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                              </div>
                          </div>
 
-                         <?php if (isset($errors['reporter_location'])): ?>
-                             <div class="form-error"><?php echo htmlspecialchars($errors['reporter_location']); ?></div>
-                         <?php endif; ?>
-                         <div class="form-help">Select the county and constituency where the reporter resides</div>
-                     </fieldset>
-                </div>
+                          <?php if (isset($errors['reporter_location'])): ?>
+                              <div class="form-error"><?php echo htmlspecialchars($errors['reporter_location']); ?></div>
+                          <?php endif; ?>
+                          <div class="form-help">Select the county and constituency where the reporter resides</div>
 
-                <div class="card-footer">
+                          <!-- Google Places Autocomplete for Reporter Location -->
+                          <div class="form-group google-places-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--light-gray);">
+                              <label for="reporter_place_search" class="form-label">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                  Search Reporter's Location (Optional)
+                              </label>
+                              <input 
+                                  type="text" 
+                                  id="reporter_place_search" 
+                                  class="form-control"
+                                  placeholder="Start typing to search location in Kenya..."
+                                  autocomplete="off"
+                              >
+                              <div class="form-help">Use Google Places for precise GPS coordinates on the map</div>
+                              <div id="reporter_place_details" class="place-details" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #3b82f6; font-size: 0.85rem;">
+                                  <strong style="color: #1e40af;">Selected:</strong> <span id="reporter_place_name" style="color: #1e40af;"></span><br>
+                                  <small style="color: #6b7280;">GPS: <span id="reporter_coords"></span></small>
+                              </div>
+                              <!-- Hidden fields for coordinates -->
+                              <input type="hidden" name="reporter_latitude" id="reporter_latitude">
+                              <input type="hidden" name="reporter_longitude" id="reporter_longitude">
+                          </div>
+                      </fieldset>
+                 </div>
+
+                 <div class="card-footer">
                     <div class="d-flex justify-between items-center">
                         <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-secondary">
                             ← Cancel
                         </a>
-                        <button type="submit" class="btn btn-success btn-lg" style="padding:0;">
-                             Record Case in Digital OB
+                        <button type="submit" class="btn btn-success btn-lg" style="padding:7px;">
+                             Record Case
                         </button>
                     </div>
                 </div>
@@ -567,6 +643,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 title: document.getElementById('title').value.trim(),
                 description: document.getElementById('description').value.trim(),
                 category: document.getElementById('category').value,
+                occurredAt: document.getElementById('occurred_at').value,
                  county: document.getElementById('incident_location_county').value,
                  constituency: document.getElementById('incident_location_constituency').value,
                 incidentLocalArea: document.getElementById('incident_local_area').value.trim(),
@@ -610,6 +687,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
             if (!formData.category) {
                 errors.push('Crime category is required');
+            }
+
+            if (!formData.occurredAt) {
+                errors.push('Date and time of incident is required');
+            } else {
+                const occurredDate = new Date(formData.occurredAt);
+                const now = new Date();
+                if (occurredDate > now) {
+                    errors.push('Date and time of incident cannot be in the future');
+                }
             }
 
             if (!formData.county || !formData.constituency) {
@@ -699,7 +786,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         document.getElementById('citizen_national_id').focus();
 
-        const tabOrder = ['citizen_national_id', 'citizen_name', 'citizen_phone', 'title', 'category', 'description', 'incident_location_county', 'incident_location_constituency', 'incident_local_area', 'reporter_county', 'reporter_constituency', 'reporter_local_area'];
+        const tabOrder = ['citizen_national_id', 'citizen_name', 'citizen_phone', 'title', 'category', 'occurred_at', 'description', 'incident_location_county', 'incident_location_constituency', 'incident_local_area', 'reporter_county', 'reporter_constituency', 'reporter_local_area'];
 
         tabOrder.forEach((fieldId, index) => {
             const field = document.getElementById(fieldId);
@@ -765,7 +852,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             border-color: var(--success-green);
         }
 
-        .form-control:invalid:not(:focus):not(:placeholder-shown):not(select) {
+        .form-control:invalid:not(:focus):not(:placeholder-shown):not(select):not(input[type="datetime-local"]) {
             border-color: var(--danger-red);
         }
 
@@ -784,6 +871,53 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         .autosave-indicator.show {
             opacity: 1;
+        }
+
+        /* Google Places Autocomplete Styling */
+        .pac-container {
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: inherit;
+            border: 1px solid var(--light-gray);
+            margin-top: 4px;
+            z-index: 9999 !important;
+        }
+
+        .pac-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .pac-item:hover {
+            background-color: #f0f9ff;
+        }
+
+        .pac-icon {
+            margin-right: 8px;
+        }
+
+        .pac-item-query {
+            font-weight: 500;
+            color: #111827;
+        }
+
+        .pac-matched {
+            font-weight: 700;
+            color: var(--primary-green);
+        }
+
+        .google-places-group input {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .google-places-group input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         @media (max-width: 768px) {
@@ -831,5 +965,158 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
         }
     </style>
+
+    <!-- Google Places Autocomplete Script -->
+    <script>
+        /**
+         * Google Places Autocomplete Initialization
+         * Restricted to Kenya only
+         */
+        function initGooglePlaces() {
+            // Kenya bounds (roughly covers the country)
+            const kenyaBounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(-4.8, 33.9),  // Southwest
+                new google.maps.LatLng(5.5, 42.0)    // Northeast
+            );
+
+            // Initialize Incident Location Autocomplete
+            const incidentInput = document.getElementById('incident_place_search');
+            if (incidentInput && typeof google !== 'undefined') {
+                const incidentAutocomplete = new google.maps.places.Autocomplete(incidentInput, {
+                    bounds: kenyaBounds,
+                    componentRestrictions: { country: 'ke' },
+                    fields: ['address_components', 'geometry', 'name', 'formatted_address'],
+                    types: ['geocode', 'establishment']
+                });
+
+                incidentAutocomplete.addListener('place_changed', function() {
+                    const place = incidentAutocomplete.getPlace();
+                    if (place.geometry) {
+                        const lat = place.geometry.location.lat();
+                        const lng = place.geometry.location.lng();
+
+                        // Extract county and sub-county from address components
+                        const addressComponents = place.address_components;
+                        let county = '';
+                        let subCounty = '';
+
+                        addressComponents.forEach(component => {
+                            if (component.types.includes('administrative_area_level_1')) {
+                                county = component.long_name;
+                            }
+                            if (component.types.includes('administrative_area_level_2')) {
+                                subCounty = component.long_name;
+                            }
+                        });
+
+                        // Populate hidden fields with coordinates
+                        document.getElementById('incident_latitude').value = lat.toFixed(8);
+                        document.getElementById('incident_longitude').value = lng.toFixed(8);
+
+                        // Show confirmation to user
+                        document.getElementById('incident_place_name').textContent = place.name || place.formatted_address;
+                        document.getElementById('incident_coords').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
+                        document.getElementById('incident_place_details').style.display = 'block';
+
+                        // Auto-fill county dropdown if empty
+                        const countySelect = document.getElementById('incident_location_county');
+                        if (countySelect && !countySelect.value && county) {
+                            matchAndSelectCounty('incident_location_county', county);
+                        }
+
+                        console.log('Incident location selected:', place.name, 'Lat:', lat, 'Lng:', lng);
+                    }
+                });
+            }
+
+            // Initialize Reporter Location Autocomplete
+            const reporterInput = document.getElementById('reporter_place_search');
+            if (reporterInput && typeof google !== 'undefined') {
+                const reporterAutocomplete = new google.maps.places.Autocomplete(reporterInput, {
+                    bounds: kenyaBounds,
+                    componentRestrictions: { country: 'ke' },
+                    fields: ['address_components', 'geometry', 'name', 'formatted_address'],
+                    types: ['geocode', 'establishment']
+                });
+
+                reporterAutocomplete.addListener('place_changed', function() {
+                    const place = reporterAutocomplete.getPlace();
+                    if (place.geometry) {
+                        const lat = place.geometry.location.lat();
+                        const lng = place.geometry.location.lng();
+
+                        // Extract county and sub-county
+                        const addressComponents = place.address_components;
+                        let county = '';
+
+                        addressComponents.forEach(component => {
+                            if (component.types.includes('administrative_area_level_1')) {
+                                county = component.long_name;
+                            }
+                        });
+
+                        // Populate hidden fields
+                        document.getElementById('reporter_latitude').value = lat.toFixed(8);
+                        document.getElementById('reporter_longitude').value = lng.toFixed(8);
+
+                        // Show confirmation
+                        document.getElementById('reporter_place_name').textContent = place.name || place.formatted_address;
+                        document.getElementById('reporter_coords').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
+                        document.getElementById('reporter_place_details').style.display = 'block';
+
+                        // Auto-fill county dropdown if empty
+                        const countySelect = document.getElementById('reporter_county');
+                        if (countySelect && !countySelect.value && county) {
+                            matchAndSelectCounty('reporter_county', county);
+                        }
+
+                        console.log('Reporter location selected:', place.name, 'Lat:', lat, 'Lng:', lng);
+                    }
+                });
+            }
+        }
+
+        /**
+         * Helper function to match Google county names with system counties
+         */
+        function matchAndSelectCounty(selectId, googleCounty) {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+
+            // Normalize the Google county name
+            const normalizedGoogleCounty = googleCounty.toLowerCase().replace(/county/g, '').trim();
+
+            for (let i = 0; i < select.options.length; i++) {
+                const optionText = select.options[i].text.toLowerCase().replace(/county/g, '').trim();
+                const optionValue = select.options[i].value.toLowerCase().replace(/county/g, '').trim();
+
+                // Check for match
+                if (optionText === normalizedGoogleCounty ||
+                    optionValue === normalizedGoogleCounty ||
+                    optionText.includes(normalizedGoogleCounty) ||
+                    normalizedGoogleCounty.includes(optionText)) {
+                    select.selectedIndex = i;
+                    select.dispatchEvent(new Event('change'));
+                    console.log('Auto-selected county:', select.options[i].text);
+                    break;
+                }
+            }
+        }
+
+        // Handle Google Places API loading errors gracefully
+        window.gm_authFailure = function() {
+            console.warn('Google Maps API authentication failed. Autocomplete features will be disabled.');
+            // Disable autocomplete inputs
+            const inputs = document.querySelectorAll('#incident_place_search, #reporter_place_search');
+            inputs.forEach(input => {
+                input.disabled = true;
+                input.placeholder = 'Location search unavailable';
+                input.title = 'Google Places API not configured. Please enter location manually.';
+            });
+        };
+    </script>
+
+    <!-- Load Google Maps API with Places library (using placeholder API key) -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDks7U6lDTrS-KueEdfMINd1E_FiKqAvRs&libraries=places&callback=initGooglePlaces" async defer onerror="console.warn('Failed to load Google Maps API');"></script>
 </body>
 </html>

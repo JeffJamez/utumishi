@@ -21,10 +21,10 @@ class CrimeAnalyzer {
                      COUNT(*) / :timeframe1 * 30 as cases_per_month,
                      ROUND(COUNT(*) * 100.0 / (
                          SELECT COUNT(*) FROM cases
-                         WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe2 DAY)
+                         WHERE COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe2 DAY)
                      ), 2) as percentage_of_total
                  FROM cases
-                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL :timeframe3 DAY)
+                 WHERE COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe3 DAY)
                  GROUP BY incident_location_county, incident_location_constituency, LOWER(incident_local_area), category
                  HAVING case_count >= :min_cases
                  ORDER BY case_count DESC, cases_per_month DESC
@@ -46,7 +46,7 @@ class CrimeAnalyzer {
 }
 
     public function analyzePeakTimes($category = null, $location = null, $days = 30) {
-        $whereConditions = ["created_at >= DATE_SUB(NOW(), INTERVAL :interval_days DAY)"];
+        $whereConditions = ["COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :interval_days DAY)"];
         $params = ['interval_days' => $days, 'days_avg' => $days];
 
         if ($category) {
@@ -64,14 +64,14 @@ class CrimeAnalyzer {
         $whereClause = implode(' AND ', $whereConditions);
 
         $sql = "SELECT
-                    HOUR(created_at) as hour_of_day,
-                    DAYOFWEEK(created_at) as day_of_week,
+                    HOUR(COALESCE(occurred_at, created_at)) as hour_of_day,
+                    DAYOFWEEK(COALESCE(occurred_at, created_at)) as day_of_week,
                     COUNT(*) as case_count,
                     category,
                     COUNT(*) / :days_avg as daily_average
                 FROM cases
                 WHERE $whereClause
-                GROUP BY HOUR(created_at), DAYOFWEEK(created_at), category
+                GROUP BY HOUR(COALESCE(occurred_at, created_at)), DAYOFWEEK(COALESCE(occurred_at, created_at)), category
                 ORDER BY case_count DESC";
 
         $timeAnalysis = $this->db->fetchAll($sql, $params);
@@ -274,8 +274,8 @@ class CrimeAnalyzer {
                     COUNT(CASE WHEN category = 'Domestic Violence' THEN 1 END) as domestic_violence_cases,
                     AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
                 FROM cases 
-                WHERE created_at >= DATE_SUB(NOW(), INTERVAL :end_offset DAY)
-                AND created_at <= DATE_SUB(NOW(), INTERVAL :start_offset DAY)";
+                WHERE COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :end_offset DAY)
+                AND COALESCE(occurred_at, created_at) <= DATE_SUB(NOW(), INTERVAL :start_offset DAY)";
 
         return $this->db->fetchOne($sql, [
             'end_offset' => $offset,
@@ -292,10 +292,10 @@ class CrimeAnalyzer {
                   WHERE c2.incident_location_constituency = c1.incident_location_constituency
                   AND c2.incident_local_area <=> c1.incident_local_area
                   AND c2.category = c1.category
-                 AND c2.created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
-                 AND c2.created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)) as previous_cases
+                 AND COALESCE(c2.occurred_at, c2.created_at) >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                 AND COALESCE(c2.occurred_at, c2.created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY)) as previous_cases
             FROM cases c1
-            WHERE c1.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+            WHERE COALESCE(c1.occurred_at, c1.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
 
     $params = [];
     if ($county) {
@@ -347,11 +347,11 @@ class CrimeAnalyzer {
     private function detectResolutionDelays($county) {
     $sql = "SELECT 
                 category,
-                AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) as avg_time,
+                AVG(TIMESTAMPDIFF(HOUR, COALESCE(occurred_at, created_at), COALESCE(closed_at, NOW()))) as avg_time,
                 AVG(estimated_resolution_hours) as target,
                 COUNT(*) as case_count
             FROM cases
-            WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+            WHERE COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
 
     $params = [];
     if ($county) {
@@ -360,9 +360,9 @@ class CrimeAnalyzer {
     }
 
      $sql .= " GROUP BY category
-               HAVING AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) > AVG(estimated_resolution_hours) * 1.2
+               HAVING AVG(TIMESTAMPDIFF(HOUR, COALESCE(occurred_at, created_at), COALESCE(closed_at, NOW()))) > AVG(estimated_resolution_hours) * 1.2
                AND COUNT(*) >= 5
-               ORDER BY (AVG(TIMESTAMPDIFF(HOUR, created_at, COALESCE(closed_at, NOW()))) / AVG(estimated_resolution_hours)) DESC
+               ORDER BY (AVG(TIMESTAMPDIFF(HOUR, COALESCE(occurred_at, created_at), COALESCE(closed_at, NOW()))) / AVG(estimated_resolution_hours)) DESC
                LIMIT 10";
 
     $delays = $this->db->fetchAll($sql, $params);
@@ -400,7 +400,7 @@ class CrimeAnalyzer {
     public function getCrimeDensityMap($filters = []) {
      $timeframe = $filters['timeframe'] ?? 30;
 
-     $whereConditions = ["created_at >= DATE_SUB(NOW(), INTERVAL :timeframe1 DAY)"];
+     $whereConditions = ["COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe1 DAY)"];
      $params = ['timeframe1' => $timeframe, 'timeframe2' => $timeframe];
 
      if (!empty($filters['category'])) {
@@ -463,7 +463,7 @@ class CrimeAnalyzer {
             WHERE incident_location_county = :county
             AND incident_location_constituency = :constituency
             AND category = :category
-            ORDER BY created_at DESC
+            ORDER BY COALESCE(occurred_at, created_at) DESC
             LIMIT 1
         ", [
             'county' => $county,

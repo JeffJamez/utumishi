@@ -151,26 +151,26 @@ class User {
     }
 
     private function getRecentCasesAsReporter($limit) {
-        $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.created_at,
+        $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.occurred_at, c.created_at,
                        CONCAT(u.name, ' (', o.badge_number, ')') as assigned_officer
                 FROM cases c
                 LEFT JOIN officers o ON c.assigned_officer_id = o.id
                 LEFT JOIN users u ON o.user_id = u.id
                 WHERE c.reported_by_citizen_id = :user_id
-                ORDER BY c.created_at DESC
+                ORDER BY COALESCE(c.occurred_at, c.created_at) DESC
                 LIMIT :limit";
 
         return $this->db->fetchAll($sql, ['user_id' => $this->id, 'limit' => $limit]);
     }
 
     private function getRecentCasesAsOfficer($limit) {
-        $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.created_at,
+        $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.occurred_at, c.created_at,
                        ur.name as reporter_name
                 FROM cases c
                 JOIN officers o ON c.assigned_officer_id = o.id
                 JOIN users ur ON c.reported_by_citizen_id = ur.id
                 WHERE o.user_id = :user_id
-                ORDER BY c.created_at DESC
+                ORDER BY COALESCE(c.occurred_at, c.created_at) DESC
                 LIMIT :limit";
 
         return $this->db->fetchAll($sql, ['user_id' => $this->id, 'limit' => $limit]);
@@ -218,7 +218,7 @@ class User {
                     COUNT(CASE WHEN c.status = 'resolved' THEN 1 END) as resolved_this_period,
                     COUNT(CASE WHEN c.status = 'closed' THEN 1 END) as closed_this_period
                 FROM officers o
-                LEFT JOIN cases c ON o.id = c.assigned_officer_id AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                LEFT JOIN cases c ON o.id = c.assigned_officer_id AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)
                 WHERE o.user_id = :user_id
                 GROUP BY o.id";
 
@@ -235,7 +235,7 @@ class User {
                 FROM cases c
                 LEFT JOIN officers o ON c.station_id = (SELECT station_id FROM users WHERE id = :user_id)
                 WHERE c.station_id = (SELECT station_id FROM users WHERE id = :user_id)
-                AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+                AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
 
         return $this->db->fetchOne($sql, ['user_id' => $this->id]);
     }
@@ -251,7 +251,7 @@ class User {
                 FROM cases c
                 LEFT JOIN stations s ON 1=1
                 LEFT JOIN officers o ON 1=1
-                WHERE c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+                WHERE COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
 
         return $this->db->fetchOne($sql);
     }

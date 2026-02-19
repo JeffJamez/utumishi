@@ -248,6 +248,33 @@ class Validator {
         return ['valid' => true, 'message' => 'Valid ' . strtolower($fieldName)];
     }
 
+    public static function validateDateTime($datetime, $fieldName, $allowFuture = false) {
+        if (empty($datetime)) {
+            return ['valid' => false, 'message' => $fieldName . ' is required'];
+        }
+
+        $dateObj = DateTime::createFromFormat('Y-m-d\TH:i', $datetime);
+        
+        if (!$dateObj) {
+            // Try alternative format
+            $dateObj = DateTime::createFromFormat('Y-m-d H:i:s', $datetime);
+        }
+
+        if (!$dateObj) {
+            return ['valid' => false, 'message' => 'Invalid ' . strtolower($fieldName) . ' format. Use format: Jan 15, 2026 at 3:30 PM'];
+        }
+
+        // Check if date is in the future (when not allowed)
+        if (!$allowFuture) {
+            $now = new DateTime();
+            if ($dateObj > $now) {
+                return ['valid' => false, 'message' => $fieldName . ' cannot be in the future'];
+            }
+        }
+
+        return ['valid' => true, 'message' => 'Valid ' . strtolower($fieldName), 'datetime' => $dateObj];
+    }
+
     public static function validateFile($file, $fieldName = 'File') {
         if (!isset($file) || $file['error'] === UPLOAD_ERR_NO_FILE) {
             return ['valid' => false, 'message' => $fieldName . ' is required'];

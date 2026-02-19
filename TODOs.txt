@@ -1,0 +1,14 @@
+Auto save a citizen on every case report
+
+
+
+On the "7-Day Risk Forecast" card, clearly display—preferably as a small caption or method used to calculate the risk values. 
+Example:  
+"Risk score = (Number of past incidents in area over last 30 days) × (Time decay factor) + (Historical hotspot weight)"
+Keep the explanation simple, transparent, and aligned with the actual logic in `ai_predictions.php`. Do not alter the forecast values—only add this explanatory note for clarity and trust.
+
+
+
+In `record_case.php`, remove the "Search Reporter's Location (Optional)" Google Places Autocomplete field and any associated logic. 
+We only need geocoordinates for the incident location—not the reporter’s residence. Keep the original "Reporter's Residence" text field (if it exists) as a plain optional input, but do not add or retain any geocoding functionality for it.
+Ensure the form still submits correctly and that only the incident location’s latitude and longitude are captured and saved to the database.

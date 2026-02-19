@@ -318,7 +318,7 @@ class AdminManager {
                 COUNT(DISTINCT (CASE WHEN role = 'officer' THEN id END)) as total_officers
             FROM cases c
             LEFT JOIN users u ON c.station_id = u.station_id
-            WHERE c.created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            WHERE COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
         ", ['timeframe' => $timeframe]);
     }
 

@@ -38,10 +38,10 @@ class Officer extends User {
     }
 
     public function getWorkload() {
-    $sql = "SELECT 
+    $sql = "SELECT
                 o.current_case_load,
                 COUNT(c.id) as active_cases,
-                COUNT(CASE WHEN TIMESTAMPDIFF(HOUR, c.created_at, NOW()) > c.estimated_resolution_hours THEN 1 END) as overdue_cases,
+                COUNT(CASE WHEN TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) > c.estimated_resolution_hours THEN 1 END) as overdue_cases,
                 COUNT(CASE WHEN c.status = 'in_progress' THEN 1 END) as in_progress_cases
             FROM officers o
             LEFT JOIN cases c ON o.id = c.assigned_officer_id AND c.status NOT IN ('closed')
@@ -57,19 +57,19 @@ public function getPerformance($periodDays = 30) {
     $periodDays = max(1, min((int)$periodDays, 365));
 
     $sql = "
-        SELECT 
+        SELECT
             o.total_cases_resolved,
             o.avg_resolution_time_hours,
             COUNT(c.id) as cases_this_period,
             COUNT(CASE WHEN c.status = 'resolved' THEN 1 END) as resolved_this_period,
             COUNT(CASE WHEN c.status = 'closed' THEN 1 END) as closed_this_period,
             AVG(CASE WHEN c.actual_resolution_hours IS NOT NULL THEN c.actual_resolution_hours END) as avg_time_this_period,
-            COUNT(CASE WHEN c.created_at >= DATE_SUB(NOW(), INTERVAL :period DAY) 
-                      AND TIMESTAMPDIFF(HOUR, c.created_at, COALESCE(c.closed_at, NOW())) <= c.estimated_resolution_hours 
+            COUNT(CASE WHEN COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :period DAY)
+                      AND TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), COALESCE(c.closed_at, NOW())) <= c.estimated_resolution_hours
                       THEN 1 END) as on_time_resolutions
         FROM officers o
-        LEFT JOIN cases c ON o.id = c.assigned_officer_id 
-            AND c.created_at >= DATE_SUB(NOW(), INTERVAL :period2 DAY)
+        LEFT JOIN cases c ON o.id = c.assigned_officer_id
+            AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :period2 DAY)
         WHERE o.user_id = :user_id
         GROUP BY o.id
     ";
@@ -107,7 +107,7 @@ public function getPendingTasks($limit = 5) {
     public function getRecordedCases($status = null) {
         $sql = "
             SELECT c.*,
-                   TIMESTAMPDIFF(HOUR, c.created_at, NOW()) as hours_since_reported,
+                   TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) as hours_since_reported,
                    u.name as reporter_name,
                    s.name as station_name,
                    'recorded' as case_type
@@ -124,7 +124,7 @@ public function getPendingTasks($limit = 5) {
             $params['status'] = $status;
         }
 
-        $sql .= " ORDER BY c.created_at DESC";
+        $sql .= " ORDER BY COALESCE(c.occurred_at, c.created_at) DESC";
 
         return $this->db->fetchAll($sql, $params);
     }
@@ -160,8 +160,8 @@ public function getPendingTasks($limit = 5) {
 
 
 
-        // Sort by most recent (created_at DESC)
-        usort($cases, fn($a, $b) => strtotime($b['created_at']) - strtotime($a['created_at']));
+        // Sort by most recent (occurred_at or created_at DESC)
+        usort($cases, fn($a, $b) => strtotime($b['occurred_at'] ?? $b['created_at']) - strtotime($a['occurred_at'] ?? $a['created_at']));
 
         // Apply filter
         if ($filter === 'assigned') {
@@ -177,15 +177,15 @@ public function getPendingTasks($limit = 5) {
 
     public function getUrgentCases() {
         $sql = "
-        SELECT c.*, 
-               TIMESTAMPDIFF(HOUR, c.created_at, NOW()) as hours_since_reported,
+        SELECT c.*,
+               TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) as hours_since_reported,
                'urgent' as attention_level
         FROM cases c
         JOIN officers o ON c.assigned_officer_id = o.id
         WHERE o.user_id = :user_id
         AND c.status IN ('assigned', 'in_progress')
-        AND TIMESTAMPDIFF(HOUR, c.created_at, NOW()) > 48
-        ORDER BY c.created_at ASC
+        AND TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) > 48
+        ORDER BY COALESCE(c.occurred_at, c.created_at) ASC
     ";
 
     return $this->db->fetchAll($sql, ['user_id' => $this->id]);
@@ -294,8 +294,8 @@ public function getWorkloadStatus() {
                 FROM cases c
                 JOIN officers o ON c.assigned_officer_id = o.id
                 WHERE o.user_id = :user_id 
-                AND YEAR(c.created_at) = :year 
-                AND MONTH(c.created_at) = :month
+                AND YEAR(COALESCE(c.occurred_at, c.created_at)) = :year
+                AND MONTH(COALESCE(c.occurred_at, c.created_at)) = :month
                 GROUP BY category
                 ORDER BY category_count DESC";
 
@@ -439,11 +439,11 @@ public function getCasesRequiringAttention() {
     $sql = "
         SELECT c.*,
                u.name as reporter_name,
-               TIMESTAMPDIFF(HOUR, c.created_at, NOW()) as hours_since_reported,
-               CASE 
-                   WHEN TIMESTAMPDIFF(HOUR, c.created_at, NOW()) > 72 THEN 'overdue'
-                   WHEN TIMESTAMPDIFF(HOUR, c.created_at, NOW()) > 48 THEN 'high_priority'
-                   WHEN TIMESTAMPDIFF(HOUR, c.created_at, NOW()) > 24 THEN 'due_soon'
+               TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) as hours_since_reported,
+               CASE
+                   WHEN TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) > 72 THEN 'overdue'
+                   WHEN TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) > 48 THEN 'high_priority'
+                   WHEN TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) > 24 THEN 'due_soon'
                    ELSE 'normal'
                END as attention_level
         FROM cases c
@@ -451,8 +451,8 @@ public function getCasesRequiringAttention() {
         LEFT JOIN users u ON c.reported_by_citizen_id = u.id
         WHERE o.user_id = :user_id
         AND c.status IN ('assigned', 'in_progress')
-        AND TIMESTAMPDIFF(HOUR, c.created_at, NOW()) > 24
-        ORDER BY c.created_at ASC
+        AND TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) > 24
+        ORDER BY COALESCE(c.occurred_at, c.created_at) ASC
     ";
 
     return $this->db->fetchAll($sql, ['user_id' => $this->id]);
@@ -526,10 +526,10 @@ public function getCasesRequiringAttention() {
                        ROUND(COUNT(CASE WHEN c.status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(c.id), 0), 1) as resolution_rate
                 FROM users u
                 JOIN officers o ON u.id = o.user_id
-                LEFT JOIN cases c ON o.id = c.assigned_officer_id 
-                    AND c.created_at >= DATE_SUB(NOW(), INTERVAL :period DAY)
-                WHERE u.station_id = :station_id 
-                AND u.is_active = 1 
+                LEFT JOIN cases c ON o.id = c.assigned_officer_id
+                    AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :period DAY)
+                WHERE u.station_id = :station_id
+                AND u.is_active = 1
                 AND u.role = 'officer'
                 GROUP BY u.id, u.name, o.badge_number
                 ORDER BY resolution_rate DESC, cases_resolved DESC";
