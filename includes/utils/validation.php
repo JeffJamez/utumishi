@@ -109,8 +109,8 @@ class Validator {
             return ['valid' => false, 'message' => 'OB Number is required'];
         }
 
-        if (!preg_match('/^OB-[A-Z]{3}-\d{4}-\d{5}$/', $obNumber)) {
-            return ['valid' => false, 'message' => 'Invalid OB Number format. Expected: OB-XXX-YYYY-NNNNN'];
+        if (!preg_match('/^OB-[A-Z0-9]+-\d{4}-\d{5}$/', $obNumber)) {
+            return ['valid' => false, 'message' => 'Invalid OB Number format. Expected: OB-XXXX-YYYY-NNNNN'];
         }
 
         return ['valid' => true, 'message' => 'Valid OB Number'];

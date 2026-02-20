@@ -13,7 +13,6 @@ class OBGenerator {
 
     public function generateOBNumber($stationId, $crimeCategory = null) {
         try {
-
             $station = $this->db->fetchOne(
                 "SELECT station_code FROM stations WHERE id = :id",
                 ['id' => $stationId]
@@ -28,44 +27,41 @@ class OBGenerator {
 
             $sequenceNumber = $this->getNextSequenceNumber($stationId, $year);
 
-            $obNumber = sprintf("OB-%s-%s-%05d", $stationCode, $year, $sequenceNumber);
+            $maxAttempts = 10;
+            for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+                $obNumber = sprintf("OB-%s-%s-%05d", $stationCode, $year, $sequenceNumber);
 
-            return $obNumber;
+                if (!$this->obNumberExists($obNumber)) {
+                    return $obNumber;
+                }
+
+                $sequenceNumber++;
+            }
+
+            throw new Exception("Failed to generate unique OB number after {$maxAttempts} attempts");
 
         } catch (Exception $e) {
             error_log("OB Generation Error: " . $e->getMessage());
-            throw new Exception("Failed to generate OB number");
+            throw new Exception("Failed to generate OB number: " . $e->getMessage());
         }
     }
 
     private function getNextSequenceNumber($stationId, $year) {
-
-        $sql = "SELECT ob_number FROM cases 
+        $sql = "SELECT COUNT(*) + 1 as next_sequence 
+                FROM cases 
                 WHERE station_id = :station_id 
-                AND YEAR(created_at) = :year 
-                ORDER BY created_at DESC 
-                LIMIT 1";
+                AND YEAR(created_at) = :year";
 
         $result = $this->db->fetchOne($sql, [
             'station_id' => $stationId,
             'year' => $year
         ]);
 
-        if ($result) {
-
-            preg_match('/OB-[A-Z]{3}-\d{4}-(\d{5})/', $result['ob_number'], $matches);
-
-            if (isset($matches[1])) {
-                return (int)$matches[1] + 1;
-            }
-        }
-
-        return 1;
+        return (int)($result['next_sequence'] ?? 1);
     }
 
     public function validateOBNumber($obNumber) {
-
-        $pattern = '/^OB-[A-Z]{3}-\d{4}-\d{5}$/';
+        $pattern = '/^OB-[A-Z0-9]+-\d{4}-\d{5}$/';
         return preg_match($pattern, $obNumber);
     }
 

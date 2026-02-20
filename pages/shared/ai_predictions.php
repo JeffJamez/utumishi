@@ -23,6 +23,8 @@ $predictionEngine = new AIPredictionEngine();
 // Get all predictions (PHP provides initial data, Brain.js handles real-time predictions)
 try {
     $predictions = $predictionEngine->getPredictions();
+    // Get locations for dropdown (with fallback to major counties)
+    $dropdownLocations = $predictionEngine->getAllLocationsForDropdown(20);
 } catch (Exception $e) {
     error_log("AI Prediction Error: " . $e->getMessage());
     $predictions = [
@@ -38,6 +40,7 @@ try {
         'categories' => [],
         'locations' => []
     ];
+    $dropdownLocations = [];
 }
 
 $pageTitle = "AI Crime Predictions";
@@ -593,6 +596,20 @@ $categoryColors = [
     background: #f9fafb;
 }
 
+/* Risk Formula Caption */
+.risk-formula {
+    font-size: 0.68rem;
+    color: #4b5563;
+    padding: 0.75rem 1.2rem;
+    border-top: 1px solid #e5e7eb;
+    background: #fffbeb;
+    line-height: 1.6;
+}
+
+.risk-formula strong {
+    color: #92400e;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
     .main-grid {
@@ -693,15 +710,30 @@ $categoryColors = [
                         <select id="predZone" required>
                             <option value="">Select location...</option>
                             <?php 
-                            // Get top 15 most active constituencies
-                            $topLocations = array_slice($predictions['top_hotspots'], 0, 15);
                             $zoneIndex = 0;
-                            foreach ($topLocations as $location): 
-                                $zoneValue = $location['constituency'] . ', ' . $location['county'];
+                            $zoneMappings = [];
+                            
+                            // Fallback if no locations from database
+                            if (empty($dropdownLocations)) {
+                                $dropdownLocations = [
+                                    ['constituency' => 'Nairobi', 'county' => 'Nairobi', 'label' => 'Nairobi (County)', 'case_count' => 0],
+                                    ['constituency' => 'Mombasa', 'county' => 'Mombasa', 'label' => 'Mombasa (County)', 'case_count' => 0],
+                                    ['constituency' => 'Kisumu', 'county' => 'Kisumu', 'label' => 'Kisumu (County)', 'case_count' => 0],
+                                    ['constituency' => 'Nakuru', 'county' => 'Nakuru', 'label' => 'Nakuru (County)', 'case_count' => 0],
+                                    ['constituency' => 'Kiambu', 'county' => 'Kiambu', 'label' => 'Kiambu (County)', 'case_count' => 0],
+                                ];
+                            }
+                            
+                            foreach ($dropdownLocations as $location): 
+                                $zoneMappings[$location['constituency'] . '_' . $location['county']] = $zoneIndex;
                             ?>
                                 <option value="<?php echo $zoneIndex++; ?>">
-                                    <?php echo htmlspecialchars($location['constituency']); ?> 
-                                    <small style="color: #6b7280;">(<?php echo htmlspecialchars($location['county']); ?>)</small>
+                                    <?php echo htmlspecialchars($location['label']); ?>
+                                    <?php if ($location['case_count'] > 0): ?>
+                                        <small style="color: #22c55e;">(<?php echo $location['case_count']; ?> cases)</small>
+                                    <?php else: ?>
+                                        <small style="color: #f59e0b;">(proactive)</small>
+                                    <?php endif; ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -732,7 +764,7 @@ $categoryColors = [
         <!-- Weekly Trend -->
         <div class="panel">
             <div class="panel-header">
-                <span class="panel-title">Weekly Trend</span>
+                <span class="panel-title">Weekly Trend: All Crimes</span>
                 <span class="badge badge-blue">7-Day</span>
             </div>
             <div style="padding: 1rem 1.2rem; border-bottom: 1px solid #e5e7eb;">
@@ -802,6 +834,12 @@ $categoryColors = [
                 <?php endforeach; ?>
             </tbody>
         </table>
+        <div class="risk-formula">
+            <strong>Risk Score Formula:</strong> 
+            Risk Score = (90-day historical average for day) × (trend factor) × 5<br>
+            <strong>Trend factor:</strong> ratio of recent 14-day vs prior 14-day incidents (range: 0.8–1.2)<br>
+            <strong>Risk levels:</strong> High (≥15 predicted cases), Medium (≥10), Low (≥5), Minimal (&lt;5)
+        </div>
         <div class="model-status">
             Statistical frequency analysis — trained on <?php echo number_format($predictions['total_crimes']); ?> historical crime records
         </div>
@@ -987,6 +1025,12 @@ new Chart(trendCtx, {
         }
     }
 });
+
+// ===========================================
+// Zone Mappings for Neural Network
+// ===========================================
+// Populate ZONE_MAPPINGS from PHP for the dropdown locations
+window.ZONE_MAPPINGS = <?php echo json_encode($zoneMappings); ?>;
 
 // ===========================================
 // Brain.js Neural Network Initialization

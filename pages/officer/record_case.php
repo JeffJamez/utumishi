@@ -254,6 +254,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         type="text" 
                                         id="citizen_name" 
                                         name="citizen_name" 
+                                        autocomplete="off"
                                         class="form-control <?php echo isset($errors['citizen_name']) ? 'error' : ''; ?>"
                                         placeholder="Enter full name as on ID"
                                         value="<?php echo htmlspecialchars($formData['citizen_name'] ?? ''); ?>"
@@ -525,34 +526,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                              </div>
                          </div>
 
-                          <?php if (isset($errors['reporter_location'])): ?>
-                              <div class="form-error"><?php echo htmlspecialchars($errors['reporter_location']); ?></div>
-                          <?php endif; ?>
-                          <div class="form-help">Select the county and constituency where the reporter resides</div>
-
-                          <!-- Google Places Autocomplete for Reporter Location -->
-                          <div class="form-group google-places-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--light-gray);">
-                              <label for="reporter_place_search" class="form-label">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                  Search Reporter's Location (Optional)
-                              </label>
-                              <input 
-                                  type="text" 
-                                  id="reporter_place_search" 
-                                  class="form-control"
-                                  placeholder="Start typing to search location in Kenya..."
-                                  autocomplete="off"
-                              >
-                              <div class="form-help">Use Google Places for precise GPS coordinates on the map</div>
-                              <div id="reporter_place_details" class="place-details" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #3b82f6; font-size: 0.85rem;">
-                                  <strong style="color: #1e40af;">Selected:</strong> <span id="reporter_place_name" style="color: #1e40af;"></span><br>
-                                  <small style="color: #6b7280;">GPS: <span id="reporter_coords"></span></small>
-                              </div>
-                              <!-- Hidden fields for coordinates -->
-                              <input type="hidden" name="reporter_latitude" id="reporter_latitude">
-                              <input type="hidden" name="reporter_longitude" id="reporter_longitude">
-                          </div>
-                      </fieldset>
+                           <?php if (isset($errors['reporter_location'])): ?>
+                               <div class="form-error"><?php echo htmlspecialchars($errors['reporter_location']); ?></div>
+                           <?php endif; ?>
+                           <div class="form-help">Select the county and constituency where the reporter resides</div>
+                       </fieldset>
                  </div>
 
                  <div class="card-footer">
@@ -1028,52 +1006,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     }
                 });
             }
-
-            // Initialize Reporter Location Autocomplete
-            const reporterInput = document.getElementById('reporter_place_search');
-            if (reporterInput && typeof google !== 'undefined') {
-                const reporterAutocomplete = new google.maps.places.Autocomplete(reporterInput, {
-                    bounds: kenyaBounds,
-                    componentRestrictions: { country: 'ke' },
-                    fields: ['address_components', 'geometry', 'name', 'formatted_address'],
-                    types: ['geocode', 'establishment']
-                });
-
-                reporterAutocomplete.addListener('place_changed', function() {
-                    const place = reporterAutocomplete.getPlace();
-                    if (place.geometry) {
-                        const lat = place.geometry.location.lat();
-                        const lng = place.geometry.location.lng();
-
-                        // Extract county and sub-county
-                        const addressComponents = place.address_components;
-                        let county = '';
-
-                        addressComponents.forEach(component => {
-                            if (component.types.includes('administrative_area_level_1')) {
-                                county = component.long_name;
-                            }
-                        });
-
-                        // Populate hidden fields
-                        document.getElementById('reporter_latitude').value = lat.toFixed(8);
-                        document.getElementById('reporter_longitude').value = lng.toFixed(8);
-
-                        // Show confirmation
-                        document.getElementById('reporter_place_name').textContent = place.name || place.formatted_address;
-                        document.getElementById('reporter_coords').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
-                        document.getElementById('reporter_place_details').style.display = 'block';
-
-                        // Auto-fill county dropdown if empty
-                        const countySelect = document.getElementById('reporter_county');
-                        if (countySelect && !countySelect.value && county) {
-                            matchAndSelectCounty('reporter_county', county);
-                        }
-
-                        console.log('Reporter location selected:', place.name, 'Lat:', lat, 'Lng:', lng);
-                    }
-                });
-            }
         }
 
         /**
@@ -1107,7 +1039,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         window.gm_authFailure = function() {
             console.warn('Google Maps API authentication failed. Autocomplete features will be disabled.');
             // Disable autocomplete inputs
-            const inputs = document.querySelectorAll('#incident_place_search, #reporter_place_search');
+            const inputs = document.querySelectorAll('#incident_place_search');
             inputs.forEach(input => {
                 input.disabled = true;
                 input.placeholder = 'Location search unavailable';

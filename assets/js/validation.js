@@ -108,10 +108,10 @@ function validateOBNumber(obNumber) {
 
   const cleanOB = obNumber.trim().toUpperCase();
 
-  if (!/^OB-[A-Z]{3}-\d{4}-\d{5}$/.test(cleanOB)) {
+  if (!/^OB-[A-Z0-9]+-\d{4}-\d{5}$/.test(cleanOB)) {
     return {
       valid: false,
-      message: "Invalid OB Number format. Expected: OB-XXX-YYYY-NNNNN",
+      message: "Invalid OB Number format. Expected: OB-XXXX-YYYY-NNNNN",
     };
   }
 

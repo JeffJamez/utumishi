@@ -35,6 +35,12 @@ const CATEGORY_MAPPINGS = {
 function initCrimePredictor(crimes) {
     console.log('Initializing Crime Predictor with', crimes ? crimes.length : 0, 'records');
     
+    // Load zone mappings from PHP if available
+    if (typeof window.ZONE_MAPPINGS !== 'undefined' && Object.keys(window.ZONE_MAPPINGS).length > 0) {
+        ZONE_MAPPINGS = window.ZONE_MAPPINGS;
+        console.log('Loaded zone mappings from PHP:', Object.keys(ZONE_MAPPINGS).length, 'zones');
+    }
+    
     if (!crimes || crimes.length === 0) {
         console.warn('No crime data available for training');
         updateModelStatus('No Data', 'error');

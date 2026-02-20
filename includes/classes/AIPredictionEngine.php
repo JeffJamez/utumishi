@@ -648,4 +648,54 @@ class AIPredictionEngine {
         
         return $locations;
     }
+
+    /**
+     * Get all locations formatted for dropdown selection
+     * Returns locations sorted by case count, with fallback to major counties
+     */
+    public function getAllLocationsForDropdown($limit = 20) {
+        // Get locations from cases table sorted by case count
+        $sql = "SELECT 
+                incident_location_constituency as constituency,
+                incident_location_county as county,
+                COUNT(*) as case_count
+            FROM cases
+            WHERE incident_location_county IS NOT NULL
+            GROUP BY incident_location_constituency, incident_location_county
+            ORDER BY case_count DESC
+            LIMIT :limit";
+        
+        $results = $this->db->fetchAll($sql, ['limit' => $limit]);
+        
+        $locations = [];
+        $seenCounties = [];
+        
+        foreach ($results as $row) {
+            $locationKey = $row['constituency'] . ', ' . $row['county'];
+            $locations[] = [
+                'constituency' => $row['constituency'],
+                'county' => $row['county'],
+                'label' => $row['constituency'] . ' (' . $row['county'] . ')',
+                'case_count' => (int)$row['case_count']
+            ];
+            $seenCounties[$row['county']] = true;
+        }
+        
+        // Add major Kenyan counties as fallback for proactive forecasting
+        $majorCounties = ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Kiambu', 'Uasin Gishu', 'Kilifi', 'Mandera', 'Kajiado', 'Machakos'];
+        
+        foreach ($majorCounties as $county) {
+            if (!isset($seenCounties[$county]) && count($locations) < $limit) {
+                $locations[] = [
+                    'constituency' => $county,
+                    'county' => $county,
+                    'label' => $county . ' (County)',
+                    'case_count' => 0
+                ];
+                $seenCounties[$county] = true;
+            }
+        }
+        
+        return $locations;
+    }
 }

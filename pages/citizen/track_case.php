@@ -28,7 +28,7 @@ if (!empty($_GET['ob']) || !empty($_POST['search_term'])) {
     if (!empty($searchTerm)) {
         try {
 
-            if (preg_match('/^OB-[A-Z]{3}-\d{4}-\d{5}$/', strtoupper($searchTerm))) {
+            if (preg_match('/^OB-[A-Z0-9]+-\d{4}-\d{5}$/', strtoupper($searchTerm))) {
                 $caseDetails = $caseManager->getCaseByOBNumber(strtoupper($searchTerm));
 
                 if ($caseDetails) {
@@ -90,7 +90,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 class="form-control"
                                 placeholder="e.g., OB-NRB-2025-00123"
                                 value="<?php echo htmlspecialchars($searchTerm); ?>"
-                                pattern="OB-[A-Z]{3}-\d{4}-\d{5}"
+                                pattern="OB-[A-Z0-9]+-\d{4}-\d{5}"
                                 maxlength="20"
                             >
                         </div>
@@ -366,10 +366,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 return false;
             }
 
-            const obPattern = /^OB-[A-Z]{3}-\d{4}-\d{5}$/;
+            const obPattern = /^OB-[A-Z0-9]+-\d{4}-\d{5}$/;
             if (!obPattern.test(searchTerm)) {
                 e.preventDefault();
-                alert('Please enter a valid OB number format: OB-XXX-YYYY-NNNNN\n\nExample: OB-NRB-2025-00123');
+                alert('Please enter a valid OB number format: OB-XXXX-YYYY-NNNNN\n\nExample: OB-NRB-2025-00123');
                 document.getElementById('search_term').focus();
                 return false;
             }
@@ -468,7 +468,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         function saveSearchTerm(term) {
-            if (term && term.match(/^OB-[A-Z]{3}-\d{4}-\d{5}$/)) {
+            if (term && term.match(/^OB-[A-Z0-9]+-\d{4}-\d{5}$/)) {
                 let searches = JSON.parse(localStorage.getItem('recentOBSearches') || '[]');
                 searches = searches.filter(s => s !== term);
                 searches.unshift(term);

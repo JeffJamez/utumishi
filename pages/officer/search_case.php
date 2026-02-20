@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
     
     if (empty($obNumber)) {
         $error = "Please enter an OB number";
-    } elseif (!preg_match('/^OB-[A-Z]{3}-\d{4}-\d{5}$/', $obNumber)) {
+    } elseif (!preg_match('/^OB-[A-Z0-9]+-\d{4}-\d{5}$/', $obNumber)) {
         $error = "Invalid OB number format";
     } else {
         try {
