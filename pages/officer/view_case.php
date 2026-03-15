@@ -12,8 +12,9 @@ require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/classes/Officer.php';
 require_once __DIR__ . '/../../includes/classes/CaseManager.php';
 require_once __DIR__ . '/../../includes/utils/file_upload.php';
+require_once __DIR__ . '/../../includes/utils/scope_validation.php';
 
-requireRole(ROLE_OFFICER);
+requireAnyRole([ROLE_OFFICER, ROLE_OCS, ROLE_ADMIN]);
 
 $currentUser = getCurrentUser();
 $officer = new Officer($currentUser['id']);
@@ -31,21 +32,33 @@ if (!empty($_GET['id'])) {
     $caseId = (int)$_GET['id'];
 
     try {
-        $case = $caseManager->getCaseById($caseId, $currentUser['id']);
-
-        if (!$case) {
-            $errors['general'] = 'Case not found.';
+        // Check scope access first
+        if (!canAccessCase($caseId, $currentUser)) {
+            $errors['general'] = 'Access denied: Case outside your jurisdiction.';
         } else {
-            // Check if officer can view: recorded or assigned
-            $isRecorder = $case['recorded_by_officer_id'] == $currentUser['id'];
-            $isAssigned = $case['assigned_officer_id'] == $currentUser['id'];
+            $case = $caseManager->getCaseById($caseId, $currentUser['id']);
 
-            if (!$isRecorder && !$isAssigned) {
-                $errors['general'] = 'You do not have permission to view this case.';
+            if (!$case) {
+                $errors['general'] = 'Case not found.';
             } else {
-                $canEdit = $isAssigned; // Can edit if assigned
-                $caseUpdates = $caseManager->getCaseUpdates($caseId);
-                $caseEvidence = getCaseEvidence($caseId);
+                // County Commanders can view all cases in their county
+                if ($currentUser['role'] === 'county_commander') {
+                    $canEdit = false; // County commanders can view but not edit cases directly
+                    $caseUpdates = $caseManager->getCaseUpdates($caseId);
+                    $caseEvidence = getCaseEvidence($caseId);
+                } else {
+                    // Check if officer can view: recorded or assigned
+                    $isRecorder = $case['recorded_by_officer_id'] == $currentUser['id'];
+                    $isAssigned = !empty($case['assigned_officer_user_id']) && $case['assigned_officer_user_id'] == $currentUser['id'];
+
+                    if (!$isRecorder && !$isAssigned) {
+                        $errors['general'] = 'You do not have permission to view this case.';
+                    } else {
+                        $canEdit = $isAssigned; // Can edit if assigned
+                        $caseUpdates = $caseManager->getCaseUpdates($caseId);
+                        $caseEvidence = getCaseEvidence($caseId);
+                    }
+                }
             }
         }
     } catch (Exception $e) {
@@ -97,6 +110,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     <span class="badge <?php echo STATUS_COLORS[$case['status']] ?? 'status-reported'; ?>">
                                         <?php echo ucfirst(str_replace('_', ' ', $case['status'])); ?>
                                     </span>
+                                </p>
+                                <p><strong>Assigned Officer:</strong> 
+                                    <?php echo !empty($case['assigned_officer_name']) 
+                                        ? htmlspecialchars($case['assigned_officer_name']) . ' (' . htmlspecialchars($case['badge_number'] ?? 'N/A') . ')' 
+                                        : 'Not assigned'; ?>
                                 </p>
                                 <p><strong>Date/Time of Incident:</strong> <?php echo !empty($case['occurred_at']) ? date('M j, Y \a\t g:i A', strtotime($case['occurred_at'])) : 'Not recorded'; ?></p>
                                 <p><strong>Reported:</strong> <?php echo htmlspecialchars($case['created_at']); ?></p>

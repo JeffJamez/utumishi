@@ -59,11 +59,7 @@ body {
 
 .app-header {
   grid-area: header;
-  background: linear-gradient(
-    135deg,
-    var(--primary-black) 0%,
-    var(--dark-gray) 100%
-  );
+  background: #000;
   color: var(--primary-white);
   padding: 0 1rem;
   display: flex;
@@ -461,7 +457,7 @@ body {
 }
 
 .kpi-value {
-  font-size: 2rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--primary-green);
   margin-bottom: 0.5rem;
@@ -656,12 +652,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    var(--primary-black) 0%,
-    var(--dark-gray) 50%,
-    var(--primary-green) 100%
-  );
 }
 
 .login-card {
@@ -887,7 +877,7 @@ body {
   }
 
   .kpi-value {
-    font-size: 2rem;
+    font-size: 1rem;
   }
 
   .login-title {

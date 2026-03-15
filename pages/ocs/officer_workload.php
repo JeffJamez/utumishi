@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../includes/core/db.php';
 require_once __DIR__ . '/../../includes/core/auth.php';
 require_once __DIR__ . '/../../includes/classes/User.php';
 require_once __DIR__ . '/../../includes/classes/WorkloadManager.php';
+require_once __DIR__ . '/../../includes/utils/scope_validation.php';
 
 requireRole(ROLE_OCS);
 
@@ -18,11 +19,22 @@ $workloadManager = new WorkloadManager();
 if ($_POST) {
     try {
         if ($_POST['action'] === 'assign_case') {
+            // Validate scope before assignment
+            if (!validateAssignmentScope($_POST['case_id'], $_POST['officer_id'], $currentUser)) {
+                throw new Exception("Access denied: Case or officer outside your jurisdiction");
+            }
+            
             $result = $workloadManager->assignCase($_POST['case_id'], $_POST['officer_id'], $currentUser['id']);
             $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];
         }
         
         if ($_POST['action'] === 'reassign_case') {
+            // Validate scope before reassignment
+            if (!validateAssignmentScope($_POST['case_id'], $_POST['from_officer_id'], $currentUser) ||
+                !validateAssignmentScope($_POST['case_id'], $_POST['to_officer_id'], $currentUser)) {
+                throw new Exception("Access denied: Case or officers outside your jurisdiction");
+            }
+            
             $reason = $_POST['reason'] ?? '';
             $result = $workloadManager->reassignCase($_POST['case_id'], $_POST['from_officer_id'], $_POST['to_officer_id'], $currentUser['id'], $reason);
             $_SESSION[$result['success'] ? 'success' : 'error'] = $result['message'];

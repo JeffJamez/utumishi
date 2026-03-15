@@ -8,8 +8,9 @@ require_once __DIR__ . '/../../includes/core/auth.php';
 require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/classes/Officer.php';
 require_once __DIR__ . '/../../includes/classes/CaseManager.php';
+require_once __DIR__ . '/../../includes/utils/scope_validation.php';
 
-requireRole(ROLE_OFFICER);
+requireAnyRole([ROLE_OFFICER, ROLE_OCS, ROLE_ADMIN]);
 
 $currentUser = getCurrentUser();
 $officer = new Officer($currentUser['id']);
@@ -29,22 +30,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
         $error = "Invalid OB number format";
     } else {
         try {
-            // Query case by OB number
-            $case = $db->fetchOne("
+            // Build base query
+            $sql = "
                 SELECT c.*, 
                        u1.name as reporter_name,
                        u2.name as recorded_by_name,
                        u3.name as assigned_officer_name,
                        o.badge_number,
-                       s.name as station_name
+                       s.name as station_name,
+                       s.county as station_county
                 FROM cases c
                 LEFT JOIN users u1 ON c.reported_by_citizen_id = u1.id
                 LEFT JOIN users u2 ON c.recorded_by_officer_id = u2.id
                 LEFT JOIN officers o ON c.assigned_officer_id = o.id
                 LEFT JOIN users u3 ON o.user_id = u3.id
                 LEFT JOIN stations s ON c.station_id = s.id
-                WHERE c.ob_number = ?
-            ", [$obNumber]);
+                WHERE c.ob_number = :ob_number
+            ";
+            
+            $params = ['ob_number' => $obNumber];
+            
+            // Add scope-based WHERE conditions
+            $userRole = $currentUser['role'];
+            if ($userRole === 'county_commander') {
+                // County Commander: Can search cases in their county
+                $userCounty = $db->fetchOne("
+                    SELECT county_in_charge FROM users WHERE id = :id
+                ", ['id' => $currentUser['id']]);
+                
+                if ($userCounty && $userCounty['county_in_charge']) {
+                    $sql .= " AND s.county = :county";
+                    $params['county'] = $userCounty['county_in_charge'];
+                }
+            } else {
+                // OCS and Officer: Can only search cases in their station
+                $sql .= " AND c.station_id = :station_id";
+                $params['station_id'] = $currentUser['station_id'];
+            }
+            
+            $case = $db->fetchOne($sql, $params);
             
             if ($case) {
                 // Check access permissions
@@ -56,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
                     $searchResults = [$case];
                     $success = "Case found with full details";
                 } else {
-                    // Limited access - show minimal info
+                    // Limited access - show minimal info but include assigned officer for follow-up
                     $searchResults = [[
                         'id' => $case['id'],
                         'ob_number' => $case['ob_number'],
@@ -67,6 +91,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
                          'incident_location_constituency' => $case['incident_location_constituency'],
                         'created_at' => $case['created_at'],
                         'station_name' => $case['station_name'],
+                        'assigned_officer_name' => $case['assigned_officer_name'] ?? 'Unassigned',
+                        'badge_number' => $case['badge_number'] ?? 'N/A',
                         'limited_access' => true
                     ]];
                     $success = "Case found (limited details - not assigned to you)";
@@ -144,7 +170,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Category:</strong> <?php echo htmlspecialchars($case['category']); ?></p>
-                                         <p class="mb-1"><strong>Location:</strong> <?php echo htmlspecialchars($case['incident_location_county']); ?>, <?php echo htmlspecialchars($case['incident_location_constituency']); ?></p>
+                                        <p class="mb-1"><strong>Assigned to:</strong> <?php echo htmlspecialchars($case['assigned_officer_name'] ?? 'Unassigned'); ?> (<?php echo htmlspecialchars($case['badge_number'] ?? 'N/A'); ?>)</p>
+                                          <p class="mb-1"><strong>Location:</strong> <?php echo htmlspecialchars($case['incident_location_county']); ?>, <?php echo htmlspecialchars($case['incident_location_constituency']); ?></p>
                                         <p class="mb-1"><strong>Station:</strong> <?php echo htmlspecialchars($case['station_name']); ?></p>
                                     </div>
                                     <div class="col-md-6">
@@ -154,7 +181,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <?php else: ?>
                                             <p class="mb-1"><strong>Reporter:</strong> <?php echo htmlspecialchars($case['reporter_name'] ?? 'N/A'); ?></p>
                                             <p class="mb-1"><strong>Recorded by:</strong> <?php echo htmlspecialchars($case['recorded_by_name'] ?? 'N/A'); ?></p>
-                                            <p class="mb-1"><strong>Assigned to:</strong> <?php echo htmlspecialchars($case['assigned_officer_name'] ?? 'Unassigned'); ?> (<?php echo htmlspecialchars($case['badge_number'] ?? 'N/A'); ?>)</p>
                                         <?php endif; ?>
                                     </div>
                                 </div>

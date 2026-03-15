@@ -76,6 +76,82 @@ class ReportManager {
     }
 
     /**
+     * Generate annual report for a station
+     */
+    public function generateAnnualReport($year, $stationId = null) {
+        $whereConditions = ["YEAR(COALESCE(occurred_at, created_at)) = :year"];
+        $params = ['year' => $year];
+
+        if ($stationId) {
+            $whereConditions[] = "station_id = :station_id";
+            $params['station_id'] = $stationId;
+        }
+
+        $whereClause = implode(' AND ', $whereConditions);
+
+        // Overall stats for the year
+        $overallStats = $this->db->fetchOne("
+            SELECT
+                COUNT(*) as total_cases,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
+            FROM cases
+            WHERE $whereClause", $params);
+
+        // Category breakdown for the year
+        $categoryStats = $this->db->fetchAll("
+            SELECT
+                category,
+                COUNT(*) as case_count,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(AVG(COALESCE(estimated_resolution_hours, 72)), 1) as avg_resolution_time
+            FROM cases
+            WHERE $whereClause
+            GROUP BY category
+            ORDER BY case_count DESC", $params);
+
+        // Monthly trends for the year
+        $monthlyTrends = $this->db->fetchAll("
+            SELECT
+                MONTH(COALESCE(occurred_at, created_at)) as month,
+                COUNT(*) as case_count,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
+            FROM cases
+            WHERE $whereClause
+            GROUP BY MONTH(COALESCE(occurred_at, created_at))
+            ORDER BY month ASC", $params);
+
+        // Hotspots for the year
+        $hotspots = $this->db->fetchAll("
+            SELECT
+                incident_location_constituency as location,
+                category,
+                COUNT(*) as case_count
+            FROM cases
+            WHERE $whereClause
+            GROUP BY incident_location_constituency, category
+            HAVING case_count > 2
+            ORDER BY case_count DESC
+            LIMIT 10", $params);
+
+        return [
+            'type' => 'Annual Report',
+            'period' => [
+                'year' => $year,
+                'year_name' => $year
+            ],
+            'overall_stats' => $overallStats,
+            'category_breakdown' => $categoryStats,
+            'monthly_trends' => $monthlyTrends,
+            'hotspots' => $hotspots,
+            'generated_at' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
      * Generate performance report for a station
      */
     public function generatePerformanceReport($stationId, $timeframe = 30) {

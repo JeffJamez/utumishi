@@ -75,9 +75,6 @@ public function getPerformance($periodDays = 30) {
     ";
 
     $user_id = $this->id;
-    if (is_array($this->officerData) && isset($this->officerData['id']) && $this->officerData['id']) {
-        $user_id = $this->officerData['id'];
-    }
 
     $result = $this->db->fetchOne($sql, [
         'user_id' => $user_id,

@@ -407,6 +407,34 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 if (typeof module !== "undefined" && module.exports) {
+  // Chart Utilities for Reports
+  const ChartUtils = {
+    colors: {
+      primary: '#3b82f6',
+      success: '#22c55e',
+      warning: '#f59e0b',
+      danger: '#ef4444',
+      info: '#06b6d4',
+      purple: '#8b5cf6',
+      pink: '#ec4899',
+      gray: '#6b7280'
+    },
+    
+    getColor: function(index) {
+      const palette = [
+        this.colors.primary,
+        this.colors.success,
+        this.colors.warning,
+        this.colors.danger,
+        this.colors.info,
+        this.colors.purple,
+        this.colors.pink,
+        this.colors.gray
+      ];
+      return palette[index % palette.length];
+    }
+  };
+
   module.exports = {
     validateNationalId,
     validatePhone,
@@ -419,5 +447,6 @@ if (typeof module !== "undefined" && module.exports) {
     validateText,
     validateNumber,
     validateForm,
+    ChartUtils,
   };
 }

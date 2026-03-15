@@ -20,11 +20,26 @@ if (!$isOfficer && !$isOCS && !$isCountyCommander) {
 
 $predictionEngine = new AIPredictionEngine();
 
+// Determine user's county for scoping
+$userCounty = null;
+if ($isCountyCommander) {
+    // County commanders can see all data in their county
+    $db = Database::getInstance();
+    $userDetails = $db->fetchOne("SELECT county_in_charge FROM users WHERE id = :id", ['id' => $currentUser['id']]);
+    $userCounty = $userDetails['county_in_charge'] ?? null;
+} elseif ($isOCS || $isOfficer) {
+    // OCS and officers are scoped to their station's county
+    $db = Database::getInstance();
+    $stationDetails = $db->fetchOne("SELECT s.county FROM stations s JOIN users u ON s.id = u.station_id WHERE u.id = :id", ['id' => $currentUser['id']]);
+    $userCounty = $stationDetails['county'] ?? null;
+}
+
 // Get all predictions (PHP provides initial data, Brain.js handles real-time predictions)
 try {
-    $predictions = $predictionEngine->getPredictions();
+    // County commanders see country-wide data, others are scoped to their county
+    $predictions = $predictionEngine->getPredictions(false, $isCountyCommander ? null : $userCounty);
     // Get locations for dropdown (with fallback to major counties)
-    $dropdownLocations = $predictionEngine->getAllLocationsForDropdown(20);
+    $dropdownLocations = $predictionEngine->getAllLocationsForDropdown(20, $isCountyCommander ? null : $userCounty);
 } catch (Exception $e) {
     error_log("AI Prediction Error: " . $e->getMessage());
     $predictions = [
@@ -32,7 +47,6 @@ try {
         'hotspot_count' => 0,
         'peak_hours' => 'N/A',
         'model_accuracy' => 'N/A',
-        'forecast_7day' => [],
         'hourly_distribution' => array_fill(0, 24, 0),
         'weekly_trend' => array_fill(0, 7, 0),
         'top_hotspots' => [],
@@ -676,6 +690,40 @@ $categoryColors = [
             <button class="toggle-btn" onclick="toggleLayer('markers', this)">Incidents</button>
             <button class="toggle-btn" onclick="toggleLayer('predicted', this)">Predicted Zones</button>
         </div>
+        <!-- Map Legend/KEY -->
+        <div style="padding: 0.8rem 1.2rem; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; gap: 2rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <div style="font-size: 0.65rem; font-weight: 700; color: #111827; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Heat Map Intensity</div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 100px; height: 12px; background: linear-gradient(to right, #ff6600, #ff0000, #ff0088, #ffffff); border-radius: 2px;"></div>
+                    <span style="font-size: 0.6rem; color: #6b7280;">Low → High</span>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <div style="font-size: 0.65rem; font-weight: 700; color: #111827; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Prediction Zones</div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <div style="width: 16px; height: 16px; border: 2px dashed #e84a2e; border-radius: 50%; background: rgba(232, 74, 46, 0.12);"></div>
+                        <span style="font-size: 0.6rem; color: #6b7280;">High Risk</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                        <div style="width: 16px; height: 16px; border: 2px dashed #f0a500; border-radius: 50%; background: rgba(240, 165, 0, 0.12);"></div>
+                        <span style="font-size: 0.6rem; color: #6b7280;">Medium Risk</span>
+                    </div>
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <div style="font-size: 0.65rem; font-weight: 700; color: #111827; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Incident Markers</div>
+                <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+                    <?php foreach (['Theft' => '#f0a500', 'Assault' => '#e84a2e', 'Burglary' => '#9b59b6', 'Fraud' => '#4a90e2', 'Traffic Offenses' => '#2ecc71'] as $cat => $color): ?>
+                    <div style="display: flex; align-items: center; gap: 0.2rem;">
+                        <div style="width: 8px; height: 8px; border-radius: 50%; background: <?php echo $color; ?>;"></div>
+                        <span style="font-size: 0.6rem; color: #6b7280;"><?php echo $cat; ?></span>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Charts Row: Risk Predictor + Weekly Trend -->
@@ -787,61 +835,20 @@ $categoryColors = [
         </div>
     </div>
 
-    <!-- 7-Day Forecast Table (Full Width) -->
+    <!-- Model Status Panel (Full Width) -->
     <div class="panel" style="margin-bottom: 1rem;">
         <div class="panel-header">
-            <span class="panel-title">7-Day Risk Forecast</span>
-            <span class="badge badge-red">AI Prediction</span>
-        </div>
-        <table class="forecast-table">
-            <thead>
-                <tr>
-                    <th>Day</th>
-                    <th>Predicted Risk</th>
-                    <th>Peak Hour</th>
-                    <th>Likely Type</th>
-                    <th>Location</th>
-                    <th>Confidence</th>
-                    <th>Trend</th>
-                </tr>
-            </thead>
-            <tbody id="forecastBody">
-                <?php foreach ($predictions['forecast_7day'] as $index => $forecast): 
-                    $prevRisk = $index > 0 ? $predictions['forecast_7day'][$index - 1]['risk_score'] : $forecast['risk_score'];
-                    $trendChange = $forecast['risk_score'] - $prevRisk;
-                    $trendIcon = $trendChange > 5 ? '↑' : ($trendChange < -5 ? '↓' : '→');
-                    $trendColor = $trendChange > 5 ? '#dc2626' : ($trendChange < -5 ? '#22c55e' : '#6b7280');
-                ?>
-                    <tr>
-                        <td>
-                            <strong><?php echo htmlspecialchars($forecast['label']); ?></strong><br>
-                            <small style="color: #6b7280;"><?php echo date('M d', strtotime($forecast['date'])); ?></small>
-                        </td>
-                        <td>
-                            <?php 
-                            $chipClass = $forecast['risk_level'] === 'high' ? 'chip-high' : ($forecast['risk_level'] === 'medium' ? 'chip-medium' : 'chip-low');
-                            ?>
-                            <span class="risk-chip <?php echo $chipClass; ?>">
-                                <?php echo $forecast['risk_score']; ?>% <?php echo ucfirst($forecast['risk_level']); ?>
-                            </span>
-                        </td>
-                        <td style="color: #6b7280;"><?php echo htmlspecialchars($forecast['peak_hour']); ?></td>
-                        <td><?php echo htmlspecialchars($forecast['likely_type']); ?></td>
-                        <td style="font-size: 0.85rem;"><?php echo htmlspecialchars($forecast['likely_location']); ?></td>
-                        <td style="color: #6b7280;"><?php echo htmlspecialchars($forecast['confidence']); ?></td>
-                        <td style="color: <?php echo $trendColor; ?>; font-weight: bold;"><?php echo $trendIcon; ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <div class="risk-formula">
-            <strong>Risk Score Formula:</strong> 
-            Risk Score = (90-day historical average for day) × (trend factor) × 5<br>
-            <strong>Trend factor:</strong> ratio of recent 14-day vs prior 14-day incidents (range: 0.8–1.2)<br>
-            <strong>Risk levels:</strong> High (≥15 predicted cases), Medium (≥10), Low (≥5), Minimal (&lt;5)
+            <span class="panel-title">Model Information</span>
+            <span class="badge badge-blue">Statistical Analysis</span>
         </div>
         <div class="model-status">
-            Statistical frequency analysis — trained on <?php echo number_format($predictions['total_crimes']); ?> historical crime records
+            Statistical frequency analysis trained on <?php echo number_format($predictions['total_crimes']); ?> historical crime records
+            <br>
+            <?php if ($userCounty && !$isCountyCommander): ?>
+                <small style="color: #6b7280;">Showing data for: <strong><?php echo htmlspecialchars($userCounty); ?> County</strong></small>
+            <?php elseif ($isCountyCommander && $userCounty): ?>
+                <small style="color: #6b7280;">Showing country-wide data (County Commander view)</small>
+            <?php endif; ?>
         </div>
     </div>
 </main>
@@ -1068,10 +1075,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Listen for model ready event
             document.addEventListener('crimeModelReady', function(e) {
                 console.log('Brain.js model ready:', e.detail);
-                
-                // Optionally update 7-day forecast with neural network predictions
-                // Uncomment the line below to use NN-generated forecast instead of PHP
-                // window.CrimePredictor.updateForecast();
             });
         } else {
             console.error('CrimePredictor not loaded');

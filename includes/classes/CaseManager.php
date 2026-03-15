@@ -64,11 +64,26 @@ class CaseManager {
 
             if ($assignedOfficer) {
                 $this->assignCase($caseId, $assignedOfficer['id']);
-
-                $this->addCaseUpdate($caseId, $data['recorded_by_officer_id'],
-                    "Case automatically assigned to Officer {$assignedOfficer['badge_number']} - {$assignedOfficer['name']}",
-                    CASE_REPORTED, CASE_ASSIGNED);
+                $assignmentMessage = "Case automatically assigned to Officer {$assignedOfficer['badge_number']} - {$assignedOfficer['name']}";
+            } else {
+                // Fallback: Find officer ID for the recording officer and assign to them
+                $recordingOfficer = $this->db->fetchOne(
+                    "SELECT id FROM officers WHERE user_id = :user_id LIMIT 1",
+                    ['user_id' => $data['recorded_by_officer_id']]
+                );
+                
+                if ($recordingOfficer) {
+                    $this->assignCase($caseId, $recordingOfficer['id']);
+                    $assignmentMessage = "Case assigned to recording officer (no matching specialist found)";
+                } else {
+                    // If no officer record found, log error but still create case
+                    error_log("No officer record found for user ID: " . $data['recorded_by_officer_id']);
+                    $assignmentMessage = "Case reported but not assigned (no officer record found)";
+                }
             }
+
+            $this->addCaseUpdate($caseId, $data['recorded_by_officer_id'],
+                $assignmentMessage, CASE_REPORTED, CASE_ASSIGNED);
 
             $this->db->commit();
 
@@ -181,6 +196,13 @@ class CaseManager {
 
     public function assignCase($caseId, $officerId) {
         try {
+            // Get current assignment to handle reassignment
+            $currentCase = $this->db->fetchOne(
+                "SELECT assigned_officer_id FROM cases WHERE id = :id",
+                ['id' => $caseId]
+            );
+            
+            $oldOfficerId = $currentCase ? $currentCase['assigned_officer_id'] : null;
 
             $updated = $this->db->update('cases', 
                 ['assigned_officer_id' => $officerId, 'status' => CASE_ASSIGNED],
@@ -189,7 +211,15 @@ class CaseManager {
             );
 
             if ($updated > 0) {
+                // If case was previously assigned to a different officer, decrement their workload
+                if ($oldOfficerId && $oldOfficerId != $officerId) {
+                    $this->db->query(
+                        "UPDATE officers SET current_case_load = current_case_load - 1 WHERE id = :id",
+                        ['id' => $oldOfficerId]
+                    );
+                }
 
+                // Increment new officer's workload
                 $this->db->query(
                     "UPDATE officers SET current_case_load = current_case_load + 1 WHERE id = :id",
                     ['id' => $officerId]
@@ -229,11 +259,17 @@ class CaseManager {
         return $result;
     }
 
+    // Get user details to determine scope
+    $user = $this->db->fetchOne("SELECT role, station_id, county_in_charge FROM users WHERE id = :id", ['id' => $userId]);
+    if (!$user) {
+        return null;
+    }
+
     $sql = "
         SELECT c.*,
                u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone,
                u2.name as recorded_by_name,
-               u3.name as assigned_officer_name, o.badge_number,
+               u3.name as assigned_officer_name, o.badge_number, o.user_id as assigned_officer_user_id,
                s.name as station_name, s.county as station_county
         FROM cases c
         JOIN users u1 ON c.reported_by_citizen_id = u1.id
@@ -242,19 +278,20 @@ class CaseManager {
         LEFT JOIN users u3 ON o.user_id = u3.id
         JOIN stations s ON c.station_id = s.id
         WHERE c.id = :case_id
-        AND (
-            c.recorded_by_officer_id = :user_id_1
-            OR o.user_id = :user_id_2
-            OR c.station_id = (SELECT station_id FROM users WHERE id = :user_id_3)
-        )
     ";
 
-    $params = [
-        'case_id' => $caseId,
-        'user_id_1' => $userId,
-        'user_id_2' => $userId,
-        'user_id_3' => $userId
-    ];
+    // Add scope-based WHERE conditions
+    $params = ['case_id' => $caseId];
+    
+    if ($user['role'] === 'county_commander' && $user['county_in_charge']) {
+        // County Commander: Can access cases in their county
+        $sql .= " AND s.county = :county";
+        $params['county'] = $user['county_in_charge'];
+    } else {
+        // OCS and Officer: Can only access cases in their station
+        $sql .= " AND c.station_id = :station_id";
+        $params['station_id'] = $user['station_id'];
+    }
 
     $result = $this->db->fetchOne($sql, $params);
     if ($result) {
@@ -411,37 +448,31 @@ class CaseManager {
     }
 
     private function canOfficerUpdateCase($caseId, $officerId) {
+    // Get user details
+    $user = $this->db->fetchOne("SELECT id, role, station_id, county_in_charge FROM users WHERE id = :id", ['id' => $officerId]);
+    if (!$user) {
+        return false;
+    }
 
-    $sql = "
-        SELECT c.*, 
-               o.user_id as assigned_user_id, 
-               u.station_id as officer_station,
-               (SELECT station_id FROM users WHERE id = :user_id_3) as user_station
+    // Get case details
+    $case = $this->db->fetchOne("
+        SELECT c.*, s.county as station_county
         FROM cases c
-        LEFT JOIN officers o ON c.assigned_officer_id = o.id
-        JOIN users u ON u.id = :user_id_1
+        JOIN stations s ON c.station_id = s.id
         WHERE c.id = :case_id
-        AND (
-            c.recorded_by_officer_id = :user_id_2
-            OR o.user_id = :user_id_4
-            OR c.station_id = (SELECT station_id FROM users WHERE id = :user_id_5)
-        )
-    ";
+    ", ['case_id' => $caseId]);
 
-    $result = $this->db->fetchOne($sql, [
-        'case_id' => $caseId,
-        'user_id_1' => $officerId,
-        'user_id_2' => $officerId,
-        'user_id_3' => $officerId,
-        'user_id_4' => $officerId,
-        'user_id_5' => $officerId
-    ]);
+    if (!$case) {
+        return false;
+    }
 
-    if (!$result) return false;
+    // County Commander: Can update cases in their county
+    if ($user['role'] === 'county_commander') {
+        return $case['station_county'] === $user['county_in_charge'];
+    }
 
-    return ($result['assigned_user_id'] == $officerId) ||
-           ($result['recorded_by_officer_id'] == $officerId) ||
-           ($result['station_id'] == $result['user_station']);
+    // OCS and Officer: Can only update cases in their station
+    return $case['station_id'] == $user['station_id'];
 }
 
     private function getEstimatedResolutionTime($category) {

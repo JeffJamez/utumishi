@@ -283,6 +283,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </thead>
                             <tbody>
                                 <?php foreach ($cases as $case): ?>
+                                    <?php $rowClass = ($case['status'] === 'resolved' || $case['status'] === 'closed') ? 'table-success' : ''; ?>
                                     <tr class="<?php echo $rowClass; ?>">
                                         <td>
                                             <strong><?php echo htmlspecialchars($case['ob_number']); ?></strong>

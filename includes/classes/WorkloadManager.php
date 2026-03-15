@@ -136,7 +136,7 @@ class WorkloadManager {
             
             // Verify case exists and is unassigned
             $case = $this->db->fetchOne("
-                SELECT id, status, assigned_officer_id 
+                SELECT id, status, assigned_officer_id, station_id 
                 FROM cases 
                 WHERE id = :case_id AND status = 'reported' AND assigned_officer_id IS NULL
             ", ['case_id' => $caseId]);
@@ -145,15 +145,21 @@ class WorkloadManager {
                 throw new Exception("Case not found or already assigned");
             }
             
-            // Verify officer exists
+            // Verify officer exists and get their station
             $officer = $this->db->fetchOne("
-                SELECT o.id FROM officers o 
+                SELECT o.id, u.station_id 
+                FROM officers o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :officer_id AND u.is_active = 1
             ", ['officer_id' => $officerId]);
             
             if (!$officer) {
                 throw new Exception("Officer not found or inactive");
+            }
+            
+            // Verify case and officer are in the same station
+            if ($case['station_id'] != $officer['station_id']) {
+                throw new Exception("Case and officer must be in the same station");
             }
             
             // Update case assignment
@@ -195,13 +201,38 @@ class WorkloadManager {
             
             // Verify case assignment
             $case = $this->db->fetchOne("
-                SELECT id, assigned_officer_id 
+                SELECT id, assigned_officer_id, station_id 
                 FROM cases 
                 WHERE id = :case_id AND assigned_officer_id = :from_officer
             ", ['case_id' => $caseId, 'from_officer' => $fromOfficerId]);
             
             if (!$case) {
                 throw new Exception("Case not found or not assigned to specified officer");
+            }
+            
+            // Verify both officers exist and get their stations
+            $fromOfficer = $this->db->fetchOne("
+                SELECT o.id, u.station_id 
+                FROM officers o 
+                JOIN users u ON o.user_id = u.id 
+                WHERE o.id = :officer_id
+            ", ['officer_id' => $fromOfficerId]);
+            
+            $toOfficer = $this->db->fetchOne("
+                SELECT o.id, u.station_id 
+                FROM officers o 
+                JOIN users u ON o.user_id = u.id 
+                WHERE o.id = :officer_id AND u.is_active = 1
+            ", ['officer_id' => $toOfficerId]);
+            
+            if (!$fromOfficer || !$toOfficer) {
+                throw new Exception("Officer not found");
+            }
+            
+            // Verify all officers and case are in the same station
+            if ($case['station_id'] != $fromOfficer['station_id'] || 
+                $case['station_id'] != $toOfficer['station_id']) {
+                throw new Exception("All officers and case must be in the same station");
             }
             
             // Update case assignment

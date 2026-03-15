@@ -11,7 +11,7 @@ require_once __DIR__ . '/../../includes/utils/validation.php';
 require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/classes/Officer.php';
 
-requireRole([ROLE_OFFICER, ROLE_ADMIN]);
+requireAnyRole([ROLE_OFFICER, ROLE_ADMIN, ROLE_OCS]);
 
 $currentUser = getCurrentUser();
 $viewOfficerId = $_GET['id'] ?? $currentUser['id'];
@@ -163,7 +163,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                 <div class="card">
                     <div class="card-header">
-                        <h3>👤 Profile Information</h3>
+                        <h3>Profile Information</h3>
                     </div>
                     <div class="card-body">
                         <form method="POST" action="" id="profileForm">

@@ -215,6 +215,88 @@ class CountyReportsManager {
     }
 
     /**
+     * Generate annual county report
+     */
+    public function generateAnnualCountyReport($year, $county = null) {
+        $where = "YEAR(COALESCE(occurred_at, created_at)) = :year";
+        $params = ['year' => $year];
+
+        if ($county) {
+            $where .= " AND incident_location_county = :county";
+            $params['county'] = $county;
+        }
+
+        // Overall stats for the year
+        $overallStats = $this->db->fetchOne("
+            SELECT
+                COUNT(*) as total_cases,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
+                COUNT(CASE WHEN status = 'reported' THEN 1 END) as pending_cases,
+                COUNT(CASE WHEN status IN ('assigned', 'in_progress') THEN 1 END) as active_cases,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time,
+                COUNT(DISTINCT station_id) as active_stations,
+                COUNT(DISTINCT incident_location_constituency) as affected_constituencies
+            FROM cases
+            WHERE $where
+        ", $params);
+
+        // Monthly trends for the year
+        $monthlyTrends = $this->db->fetchAll("
+            SELECT
+                MONTH(COALESCE(occurred_at, created_at)) as month,
+                COUNT(*) as case_count,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
+            FROM cases
+            WHERE $where
+            GROUP BY MONTH(COALESCE(occurred_at, created_at))
+            ORDER BY month ASC
+        ", $params);
+
+        // Category breakdown for the year
+        $categoryBreakdown = $this->db->fetchAll("
+            SELECT
+                category,
+                COUNT(*) as case_count,
+                COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
+            FROM cases
+            WHERE $where
+            GROUP BY category
+            ORDER BY case_count DESC
+        ", $params);
+
+        // Hotspots for the year
+        $hotspots = $this->db->fetchAll("
+            SELECT
+                incident_location_constituency as location,
+                category,
+                COUNT(*) as case_count
+            FROM cases
+            WHERE $where
+            GROUP BY incident_location_constituency, category
+            HAVING case_count > 2
+            ORDER BY case_count DESC
+            LIMIT 10
+        ", $params);
+
+        return [
+            'type' => 'Annual County Report',
+            'period' => [
+                'year' => $year,
+                'year_name' => $year
+            ],
+            'overall_stats' => $overallStats,
+            'monthly_trends' => $monthlyTrends,
+            'category_breakdown' => $categoryBreakdown,
+            'hotspots' => $hotspots,
+            'generated_at' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
      * Generate county performance report
      */
     public function generateCountyPerformanceReport($county = null, $timeframe = 30) {

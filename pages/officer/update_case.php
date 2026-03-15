@@ -12,8 +12,9 @@ require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/classes/Officer.php';
 require_once __DIR__ . '/../../includes/classes/CaseManager.php';
 require_once __DIR__ . '/../../includes/utils/file_upload.php';
+require_once __DIR__ . '/../../includes/utils/scope_validation.php';
 
-requireRole(ROLE_OFFICER);
+requireAnyRole([ROLE_OFFICER, ROLE_OCS]);
 
 $currentUser = getCurrentUser();
 $officer = new Officer($currentUser['id']);
@@ -30,17 +31,22 @@ if (!empty($_GET['id'])) {
     $caseId = (int)$_GET['id'];
 
     try {
-        $case = $caseManager->getCaseById($caseId, $currentUser['id']);
-
-        if (!$case) {
-            $errors['general'] = 'Case not found.';
-        } elseif (!$officer->canPerformAction('update_case', $caseId)) {
-            $errors['general'] = 'You do not have permission to update this case.';
+        // Check scope access first
+        if (!canAccessCase($caseId, $currentUser)) {
+            $errors['general'] = 'Access denied: Case outside your jurisdiction.';
         } else {
-            $caseUpdates = $caseManager->getCaseUpdates($caseId);
-            $caseEvidence = getCaseEvidence($caseId);
+            $case = $caseManager->getCaseById($caseId, $currentUser['id']);
+
+            if (!$case) {
+                $errors['general'] = 'Case not found.';
+            } elseif (!$officer->canPerformAction('update_case', $caseId)) {
+                $errors['general'] = 'You do not have permission to update this case.';
+            } else {
+                $caseUpdates = $caseManager->getCaseUpdates($caseId);
+                $caseEvidence = getCaseEvidence($caseId);
+            }
         }
-        } catch (Exception $e) {
+    } catch (Exception $e) {
         error_log("Case Load Error: " . $e->getMessage());
         $errors['general'] = 'Unable to load case details.';
 

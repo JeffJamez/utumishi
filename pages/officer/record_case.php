@@ -143,6 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'name' => $formData['citizen_name'],
                         'phone' => $formData['citizen_phone'],
                         'id_document_path' => $citizenIdDocumentPath,
+                        'email' => null,
                         'password' => password_hash($formData['citizen_national_id'], PASSWORD_DEFAULT),
                         'role' => ROLE_CITIZEN,
                         'created_at' => date('Y-m-d H:i:s')
@@ -196,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     setFlashMessage('success', "Case successfully recorded. OB Number: {$obNumber}");
 
-                    header('Location: ' . BASE_URL . '/pages/officer/dashboard.php');
+                    header('Location: ' . BASE_URL . '/pages/officer/my_cases.php');
                     exit;
                 } else {
                     $errors['general'] = $result['message'];
@@ -776,7 +777,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
     <style>
         fieldset {
-            border: 1px solid var(--light-gray);
+            border: 1px solid #737678;
             border-radius: var(--border-radius);
             padding: 1.5rem;
             margin-bottom: 1.5rem;

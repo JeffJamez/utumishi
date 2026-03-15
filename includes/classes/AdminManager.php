@@ -315,9 +315,8 @@ class AdminManager {
                 ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time,
                 COUNT(DISTINCT station_id) as active_stations,
-                COUNT(DISTINCT (CASE WHEN role = 'officer' THEN id END)) as total_officers
+                (SELECT COUNT(*) FROM users WHERE role = 'officer' AND is_active = 1) as total_officers
             FROM cases c
-            LEFT JOIN users u ON c.station_id = u.station_id
             WHERE COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
         ", ['timeframe' => $timeframe]);
     }

@@ -392,4 +392,8 @@ function validateCrimeCategory($category) {
 function validateLocation($county, $constituency) {
     return Validator::validateLocation($county, $constituency);
 }
+
+function validateCaseStatus($status) {
+    return Validator::validateCaseStatus($status);
+}
 ?>

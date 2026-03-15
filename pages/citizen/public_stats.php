@@ -669,7 +669,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         }
 
         .kpi-value {
-            font-size: 1.8rem;
+            font-size: 1rem;
             font-weight: 700;
             color: var(--primary-green);
             transition: color 0.3s ease;
