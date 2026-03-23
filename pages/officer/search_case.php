@@ -53,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
             // Add scope-based WHERE conditions
             $userRole = $currentUser['role'];
             if ($userRole === 'county_commander') {
-                // County Commander: Can search cases in their county
                 $userCounty = $db->fetchOne("
                     SELECT county_in_charge FROM users WHERE id = :id
                 ", ['id' => $currentUser['id']]);
@@ -62,8 +61,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
                     $sql .= " AND s.county = :county";
                     $params['county'] = $userCounty['county_in_charge'];
                 }
+            } elseif ($userRole === 'officer') {
+                $sql .= " AND (c.station_id = :station_id OR c.recorded_by_officer_id = :current_user_id)";
+                $params['station_id'] = $currentUser['station_id'];
+                $params['current_user_id'] = $currentUser['id'];
             } else {
-                // OCS and Officer: Can only search cases in their station
                 $sql .= " AND c.station_id = :station_id";
                 $params['station_id'] = $currentUser['station_id'];
             }
@@ -73,32 +75,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
             if ($case) {
                 // Check access permissions
                 $officerId = $officer->getOfficerData()['id'] ?? null;
-                $hasFullAccess = ($case['assigned_officer_id'] == $officerId || 
-                                $case['recorded_by_officer_id'] == $currentUser['id']);
                 
-                if ($hasFullAccess) {
+                if ($case['assigned_officer_id'] == $officerId) {
+                    // Assigned to this officer - full access
                     $searchResults = [$case];
                     $success = "Case found with full details";
-                } else {
-                    // Limited access - show minimal info but include assigned officer for follow-up
+                } elseif ($case['recorded_by_officer_id'] == $currentUser['id']) {
+                    // Recorded by this officer - limited access for citizen inquiries
                     $searchResults = [[
                         'id' => $case['id'],
                         'ob_number' => $case['ob_number'],
                         'title' => $case['title'],
                         'category' => $case['category'],
                         'status' => $case['status'],
-                         'incident_location_county' => $case['incident_location_county'],
-                         'incident_location_constituency' => $case['incident_location_constituency'],
+                        'incident_location_county' => $case['incident_location_county'],
+                        'incident_location_constituency' => $case['incident_location_constituency'],
                         'created_at' => $case['created_at'],
                         'station_name' => $case['station_name'],
                         'assigned_officer_name' => $case['assigned_officer_name'] ?? 'Unassigned',
                         'badge_number' => $case['badge_number'] ?? 'N/A',
                         'limited_access' => true
                     ]];
-                    $success = "Case found (limited details - not assigned to you)";
+                    $success = "Case found (limited details - case recorded by you)";
+                } else {
+                    $error = "Case not found";
                 }
             } else {
-                $error = "Case not found";
+                // Case not found in scope - check if it exists at all
+                $caseExists = $db->fetchOne(
+                    "SELECT c.id, s.name as station_name FROM cases c
+                     LEFT JOIN stations s ON c.station_id = s.id
+                     WHERE c.ob_number = :ob_number",
+                    ['ob_number' => $obNumber]
+                );
+                
+                if ($caseExists) {
+                    $error = "Case exists but is not within your jurisdiction. Contact the OCS at " . 
+                             htmlspecialchars($caseExists['station_name']) . 
+                             " for assistance.";
+                } else {
+                    $error = "No case found with OB number: " . htmlspecialchars($obNumber);
+                }
             }
         } catch (Exception $e) {
             error_log("Search case error: " . $e->getMessage());

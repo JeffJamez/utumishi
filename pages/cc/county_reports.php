@@ -14,15 +14,11 @@ requireRole(ROLE_ADMIN);
 $currentUser = getCurrentUser();
 $reportsManager = new CountyReportsManager();
 
-// Fetch county_in_charge from database
 $db = Database::getInstance();
 $userDetails = $db->fetchOne("SELECT county_in_charge FROM users WHERE id = :id", ['id' => $currentUser['id']]);
 $county = $userDetails['county_in_charge'] ?? null;
 
-// Debug: show county
-// var_dump($county); exit;
-
-// Handle report generation
+$reportType = $_GET['type'] ?? '';
 $reportType = $_GET['type'] ?? '';
 $reportData = [];
 $reportGenerated = false;
@@ -274,10 +270,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     <script src="<?php echo ASSETS_URL; ?>/js/validation.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Render charts when report is generated
         document.addEventListener('DOMContentLoaded', function() {
             <?php if ($reportGenerated && $reportType === 'annual' && !empty($reportData['monthly_trends'])): ?>
-            // Annual Report - Monthly Trends Chart
             const monthlyData = <?php echo json_encode($reportData['monthly_trends']); ?>;
             if (monthlyData && monthlyData.length > 0) {
                 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -324,13 +318,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
             
             <?php if ($reportGenerated && $reportType === 'annual' && !empty($reportData['category_breakdown'])): ?>
-            // Annual Report - Category Breakdown Chart
             const categoryData = <?php echo json_encode($reportData['category_breakdown']); ?>;
             if (categoryData && categoryData.length > 0) {
                 const categoryLabels = categoryData.map(c => c.category);
                 const categoryCases = categoryData.map(c => parseInt(c.case_count));
-                
-                // Simple color palette
                 const colors = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6', '#ec4899', '#6b7280'];
                 
                 new Chart(document.getElementById('categoryChart'), {
@@ -368,7 +359,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
             
             <?php if ($reportGenerated && $reportType === 'performance' && !empty($reportData['category_breakdown'])): ?>
-            // Performance Report - Resolution Rate Chart
             const perfData = <?php echo json_encode($reportData['category_breakdown']); ?>;
             const perfLabels = perfData.map(c => c.category);
             const perfRates = perfData.map(c => parseFloat(c.resolution_rate));
@@ -422,7 +412,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
             
             <?php if ($reportGenerated && $reportType === 'crime_analysis' && !empty($reportData['hotspots'])): ?>
-            // Crime Analysis Report - Hotspot Chart
             const hotspotData = <?php echo json_encode($reportData['hotspots']); ?>;
             const hotspotLabels = hotspotData.map(h => h.location);
             const hotspotCases = hotspotData.map(h => parseInt(h.case_count));

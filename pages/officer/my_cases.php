@@ -17,21 +17,13 @@ $currentUser = getCurrentUser();
 $officer = new Officer($currentUser['id']);
 $caseManager = new CaseManager();
 
-$caseFilter = sanitizeText($_GET['filter'] ?? 'all');
+$caseFilter = sanitizeText($_GET['filter'] ?? 'assigned');
 
 try {
-    $myCases = $officer->getMyCases($caseFilter);
-
-
-
-
-    // Apply case filter
-    if ($caseFilter === 'assigned') {
-        $myCases = array_filter($myCases, fn($c) => $c['case_type'] === 'assigned');
-    } elseif ($caseFilter === 'recorded') {
-        $myCases = array_filter($myCases, fn($c) => $c['case_type'] === 'recorded');
-    } elseif ($caseFilter === 'in_progress') {
-        $myCases = array_filter($myCases, fn($c) => $c['status'] === 'in_progress');
+    if ($caseFilter === 'recorded') {
+        $myCases = $officer->getRecordedCases();
+    } else {
+        $myCases = $officer->getAssignedCases();
     }
 
 } catch (Exception $e) {
@@ -65,10 +57,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 </div>
                 <div class="card-body">
                     <div class="d-flex gap-2 flex-wrap">
-                        <a href="<?php echo BASE_URL; ?>/pages/officer/my_cases.php"
-                           class="btn btn-<?php echo $caseFilter === 'all' ? 'primary' : 'outline btn-secondary'; ?>">
-                            All My Cases
-                        </a>
                         <a href="<?php echo BASE_URL; ?>/pages/officer/my_cases.php?filter=assigned"
                            class="btn btn-<?php echo $caseFilter === 'assigned' ? 'primary' : 'outline btn-secondary'; ?>">
                             Assigned
@@ -77,26 +65,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                            class="btn btn-<?php echo $caseFilter === 'recorded' ? 'primary' : 'outline btn-secondary'; ?>">
                             Recorded
                         </a>
-                        <a href="<?php echo BASE_URL; ?>/pages/officer/my_cases.php?filter=in_progress"
-                           class="btn btn-<?php echo $caseFilter === 'in_progress' ? 'primary' : 'outline btn-secondary'; ?>">
-                            In Progress
-                        </a>
-
                     </div>
                 </div>
             </div>
 
             <div class="card">
                  <div class="card-header">
-                     <h3>
-                         <?php
-                         if ($caseFilter !== 'all') {
-                             echo ucfirst($caseFilter) . ' Cases';
-                         } else {
-                             echo 'All My Cases';
-                         }
-                         ?>
-                     </h3>
+                                     <h3><?php echo ucfirst($caseFilter); ?> Cases</h3>
                      <span class="badge status-progress"><?php echo count($myCases); ?> case(s)</span>
                  </div>
 
@@ -107,11 +82,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                  <thead>
                                      <tr>
                                          <th>OB Number</th>
-                                         <th>Title</th>
-                                         <th>Reporter</th>
-                                         <th>Status</th>
-                                         <th>Type</th>
-                                         <th>Actions</th>
+                                          <th>Title</th>
+                                          <th>Reporter</th>
+                                          <th>Status</th>
+                                          <th>Actions</th>
                                      </tr>
                                  </thead>
                                  <tbody>
@@ -120,52 +94,38 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                              <td><?php echo htmlspecialchars($case['ob_number'] ?? 'N/A'); ?></td>
                                              <td><?php echo htmlspecialchars($case['title'] ?? 'No title'); ?></td>
                                              <td><?php echo htmlspecialchars($case['reporter_name'] ?? 'Unknown'); ?></td>
-                                             <td>
-                                                 <span class="badge <?php echo STATUS_COLORS[$case['status']] ?? 'status-reported'; ?>">
-                                                     <?php echo ucfirst(str_replace('_', ' ', $case['status'] ?? 'unknown')); ?>
-                                                 </span>
-                                             </td>
-                                             <td><?php echo htmlspecialchars($case['case_type'] ?? 'unknown'); ?></td>
-                                             <td>
-                                                 <?php if (($case['case_type'] ?? 'unknown') === 'assigned'): ?>
-                                                     <div class="d-flex flex-column gap-1">
-                                                         <a href="<?php echo BASE_URL; ?>/pages/officer/update_case.php?id=<?php echo $case['id']; ?>"
-                                                            class="btn btn-sm btn-primary">
-                                                             Update
-                                                         </a>
-                                                         <a href="<?php echo BASE_URL; ?>/pages/officer/view_case.php?id=<?php echo $case['id']; ?>"
-                                                            class="btn btn-sm btn-outline btn-secondary">
-                                                             View
-                                                         </a>
-                                                     </div>
-                                                 <?php else: ?>
-                                                     <a href="<?php echo BASE_URL; ?>/pages/officer/view_case.php?id=<?php echo $case['id']; ?>"
-                                                        class="btn btn-sm btn-info">
-                                                         View Details
-                                                     </a>
-                                                 <?php endif; ?>
-                                             </td>
+                                         <td>
+                                                  <span class="badge <?php echo STATUS_COLORS[$case['status']] ?? 'status-reported'; ?>">
+                                                      <?php echo ucfirst(str_replace('_', ' ', $case['status'] ?? 'unknown')); ?>
+                                                  </span>
+                                              </td>
+                                              <td>
+                                                  <div class="d-flex flex-column gap-1">
+                                                      <a href="<?php echo BASE_URL; ?>/pages/officer/view_case.php?id=<?php echo $case['id']; ?>"
+                                                         class="btn btn-sm btn-outline btn-secondary">
+                                                          View
+                                                      </a>
+                                                      <?php if ($caseFilter === 'assigned'): ?>
+                                                          <a href="<?php echo BASE_URL; ?>/pages/officer/update_case.php?id=<?php echo $case['id']; ?>"
+                                                             class="btn btn-sm btn-primary">
+                                                              Update
+                                                          </a>
+                                                      <?php endif; ?>
+                                                  </div>
+                                              </td>
                                          </tr>
                                      <?php endforeach; ?>
                                  </tbody>
                              </table>
                          </div>
                      <?php else: ?>
-                         <div class="text-center p-4">
-                             <div style="font-size: 3rem;"></div>
-                             <h4>No Cases Found</h4>
-                              <?php if ($caseFilter !== 'all'): ?>
-                                 <p class="text-muted">No cases match the selected filter.</p>
-                                 <a href="<?php echo BASE_URL; ?>/pages/officer/my_cases.php" class="btn btn-secondary">
-                                     View All Cases
-                                 </a>
-                             <?php else: ?>
-                                 <p class="text-muted">You don't have any cases assigned yet.</p>
-                                 <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-primary">
-                                     Return to Dashboard
-                                 </a>
-                             <?php endif; ?>
-                         </div>
+                     <div class="text-center p-4">
+                              <h4>No Cases Found</h4>
+                              <p class="text-muted">No cases match the selected filter.</p>
+                              <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-primary">
+                                  Return to Dashboard
+                              </a>
+                          </div>
                      <?php endif; ?>
                  </div>
              </div>
@@ -194,13 +154,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey || e.metaKey) {
                 switch(e.key) {
-                    case 'u':
-                        e.preventDefault();
-                        window.location.href = '<?php echo BASE_URL; ?>/pages/officer/my_cases.php?filter=urgent';
-                        break;
                     case 'a':
                         e.preventDefault();
-                        window.location.href = '<?php echo BASE_URL; ?>/pages/officer/my_cases.php?filter=attention';
+                        window.location.href = '<?php echo BASE_URL; ?>/pages/officer/my_cases.php?filter=assigned';
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        window.location.href = '<?php echo BASE_URL; ?>/pages/officer/my_cases.php?filter=recorded';
                         break;
                 }
             }

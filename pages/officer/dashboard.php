@@ -90,7 +90,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                      <div class="kpi-value"><?php echo $dashboardData['total_assigned'] ?? 0; ?></div>
                      <div class="kpi-label">Total Cases Assigned</div>
                      <div class="kpi-change">
-                         Cases currently assigned to you
+                         <?php echo $dashboardData['total_active'] ?? 0; ?> active (not closed)
                      </div>
                  </div>
 

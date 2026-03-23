@@ -346,19 +346,21 @@ public function getWorkloadStatus() {
 
         $sql = "
             SELECT
-                COUNT(CASE WHEN c.assigned_officer_id = ? AND c.status NOT IN ('closed') THEN 1 END) as total_assigned,
-                COUNT(CASE WHEN c.recorded_by_officer_id = ? AND c.assigned_officer_id != ? THEN 1 END) as total_recorded,
+                COUNT(CASE WHEN c.assigned_officer_id = ? THEN 1 END) as total_assigned,
+                COUNT(CASE WHEN c.assigned_officer_id = ? AND c.status NOT IN ('closed') THEN 1 END) as total_active,
+                COUNT(CASE WHEN c.recorded_by_officer_id = ? THEN 1 END) as total_recorded,
                 COUNT(CASE WHEN c.assigned_officer_id = ? AND c.status = 'closed' THEN 1 END) as total_closed,
                 COUNT(CASE WHEN c.assigned_officer_id = ? AND c.status IN ('assigned', 'in_progress', 'resolved') THEN 1 END) as total_open
             FROM cases c
         ";
 
-        $result = $this->db->fetchOne($sql, [$officerId, $this->id, $officerId, $officerId, $officerId]);
+        $result = $this->db->fetchOne($sql, [$officerId, $officerId, $this->id, $officerId, $officerId]);
 
 
 
         return [
             'total_assigned' => (int)($result['total_assigned'] ?? 0),
+            'total_active' => (int)($result['total_active'] ?? 0),
             'total_recorded' => (int)($result['total_recorded'] ?? 0),
             'total_closed' => (int)($result['total_closed'] ?? 0),
             'total_open' => (int)($result['total_open'] ?? 0)
