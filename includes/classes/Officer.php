@@ -396,39 +396,54 @@ public function getWorkloadStatus() {
     }
 
     private function canUpdateCase($caseId) {
-    $sql = "SELECT c.*, o.user_id as assigned_user_id
-            FROM cases c
-            LEFT JOIN officers o ON c.assigned_officer_id = o.id
-            WHERE c.id = :case_id
-            AND (
-                c.recorded_by_officer_id = :user_id_1
-                OR o.user_id = :user_id_2
-                OR c.station_id = (SELECT station_id FROM users WHERE id = :user_id_3)
-            )";
+        // Get station_id from officers table
+        $officer = $this->db->fetchOne("SELECT station_id FROM officers WHERE user_id = :user_id", ['user_id' => $this->id]);
+        $stationId = $officer['station_id'] ?? null;
+        
+        if (!$stationId) {
+            return false;
+        }
+        
+        $sql = "SELECT c.*, o.user_id as assigned_user_id
+                FROM cases c
+                LEFT JOIN officers o ON c.assigned_officer_id = o.id
+                WHERE c.id = :case_id
+                AND (
+                    c.recorded_by_officer_id = :user_id_1
+                    OR o.user_id = :user_id_2
+                    OR c.station_id = :station_id
+                )";
 
-    $result = $this->db->fetchOne($sql, [
-        'case_id' => $caseId,
-        'user_id_1' => $this->id,
-        'user_id_2' => $this->id,
-        'user_id_3' => $this->id
-    ]);
+        $result = $this->db->fetchOne($sql, [
+            'case_id' => $caseId,
+            'user_id_1' => $this->id,
+            'user_id_2' => $this->id,
+            'station_id' => $stationId
+        ]);
 
-    return $result !== false;
-}
+        return $result !== false;
+    }
 
     private function canUploadEvidence($caseId) {
         return $this->canUpdateCase($caseId);
     }
 
     private function canViewCase($caseId) {
+        // Get station_id from officers table
+        $officer = $this->db->fetchOne("SELECT station_id FROM officers WHERE user_id = :user_id", ['user_id' => $this->id]);
+        $stationId = $officer['station_id'] ?? null;
+        
+        if (!$stationId) {
+            return false;
+        }
 
         $sql = "SELECT 1 FROM cases c 
                 WHERE c.id = :case_id 
-                AND c.station_id = (SELECT station_id FROM users WHERE id = :user_id)";
+                AND c.station_id = :station_id";
 
         $result = $this->db->fetchOne($sql, [
             'case_id' => $caseId,
-            'user_id' => $this->id
+            'station_id' => $stationId
         ]);
 
         return $result !== false;
@@ -507,7 +522,7 @@ public function getCasesRequiringAttention() {
                        END as workload_status
                 FROM users u
                 JOIN officers o ON u.id = o.user_id
-                WHERE u.station_id = :station_id 
+                WHERE o.station_id = :station_id 
                 AND u.is_active = 1 
                 AND u.role = 'officer'
                 ORDER BY u.name";
@@ -527,7 +542,7 @@ public function getCasesRequiringAttention() {
                 JOIN officers o ON u.id = o.user_id
                 LEFT JOIN cases c ON o.id = c.assigned_officer_id
                     AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :period DAY)
-                WHERE u.station_id = :station_id
+                WHERE o.station_id = :station_id
                 AND u.is_active = 1
                 AND u.role = 'officer'
                 GROUP BY u.id, u.name, o.badge_number

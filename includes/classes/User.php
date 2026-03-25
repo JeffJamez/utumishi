@@ -19,9 +19,12 @@ class User {
     }
 
     protected function loadUserData() {
-        $sql = "SELECT u.*, s.name as station_name, s.county, s.constituency 
+        $sql = "SELECT u.id, u.national_id, u.name, u.email, u.phone, u.password, u.role, 
+                       u.county_in_charge, u.created_at, u.last_login, u.is_active, u.id_document_path,
+                       o.station_id, s.name as station_name, s.county, s.constituency 
                 FROM users u 
-                LEFT JOIN stations s ON u.station_id = s.id 
+                LEFT JOIN officers o ON u.id = o.user_id
+                LEFT JOIN stations s ON o.station_id = s.id 
                 WHERE u.id = :id AND u.is_active = 1";
 
         $this->data = $this->db->fetchOne($sql, ['id' => $this->id]);
@@ -226,6 +229,14 @@ class User {
     }
 
     private function getOCSStatistics() {
+        // Get station_id from officers table
+        $officer = $this->db->fetchOne("SELECT station_id FROM officers WHERE user_id = :user_id", ['user_id' => $this->id]);
+        $stationId = $officer['station_id'] ?? null;
+        
+        if (!$stationId) {
+            return null;
+        }
+        
         $sql = "SELECT 
                     COUNT(c.id) as total_station_cases,
                     COUNT(CASE WHEN c.status = 'resolved' THEN 1 END) as resolved_cases,
@@ -233,11 +244,11 @@ class User {
                     COUNT(CASE WHEN c.status IN ('reported', 'assigned', 'in_progress') THEN 1 END) as active_cases,
                     COUNT(DISTINCT o.id) as total_officers
                 FROM cases c
-                LEFT JOIN officers o ON c.station_id = (SELECT station_id FROM users WHERE id = :user_id)
-                WHERE c.station_id = (SELECT station_id FROM users WHERE id = :user_id)
+                LEFT JOIN officers o ON c.station_id = :station_id
+                WHERE c.station_id = :station_id
                 AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
 
-        return $this->db->fetchOne($sql, ['user_id' => $this->id]);
+        return $this->db->fetchOne($sql, ['station_id' => $stationId]);
     }
 
     private function getAdminStatistics() {
@@ -482,6 +493,65 @@ class User {
         } catch (Exception $e) {
             error_log("Find User Error: " . $e->getMessage());
             return null;
+        }
+    }
+
+    public static function findOrCreateCitizen($nationalId, $details) {
+        try {
+            $db = Database::getInstance();
+
+            $existingUser = $db->fetchOne(
+                "SELECT id, role FROM users WHERE national_id = :national_id",
+                ['national_id' => $nationalId]
+            );
+
+            if ($existingUser) {
+                $userId = $existingUser['id'];
+
+                $updateData = [
+                    'name' => sanitizeName($details['name']),
+                    'phone' => sanitizePhone($details['phone'])
+                ];
+
+                if (!empty($details['id_document_path'])) {
+                    $updateData['id_document_path'] = $details['id_document_path'];
+                }
+
+                if (!empty($details['email'])) {
+                    $updateData['email'] = sanitizeEmail($details['email']);
+                }
+
+                $db->update('users', $updateData, 'id = :id', ['id' => $userId]);
+
+                return [
+                    'exists' => true,
+                    'user_id' => $userId,
+                    'message' => 'Existing citizen updated with new details'
+                ];
+            } else {
+                $citizenData = [
+                    'national_id' => $nationalId,
+                    'name' => sanitizeName($details['name']),
+                    'phone' => sanitizePhone($details['phone']),
+                    'id_document_path' => $details['id_document_path'] ?? null,
+                    'email' => !empty($details['email']) ? sanitizeEmail($details['email']) : null,
+                    'password' => password_hash($nationalId, PASSWORD_DEFAULT),
+                    'role' => ROLE_CITIZEN,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+
+                $userId = $db->insert('users', $citizenData);
+
+                return [
+                    'exists' => false,
+                    'user_id' => $userId,
+                    'message' => 'New citizen created'
+                ];
+            }
+
+        } catch (Exception $e) {
+            error_log("FindOrCreate Citizen Error: " . $e->getMessage());
+            throw new Exception('Failed to process citizen record: ' . $e->getMessage());
         }
     }
 }

@@ -36,15 +36,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
                        u1.name as reporter_name,
                        u2.name as recorded_by_name,
                        u3.name as assigned_officer_name,
+                       u3.national_id as assigned_officer_national_id,
                        o.badge_number,
                        s.name as station_name,
-                       s.county as station_county
+                       s.county as station_county,
+                       ocs.name as ocs_name
                 FROM cases c
                 LEFT JOIN users u1 ON c.reported_by_citizen_id = u1.id
                 LEFT JOIN users u2 ON c.recorded_by_officer_id = u2.id
                 LEFT JOIN officers o ON c.assigned_officer_id = o.id
                 LEFT JOIN users u3 ON o.user_id = u3.id
                 LEFT JOIN stations s ON c.station_id = s.id
+                LEFT JOIN users ocs ON s.ocs_id = ocs.id
                 WHERE c.ob_number = :ob_number
             ";
             
@@ -93,7 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
                         'created_at' => $case['created_at'],
                         'station_name' => $case['station_name'],
                         'assigned_officer_name' => $case['assigned_officer_name'] ?? 'Unassigned',
+                        'assigned_officer_national_id' => $case['assigned_officer_national_id'] ?? 'N/A',
                         'badge_number' => $case['badge_number'] ?? 'N/A',
+                        'ocs_name' => $case['ocs_name'] ?? 'N/A',
                         'limited_access' => true
                     ]];
                     $success = "Case found (limited details - case recorded by you)";
@@ -187,9 +192,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Category:</strong> <?php echo htmlspecialchars($case['category']); ?></p>
-                                        <p class="mb-1"><strong>Assigned to:</strong> <?php echo htmlspecialchars($case['assigned_officer_name'] ?? 'Unassigned'); ?> (<?php echo htmlspecialchars($case['badge_number'] ?? 'N/A'); ?>)</p>
-                                          <p class="mb-1"><strong>Location:</strong> <?php echo htmlspecialchars($case['incident_location_county']); ?>, <?php echo htmlspecialchars($case['incident_location_constituency']); ?></p>
-                                        <p class="mb-1"><strong>Station:</strong> <?php echo htmlspecialchars($case['station_name']); ?></p>
+                                        <p class="mb-1"><strong>Assigned to:</strong> 
+                                            <?php echo htmlspecialchars($case['assigned_officer_name'] ?? 'Unassigned'); ?> | 
+                                            Badge: <?php echo htmlspecialchars($case['badge_number'] ?? 'N/A'); ?> |
+                                            National ID: <?php echo htmlspecialchars($case['assigned_officer_national_id'] ?? 'N/A'); ?>
+                                        </p>
+                                        <p class="mb-1"><strong>Station:</strong> <?php echo htmlspecialchars($case['station_name']); ?> - OCS: <?php echo htmlspecialchars($case['ocs_name'] ?? 'N/A'); ?></p>
                                     </div>
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($case['created_at'])); ?></p>

@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/utils/ob_generator.php';
 require_once __DIR__ . '/../../includes/utils/file_upload.php';
 require_once __DIR__ . '/../../includes/classes/CaseManager.php';
+require_once __DIR__ . '/../../includes/classes/User.php';
 
 requireRole(ROLE_OFFICER);
 
@@ -119,7 +120,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $db = Database::getInstance();
 
-            // Handle citizen ID document upload
             $citizenIdDocumentPath = null;
             if (isset($_FILES['citizen_id_document']) && $_FILES['citizen_id_document']['error'] !== UPLOAD_ERR_NO_FILE) {
                 $uploadResult = uploadCitizenIdDocument($_FILES['citizen_id_document'], $formData['citizen_national_id']);
@@ -131,44 +131,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (empty($errors)) {
-                $citizen = $db->fetchOne(
-                    "SELECT id FROM users WHERE national_id = :national_id AND role = 'citizen'",
-                    ['national_id' => $formData['citizen_national_id']]
-                );
+                $citizenDetails = [
+                    'name' => $formData['citizen_name'],
+                    'phone' => $formData['citizen_phone'],
+                    'id_document_path' => $citizenIdDocumentPath,
+                    'email' => null
+                ];
 
-                if (!$citizen) {
+                $citizenResult = User::findOrCreateCitizen($formData['citizen_national_id'], $citizenDetails);
 
-                    $citizenData = [
-                        'national_id' => $formData['citizen_national_id'],
-                        'name' => $formData['citizen_name'],
-                        'phone' => $formData['citizen_phone'],
-                        'id_document_path' => $citizenIdDocumentPath,
-                        'email' => null,
-                        'password' => password_hash($formData['citizen_national_id'], PASSWORD_DEFAULT),
-                        'role' => ROLE_CITIZEN,
-                        'created_at' => date('Y-m-d H:i:s')
-                    ];
-
-                    $citizenId = $db->insert('users', $citizenData);
-
-                    if (!$citizenId) {
-                        throw new Exception('Failed to create citizen record');
-                    }
-                } else {
-                    $citizenId = $citizen['id'];
-
-                    $updateData = [
-                        'name' => $formData['citizen_name'],
-                        'phone' => $formData['citizen_phone']
-                    ];
-                    if ($citizenIdDocumentPath) {
-                        $updateData['id_document_path'] = $citizenIdDocumentPath;
-                    }
-
-                    $db->update('users', $updateData, 'id = :id', ['id' => $citizenId]);
+                if (!$citizenResult) {
+                    throw new Exception('Failed to process citizen record');
                 }
 
-                // Create case only after successful citizen handling
+                $citizenId = $citizenResult['user_id'];
+
                 $caseData = [
                     'title' => $formData['title'],
                     'description' => $formData['description'],
@@ -273,6 +250,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         type="tel" 
                                         id="citizen_phone" 
                                         name="citizen_phone" 
+                                        autocomplete="off"
                                         class="form-control <?php echo isset($errors['citizen_phone']) ? 'error' : ''; ?>"
                                         placeholder="0701234567"
                                         value="<?php echo htmlspecialchars($formData['citizen_phone'] ?? ''); ?>"
@@ -291,6 +269,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     type="text" 
                                     id="citizen_national_id" 
                                     name="citizen_national_id" 
+                                    autocomplete="off"
                                     class="form-control <?php echo isset($errors['citizen_national_id']) ? 'error' : ''; ?>"
                                     placeholder="12345678"
                                     value="<?php echo htmlspecialchars($formData['citizen_national_id'] ?? ''); ?>"

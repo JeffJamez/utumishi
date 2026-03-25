@@ -38,10 +38,9 @@ class ScopeValidation {
      */
     public function canAccessOfficer($officerId, $currentUser) {
         $officer = $this->db->fetchOne("
-            SELECT o.id, u.station_id, s.county
+            SELECT o.id, o.station_id, s.county
             FROM officers o
-            JOIN users u ON o.user_id = u.id
-            JOIN stations s ON u.station_id = s.id
+            JOIN stations s ON o.station_id = s.id
             WHERE o.id = :officer_id
         ", ['officer_id' => $officerId]);
 
@@ -142,7 +141,7 @@ class ScopeValidation {
 
             if ($userCounty && $userCounty['county_in_charge']) {
                 return [
-                    'where' => "u.station_id IN (SELECT id FROM stations WHERE county = :user_county)",
+                    'where' => "o.station_id IN (SELECT id FROM stations WHERE county = :user_county)",
                     'params' => ['user_county' => $userCounty['county_in_charge']]
                 ];
             }
@@ -150,7 +149,7 @@ class ScopeValidation {
 
         // OCS and Officer: Filter by station
         return [
-            'where' => "u.station_id = :user_station",
+            'where' => "o.station_id = :user_station",
             'params' => ['user_station' => $userStationId]
         ];
     }
@@ -199,10 +198,9 @@ class ScopeValidation {
         ", ['case_id' => $caseId]);
 
         $officer = $this->db->fetchOne("
-            SELECT u.station_id
-            FROM officers o
-            JOIN users u ON o.user_id = u.id
-            WHERE o.id = :officer_id
+            SELECT station_id
+            FROM officers 
+            WHERE id = :officer_id
         ", ['officer_id' => $officerId]);
 
         if (!$case || !$officer) {

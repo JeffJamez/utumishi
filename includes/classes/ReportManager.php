@@ -247,7 +247,7 @@ class ReportManager {
             FROM officers o
             JOIN users u ON o.user_id = u.id
             LEFT JOIN cases c ON o.id = c.assigned_officer_id
-            WHERE u.station_id = :station_id AND u.is_active = 1
+            WHERE o.station_id = :station_id AND u.is_active = 1
             GROUP BY u.name, o.badge_number, o.current_case_load, o.total_cases_resolved
             ORDER BY o.current_case_load DESC
         ", ['station_id' => $stationId]);
@@ -260,7 +260,7 @@ class ReportManager {
                 COUNT(CASE WHEN o.current_case_load > 10 THEN 1 END) as overloaded_officers
             FROM officers o
             JOIN users u ON o.user_id = u.id
-            WHERE u.station_id = :station_id AND u.is_active = 1
+            WHERE o.station_id = :station_id AND u.is_active = 1
         ", ['station_id' => $stationId]);
 
         return [
@@ -277,9 +277,10 @@ class ReportManager {
     public function generateStationOverviewReport($stationId) {
         // Get station information
         $stationInfo = $this->db->fetchOne("
-            SELECT s.*, u.name as commander_name 
+            SELECT s.*, u.name as ocs_name, cc.name as county_commander_name 
             FROM stations s 
-            LEFT JOIN users u ON s.commander_id = u.id 
+            LEFT JOIN users u ON s.ocs_id = u.id 
+            LEFT JOIN users cc ON s.county_commander_id = cc.id
             WHERE s.id = :station_id
         ", ['station_id' => $stationId]);
 

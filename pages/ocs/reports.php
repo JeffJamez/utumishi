@@ -364,6 +364,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             const perfLabels = perfData.map(c => c.category);
             const perfRates = perfData.map(c => parseFloat(c.resolution_rate));
             
+            const perfChartColors = {
+                success: '#22c55e',
+                warning: '#f59e0b',
+                danger: '#ef4444'
+            };
+            
             new Chart(document.getElementById('performanceChart'), {
                 type: 'bar',
                 data: {
@@ -372,12 +378,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         label: 'Resolution Rate (%)',
                         data: perfRates,
                         backgroundColor: perfLabels.map((_, i) => 
-                            perfRates[i] >= 80 ? ChartUtils.colors.success : 
-                            perfRates[i] >= 50 ? ChartUtils.colors.warning : ChartUtils.colors.danger
+                            perfRates[i] >= 80 ? perfChartColors.success : 
+                            perfRates[i] >= 50 ? perfChartColors.warning : perfChartColors.danger
                         ),
                         borderColor: perfLabels.map((_, i) => 
-                            perfRates[i] >= 80 ? ChartUtils.colors.success : 
-                            perfRates[i] >= 50 ? ChartUtils.colors.warning : ChartUtils.colors.danger
+                            perfRates[i] >= 80 ? perfChartColors.success : 
+                            perfRates[i] >= 50 ? perfChartColors.warning : perfChartColors.danger
                         ),
                         borderWidth: 1
                     }]
@@ -417,6 +423,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             const hotspotLabels = hotspotData.map(h => h.location);
             const hotspotCases = hotspotData.map(h => parseInt(h.case_count));
             
+            const hotspotChartColors = {
+                danger: '#ef4444'
+            };
+            
             new Chart(document.getElementById('hotspotChart'), {
                 type: 'bar',
                 data: {
@@ -424,8 +434,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     datasets: [{
                         label: 'Case Count',
                         data: hotspotCases,
-                        backgroundColor: ChartUtils.colors.danger,
-                        borderColor: ChartUtils.colors.danger,
+                        backgroundColor: hotspotChartColors.danger,
+                        borderColor: hotspotChartColors.danger,
                         borderWidth: 1
                     }]
                 },

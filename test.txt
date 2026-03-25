@@ -1,26 +1,44 @@
 Test Accounts:  
 
 ======COUNTY  COMMANDERS    =========
-NAKURU - 20987645 / 20987645
-NAIROBI - 27897657 / 27897657
-MOMBASA - 20984676 / 20984676
-KISUMU - 29875538 / 29875538
-ELDORET - 29567564 / 29567564
+| commander_name                 | national_id | county_jurisdiction |
+|--------------------------------|-------------|---------------------|
+| John Wanjiku                   | 12345678    | Nairobi             |
+| County Chief Richard Barasa    | 20984676    | Mombasa             |
+| County Chief Margaret Mbone    | 20987645    | Nakuru              |
+| County Commander Judith Wacera | 29875538    | Kisumu              |
+| Inspector Lily Kibaki          | 56002708    | Eldoret             |
+| Sergeant Margaret Korir        | 25653542    | Kiambu              |
+| County Chief James Morara      | 29567564    | Uasin Gishu         |
 
 
 ========= OCS ACCOUNTS   ========
-OCS: 34567890 / 34567890
-OCS: 23456789 / 23456789
-OCS: 89012345 / 89012345
+| ocs_name                   | ocs_national_id | station_name                 | county       |
+|----------------------------|-----------------|------------------------------|--------------|
+| C Officer Lawrence Wanyama | 22222222        | Nakuru Naivasha Police       | Nakuru       |
+| Chief Officer Ann Ndung'u  | 67890123        | Langata Police Station       | Nairobi      |
+| Inspector Andrew Mbone     | 75180805        | Mombasa Central Police       | Mombasa      |
+| Inspector Douglas Okoth    | 47594160        | Central Police Station       | Nairobi      |
+| OCS Eliza Waithaka         | 89012345        | Kiambu Police Station        | Kiambu       |
+| Constable Jane Kimani      | 97414857        | Kisumu Central Police        | Kisumu       |
+| St Commander Winnie Nyamai | 47966796        | Nairobi Westlands Police     | Nairobi      |
+| StCommander Richard Kimani | 11111111        | Kisumu Milimani Police       | Kisumu       |
+| Constable Judith Kipchoge  | 25319327        | Mombasa Central Police Stn   | Mombasa      |
+| Chief Officer Ann Gathoni  | 13046462        | Nairobi Central Police Stn   | Nairobi      |
+| Officer Peter Nyokabi      | 60870847        | Eldoret Police Station       | Uasin Gishu  |
+| Inspector Vincent Kagendo  | 67542005        | Nakuru Central Police        | Nakuru       |
+| OCS Mary Opondo            | 33333333        | Eldoret Soy Police           | Eldoret      |
+| Constable James Onyango    | 90494433        | Mombasa Likoni Police        | Mombasa      |
+| Inspector Florence Maitso  | 91955099        | Nairobi Eastlands Police     | Nairobi      |
+| Constable Clara Otieno     | 64923623        | Eldoret Central Police       | Eldoret      |
+
 
 
 ========= Officer ACCOUNTS   ========
-Officer : 98064685 / 98064685
-Officer : 13529994 / 13529994
-Officer : 45678902 / 45678902
+Officer : 45678901 / 45678901
+Officer : 56789012 / 56789012
 
 
 ========= CITIZEN ACCOUNTS   ========
-Citizen: 21115632 / 21115632
-Citizen: 25125051 / 25125051
-Citizen: 27973603 / 27973603
+Citizen: 44444444 / 44444444
+Citizen: 55555555 / 55555555

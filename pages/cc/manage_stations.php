@@ -27,8 +27,7 @@ if ($_POST) {
                 'county' => $_POST['county'],
                 'constituency' => $_POST['constituency'],
                 'address' => $_POST['address'],
-                'contact_phone' => $_POST['contact_phone'],
-                'commander_id' => !empty($_POST['commander_id']) ? $_POST['commander_id'] : null
+                'contact_phone' => $_POST['contact_phone']
             ];
             
             $result = $adminManager->updateStation($_POST['station_id'], $stationData);
@@ -65,7 +64,7 @@ try {
         SELECT u.id, u.name, o.badge_number, s.name as current_station
         FROM users u
         JOIN officers o ON u.id = o.user_id
-        LEFT JOIN stations s ON u.station_id = s.id
+        LEFT JOIN stations s ON o.station_id = s.id
         WHERE $ocsWhere
         ORDER BY u.name
     ", $ocsParams);
@@ -109,7 +108,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                      <tr>
                                          <th>Station</th>
                                          <th>Location</th>
-                                         <th>Commander (OCS)</th>
+                                         <th>(OCS)</th>
                                          <th>Officers</th>
                                          <th>Cases</th>
                                          <th>Actions</th>
@@ -130,10 +129,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 <small class="text-muted"><?php echo htmlspecialchars($station['county']); ?> County</small>
                                             </td>
                                             <td>
-                                                <?php if ($station['commander_name']): ?>
-                                                    <?php echo htmlspecialchars($station['commander_name']); ?>
+                                                <?php if ($station['ocs_name']): ?>
+                                                    <?php echo htmlspecialchars($station['ocs_name']); ?>
                                                 <?php else: ?>
-                                                    <span class="text-warning">No Commander</span>
+                                                    <span class="text-warning">No OCS</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td>
@@ -192,7 +191,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             const station = stations.find(s => s.id == id);
 
             if (station) {
-                const commanderName = station.commander_name || 'No Commander Assigned';
+                const ocsName = station.ocs_name || 'No OCS Assigned';
+                const countyCommanderName = station.county_commander_name || 'No County Commander';
                 const content = `
                     <div class="row">
                         <div class="col-md-6">
@@ -203,7 +203,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <p><strong>Constituency:</strong> ${station.constituency}</p>
                             <p><strong>Contact Phone:</strong> ${station.contact_phone || 'Not provided'}</p>
                             <p><strong>Address:</strong> ${station.address || 'Not provided'}</p>
-                            <p><strong>Commander:</strong> ${commanderName}</p>
+                            <p><strong>OCS:</strong> ${ocsName}</p>
+                            <p><strong>County Commander:</strong> ${countyCommanderName}</p>
                         </div>
                         <div class="col-md-6">
                             <h5>Assigned Officers</h5>

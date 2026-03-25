@@ -48,8 +48,8 @@ try {
     $alerts = $crimeAnalyzer->generateAlerts($stationId);
 
     $stationInfo = getDB()->fetchOne(
-        "SELECT s.*, u.name as commander_name FROM stations s 
-         LEFT JOIN users u ON s.commander_id = u.id 
+        "SELECT s.*, u.name as ocs_name FROM stations s 
+         LEFT JOIN users u ON s.ocs_id = u.id 
          WHERE s.id = :id", 
         ['id' => $stationId]
     );

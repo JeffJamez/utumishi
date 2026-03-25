@@ -181,7 +181,7 @@ class CaseManager {
         $sql = "SELECT o.*, u.name 
                 FROM officers o
                 JOIN users u ON o.user_id = u.id
-                WHERE u.station_id = :station_id 
+                WHERE o.station_id = :station_id 
                 AND u.is_active = 1
                 AND u.role = 'officer'
                 AND (o.expertise_categories LIKE :category OR o.expertise_categories LIKE '%Other%')
@@ -240,16 +240,18 @@ class CaseManager {
 
     if (!$userId) {
         $sql = "SELECT c.*,
-                       u1.name as reporter_name, u1.phone as reporter_phone,
+                       u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone,
                        u2.name as recorded_by_name,
-                       u3.name as assigned_officer_name, o.badge_number,
-                       s.name as station_name, s.county as station_county
+                       u3.name as assigned_officer_name, u3.national_id as assigned_officer_national_id, o.badge_number,
+                       s.name as station_name, s.county as station_county,
+                       ocs.name as ocs_name
                 FROM cases c
                 JOIN users u1 ON c.reported_by_citizen_id = u1.id
                 JOIN users u2 ON c.recorded_by_officer_id = u2.id
                 LEFT JOIN officers o ON c.assigned_officer_id = o.id
                 LEFT JOIN users u3 ON o.user_id = u3.id
                 JOIN stations s ON c.station_id = s.id
+                LEFT JOIN users ocs ON s.ocs_id = ocs.id
                 WHERE c.id = :id";
 
         $result = $this->db->fetchOne($sql, ['id' => $caseId]);
@@ -259,24 +261,30 @@ class CaseManager {
         return $result;
     }
 
-    // Get user details to determine scope
-    $user = $this->db->fetchOne("SELECT role, station_id, county_in_charge FROM users WHERE id = :id", ['id' => $userId]);
+    // Get user details to determine scope (dual-read: officers table with fallback to users)
+    $user = $this->db->fetchOne("SELECT id, role, county_in_charge FROM users WHERE id = :id", ['id' => $userId]);
     if (!$user) {
         return null;
     }
+    
+    // Get station_id from officers table
+    $officer = $this->db->fetchOne("SELECT station_id FROM officers WHERE user_id = :user_id", ['user_id' => $userId]);
+    $user['station_id'] = $officer['station_id'] ?? null;
 
     $sql = "
         SELECT c.*,
                u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone,
                u2.name as recorded_by_name,
-               u3.name as assigned_officer_name, o.badge_number, o.user_id as assigned_officer_user_id,
-               s.name as station_name, s.county as station_county
+               u3.name as assigned_officer_name, u3.national_id as assigned_officer_national_id, o.badge_number, o.user_id as assigned_officer_user_id,
+               s.name as station_name, s.county as station_county,
+               ocs.name as ocs_name
         FROM cases c
         JOIN users u1 ON c.reported_by_citizen_id = u1.id
         JOIN users u2 ON c.recorded_by_officer_id = u2.id
         LEFT JOIN officers o ON c.assigned_officer_id = o.id
         LEFT JOIN users u3 ON o.user_id = u3.id
         JOIN stations s ON c.station_id = s.id
+        LEFT JOIN users ocs ON s.ocs_id = ocs.id
         WHERE c.id = :case_id
     ";
 
@@ -448,11 +456,15 @@ class CaseManager {
     }
 
     private function canOfficerUpdateCase($caseId, $officerId) {
-    // Get user details
-    $user = $this->db->fetchOne("SELECT id, role, station_id, county_in_charge FROM users WHERE id = :id", ['id' => $officerId]);
+    // Get user details (dual-read: officers table with fallback to users)
+    $user = $this->db->fetchOne("SELECT id, role, county_in_charge FROM users WHERE id = :id", ['id' => $officerId]);
     if (!$user) {
         return false;
     }
+    
+    // Get station_id from officers table
+    $officer = $this->db->fetchOne("SELECT station_id FROM officers WHERE user_id = :user_id", ['user_id' => $officerId]);
+    $user['station_id'] = $officer['station_id'] ?? null;
 
     // Get case details
     $case = $this->db->fetchOne("

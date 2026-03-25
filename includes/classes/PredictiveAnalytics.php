@@ -507,7 +507,7 @@ class PredictiveAnalytics {
             SELECT COUNT(*) as officer_count
             FROM officers o
             JOIN users u ON o.user_id = u.id
-            WHERE u.station_id = :station_id AND u.is_active = 1
+            WHERE o.station_id = :station_id AND u.is_active = 1
         ", ['station_id' => $stationId]);
 
         return round(($result['officer_count'] ?? 5) * 0.8);

@@ -258,7 +258,7 @@ class CrimeAnalyzer {
 
         $params = [];
         if ($stationId) {
-            $sql .= " WHERE u.station_id = :station_id";
+            $sql .= " WHERE o.station_id = :station_id";
             $params['station_id'] = $stationId;
         }
 
@@ -326,8 +326,8 @@ class CrimeAnalyzer {
                     COUNT(c.id) as case_count,
                     ROUND(COUNT(c.id) / NULLIF(COUNT(DISTINCT o.id), 0), 1) as cases_per_officer
                 FROM stations s
-                LEFT JOIN users u ON s.id = u.station_id AND u.role = 'officer' AND u.is_active = 1
-                LEFT JOIN officers o ON u.id = o.user_id
+                LEFT JOIN officers o ON s.id = o.station_id
+                LEFT JOIN users u ON o.user_id = u.id AND u.is_active = 1
                 LEFT JOIN cases c ON o.id = c.assigned_officer_id AND c.status NOT IN ('closed')";
 
         $params = [];

@@ -246,7 +246,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     <strong>Reporter:</strong>
                                     <div><?php echo htmlspecialchars($caseDetails['reporter_name'] ?? 'N/A'); ?></div>
                                     <?php if ($caseDetails['reporter_phone']): ?>
-                                        <small class="text-muted"><?php echo htmlspecialchars($caseDetails['reporter_phone']); ?></small>
+                                        <small class="text-muted"><?php echo htmlspecialchars($caseDetails['reporter_phone']); ?></small> <br>
+                                    <?php endif; ?>
+
+                                     <?php if ($caseDetails['reporter_national_id']): ?>
+                                        <small class="text-muted">National Id: <?php echo htmlspecialchars($caseDetails['reporter_national_id']); ?></small> <br>
                                     <?php endif; ?>
                                 </div>
 

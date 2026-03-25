@@ -141,8 +141,8 @@ class CountyReportsManager {
                 ROUND(COUNT(c.id) / NULLIF(COUNT(DISTINCT o.id), 0), 1) as cases_per_officer
             FROM stations s
             LEFT JOIN cases c ON s.id = c.station_id AND COALESCE(c.occurred_at, c.created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
-            LEFT JOIN users u ON s.id = u.station_id AND u.role = 'officer' AND u.is_active = 1
-            LEFT JOIN officers o ON u.id = o.user_id
+            LEFT JOIN officers o ON s.id = o.station_id
+            LEFT JOIN users u ON o.user_id = u.id AND u.is_active = 1
             WHERE $where
             GROUP BY s.id, s.name, s.county, s.constituency
             ORDER BY resolution_rate DESC, total_cases DESC

@@ -36,7 +36,7 @@ class Auth {
                 $params['role'] = $role;
             }
 
-            $sql = "SELECT id, national_id, name, email, phone, password, role, station_id, last_login 
+            $sql = "SELECT id, national_id, name, email, phone, password, role, last_login 
                     FROM users 
                     WHERE {$whereClause}";
 
@@ -76,7 +76,14 @@ class Auth {
         $_SESSION['national_id'] = $user['national_id'];
         $_SESSION['name'] = $user['name'];
         $_SESSION['role'] = $user['role'];
-        $_SESSION['station_id'] = $user['station_id'];
+        
+        // Get station_id from officers table
+        $officer = $this->db->fetchOne(
+            "SELECT station_id FROM officers WHERE user_id = :user_id",
+            ['user_id' => $user['id']]
+        );
+        $_SESSION['station_id'] = $officer['station_id'] ?? null;
+        
         $_SESSION['last_activity'] = time();
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 
@@ -109,7 +116,7 @@ class Auth {
         }
 
         $db = Database::getInstance();
-        $sql = "SELECT id, national_id, name, phone, email, role, station_id 
+        $sql = "SELECT id, national_id, name, phone, email, role 
                 FROM users 
                 WHERE id = :id AND is_active = 1";
 
@@ -126,7 +133,14 @@ class Auth {
         $_SESSION['phone'] = $user['phone'];      
         $_SESSION['email'] = $user['email'];      
         $_SESSION['role'] = $user['role'];
-        $_SESSION['station_id'] = $user['station_id'];
+        
+        // Get station_id from officers table
+        $officer = $db->fetchOne(
+            "SELECT station_id FROM officers WHERE user_id = :user_id",
+            ['user_id' => $user['id']]
+        );
+        $stationId = $officer['station_id'] ?? null;
+        $_SESSION['station_id'] = $stationId;
 
         return [
             'id' => $user['id'],
@@ -135,7 +149,7 @@ class Auth {
             'phone' => $user['phone'],           
             'email' => $user['email'],           
             'role' => $user['role'],
-            'station_id' => $user['station_id']
+            'station_id' => $stationId
         ];
     }
 
@@ -300,9 +314,10 @@ class Auth {
             return null;
         }
 
+        // Get station from officers table
         $sql = "SELECT s.* FROM stations s 
-                JOIN users u ON s.id = u.station_id 
-                WHERE u.id = :user_id";
+                JOIN officers o ON s.id = o.station_id 
+                WHERE o.user_id = :user_id";
 
         return $this->db->fetchOne($sql, ['user_id' => $userId]);
     }

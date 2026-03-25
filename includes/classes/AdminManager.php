@@ -19,7 +19,7 @@ class AdminManager {
         $params = [];
 
         if (!empty($filters['station_id'])) {
-            $whereConditions[] = "u.station_id = :station_id";
+            $whereConditions[] = "o.station_id = :station_id";
             $params['station_id'] = $filters['station_id'];
         }
 
@@ -61,7 +61,7 @@ class AdminManager {
                 s.constituency
             FROM users u
             JOIN officers o ON u.id = o.user_id
-            LEFT JOIN stations s ON u.station_id = s.id
+            LEFT JOIN stations s ON o.station_id = s.id
             WHERE $whereClause
             ORDER BY s.name ASC, u.name ASC
         ", $params);
@@ -169,7 +169,7 @@ class AdminManager {
             $this->db->beginTransaction();
 
             $officer = $this->db->fetchOne("
-                SELECT o.user_id, u.station_id as old_station_id, u.name 
+                SELECT o.user_id, o.station_id as old_station_id, u.name 
                 FROM officers o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :id
@@ -187,11 +187,11 @@ class AdminManager {
                 }
             }
 
-            // Update station assignment
-            $this->db->update('users', 
+            // Update station assignment in officers table
+            $this->db->update('officers', 
                 ['station_id' => $newStationId], 
                 'id = :id', 
-                ['id' => $officer['user_id']]
+                ['id' => $officerId]
             );
 
             // Log the transfer (you could create a transfers table for audit)
@@ -261,12 +261,15 @@ class AdminManager {
         return $this->db->fetchAll("
             SELECT
                 s.*,
-                u.name as commander_name,
-                COUNT(DISTINCT users.id) as officer_count,
+                u.name as ocs_name,
+                cc.name as county_commander_name,
+                COUNT(DISTINCT o.id) as officer_count,
                 COUNT(DISTINCT cases.id) as total_cases
             FROM stations s
-            LEFT JOIN users u ON s.commander_id = u.id
-            LEFT JOIN users ON s.id = users.station_id AND users.role = 'officer' AND users.is_active = 1
+            LEFT JOIN users u ON s.ocs_id = u.id
+            LEFT JOIN users cc ON s.county_commander_id = cc.id
+            LEFT JOIN officers o ON s.id = o.station_id
+            LEFT JOIN users ou ON o.user_id = ou.id AND ou.is_active = 1
             LEFT JOIN cases ON s.id = cases.station_id
             WHERE $where
             GROUP BY s.id
@@ -362,7 +365,7 @@ class AdminManager {
                 s.constituency
             FROM officers o
             JOIN users u ON o.user_id = u.id
-            LEFT JOIN stations s ON u.station_id = s.id
+            LEFT JOIN stations s ON o.station_id = s.id
             WHERE o.id = :id
         ", ['id' => $officerId]);
 

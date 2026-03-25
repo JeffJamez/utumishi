@@ -363,6 +363,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             const perfLabels = perfData.map(c => c.category);
             const perfRates = perfData.map(c => parseFloat(c.resolution_rate));
             
+            const perfChartColors = {
+                success: '#22c55e',
+                warning: '#f59e0b',
+                danger: '#ef4444'
+            };
+            
             new Chart(document.getElementById('performanceChart'), {
                 type: 'bar',
                 data: {
@@ -371,12 +377,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         label: 'Resolution Rate (%)',
                         data: perfRates,
                         backgroundColor: perfLabels.map((_, i) => 
-                            perfRates[i] >= 80 ? ChartUtils.colors.success : 
-                            perfRates[i] >= 50 ? ChartUtils.colors.warning : ChartUtils.colors.danger
+                            perfRates[i] >= 80 ? perfChartColors.success : 
+                            perfRates[i] >= 50 ? perfChartColors.warning : perfChartColors.danger
                         ),
                         borderColor: perfLabels.map((_, i) => 
-                            perfRates[i] >= 80 ? ChartUtils.colors.success : 
-                            perfRates[i] >= 50 ? ChartUtils.colors.warning : ChartUtils.colors.danger
+                            perfRates[i] >= 80 ? perfChartColors.success : 
+                            perfRates[i] >= 50 ? perfChartColors.warning : perfChartColors.danger
                         ),
                         borderWidth: 1
                     }]
@@ -412,10 +418,22 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <?php endif; ?>
             
             <?php if ($reportGenerated && $reportType === 'crime_analysis' && !empty($reportData['hotspots'])): ?>
+            console.log('Crime analysis chart: checking conditions...');
+            console.log('ChartUtils available:', typeof ChartUtils !== 'undefined');
+            console.log('Chart available:', typeof Chart !== 'undefined');
             const hotspotData = <?php echo json_encode($reportData['hotspots']); ?>;
+            console.log('Hotspot data:', hotspotData);
             const hotspotLabels = hotspotData.map(h => h.location);
             const hotspotCases = hotspotData.map(h => parseInt(h.case_count));
             
+            const chartColors = {
+                primary: '#3b82f6',
+                success: '#22c55e',
+                warning: '#f59e0b',
+                danger: '#ef4444'
+            };
+            
+            try {
             new Chart(document.getElementById('hotspotChart'), {
                 type: 'bar',
                 data: {
@@ -423,8 +441,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     datasets: [{
                         label: 'Case Count',
                         data: hotspotCases,
-                        backgroundColor: ChartUtils.colors.danger,
-                        borderColor: ChartUtils.colors.danger,
+                        backgroundColor: chartColors.danger,
+                        borderColor: chartColors.danger,
                         borderWidth: 1
                     }]
                 },
@@ -448,6 +466,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     }
                 }
             });
+            } catch (e) {
+                console.error('Chart error:', e);
+            }
             <?php endif; ?>
         });
     </script>

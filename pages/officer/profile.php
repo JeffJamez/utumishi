@@ -21,7 +21,7 @@ if ($currentUser['role'] === 'county_commander' && $viewOfficerId !== $currentUs
     $userDetails = getDB()->fetchOne("SELECT county_in_charge FROM users WHERE id = :id", ['id' => $currentUser['id']]);
     $county = $userDetails['county_in_charge'] ?? null;
 
-    $officerStation = getDB()->fetchOne("SELECT s.county FROM users u JOIN stations s ON u.station_id = s.id WHERE u.id = :id", ['id' => $viewOfficerId]);
+    $officerStation = getDB()->fetchOne("SELECT s.county FROM officers o JOIN stations s ON o.station_id = s.id WHERE o.user_id = :id", ['id' => $viewOfficerId]);
     if (!$officerStation || $officerStation['county'] !== $county) {
         die("Access denied: Officer not in your county.");
     }

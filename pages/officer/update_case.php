@@ -379,7 +379,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 </form>
                             <?php else: ?>
                                 <div class="text-center p-4">
-                                    <div style="font-size: 3rem;">✅</div>
                                     <h4>Case Resolved</h4>
                                     <p class="text-muted">This case has been resolved. Request closure for final approval.</p>
                                     <form method="POST" action="" style="display: inline;">

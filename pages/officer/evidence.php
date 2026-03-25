@@ -243,8 +243,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div class="card">
                 <div class="card-header">
                     <h3>Evidence for Case: <?php echo htmlspecialchars($selectedCase['ob_number']); ?></h3>
-                    <a href="<?php echo BASE_URL; ?>/pages/<?php echo $isOCS ? 'ocs' : 'officer'; ?>/evidence.php" class="btn btn-sm btn-outline btn-secondary">
-                        ← Back to Cases
+                    <a href="<?php echo BASE_URL; ?>/pages/<?php echo $isOCS ? 'ocs/station_cases.php' : 'officer/evidence.php'; ?>" class="btn btn-sm btn-outline btn-secondary">
+                        Back to Cases
                     </a>
                 </div>
                     <div class="card-body">

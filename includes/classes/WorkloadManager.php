@@ -56,7 +56,7 @@ class WorkloadManager {
             FROM officers o
             JOIN users u ON o.user_id = u.id
             LEFT JOIN cases c ON o.id = c.assigned_officer_id AND c.status NOT IN ('closed')
-            WHERE u.station_id = :station_id AND u.is_active = 1
+            WHERE o.station_id = :station_id AND u.is_active = 1
             GROUP BY o.id, u.id, u.name, u.email, u.phone, o.badge_number, 
                      o.current_case_load, o.total_cases_resolved, o.avg_resolution_time_hours, o.expertise_categories
             ORDER BY o.current_case_load ASC, u.name ASC
@@ -110,7 +110,7 @@ class WorkloadManager {
                 SUM(o.current_case_load) as total_active_cases
             FROM officers o
             JOIN users u ON o.user_id = u.id
-            WHERE u.station_id = :station_id AND u.is_active = 1
+            WHERE o.station_id = :station_id AND u.is_active = 1
         ", ['station_id' => $stationId]);
 
         return $result ?: [
@@ -147,7 +147,7 @@ class WorkloadManager {
             
             // Verify officer exists and get their station
             $officer = $this->db->fetchOne("
-                SELECT o.id, u.station_id 
+                SELECT o.id, o.station_id 
                 FROM officers o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :officer_id AND u.is_active = 1
@@ -212,14 +212,14 @@ class WorkloadManager {
             
             // Verify both officers exist and get their stations
             $fromOfficer = $this->db->fetchOne("
-                SELECT o.id, u.station_id 
+                SELECT o.id, o.station_id 
                 FROM officers o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :officer_id
             ", ['officer_id' => $fromOfficerId]);
             
             $toOfficer = $this->db->fetchOne("
-                SELECT o.id, u.station_id 
+                SELECT o.id, o.station_id 
                 FROM officers o 
                 JOIN users u ON o.user_id = u.id 
                 WHERE o.id = :officer_id AND u.is_active = 1
@@ -373,7 +373,7 @@ class WorkloadManager {
                 o.expertise_categories
             FROM officers o
             JOIN users u ON o.user_id = u.id
-            WHERE u.station_id = :station_id 
+            WHERE o.station_id = :station_id 
             AND u.is_active = 1
             AND (
                 JSON_CONTAINS(o.expertise_categories, :category_json)
@@ -409,7 +409,7 @@ class WorkloadManager {
                 o.current_case_load
             FROM officers o
             JOIN users u ON o.user_id = u.id
-            WHERE u.station_id = :station_id 
+            WHERE o.station_id = :station_id 
             AND u.is_active = 1
             ORDER BY o.current_case_load ASC, u.name ASC
             LIMIT 1

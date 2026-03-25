@@ -30,7 +30,7 @@ if ($isCountyCommander) {
 } elseif ($isOCS || $isOfficer) {
     // OCS and officers are scoped to their station's county
     $db = Database::getInstance();
-    $stationDetails = $db->fetchOne("SELECT s.county FROM stations s JOIN users u ON s.id = u.station_id WHERE u.id = :id", ['id' => $currentUser['id']]);
+    $stationDetails = $db->fetchOne("SELECT s.county FROM stations s JOIN officers o ON s.id = o.station_id WHERE o.user_id = :id", ['id' => $currentUser['id']]);
     $userCounty = $stationDetails['county'] ?? null;
 }
 

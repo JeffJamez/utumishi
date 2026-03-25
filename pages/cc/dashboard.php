@@ -72,8 +72,8 @@ try {
             ROUND(COUNT(c.id) / NULLIF(COUNT(DISTINCT o.id), 0), 1) as cases_per_officer
         FROM stations s
         LEFT JOIN cases c ON s.id = c.station_id AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" . ($county ? " AND c.incident_location_county = :county_join" : "") . "
-        LEFT JOIN users u ON s.id = u.station_id AND u.role = 'officer' AND u.is_active = 1
-        LEFT JOIN officers o ON u.id = o.user_id
+        LEFT JOIN officers o ON s.id = o.station_id
+        LEFT JOIN users u ON o.user_id = u.id AND u.is_active = 1
         WHERE ($stationWhere)
         GROUP BY s.id, s.name, s.county
         ORDER BY resolution_rate DESC, total_cases DESC
@@ -107,18 +107,13 @@ try {
     ", $params);
 
     $stationWhere = "1=1";
-    $officerWhere = "role = 'officer' AND is_active = 1";
-    $citizenWhere = "role = 'citizen'";
     $casesWhere = "1=1";
 
     if ($county) {
         $stationWhere .= " AND county = :county_stations";
-        $officerWhere .= " AND station_id IN (SELECT id FROM stations WHERE county = :county_officers)";
-        $citizenWhere .= " AND id IN (SELECT DISTINCT reported_by_citizen_id FROM cases WHERE incident_location_county = :county_citizens)";
         $casesWhere .= " AND incident_location_county = :county_cases";
     }
 
-    // Prepare params for systemTotals with unique names
     $systemParams = [];
     if ($county) {
         $systemParams['county_stations'] = $county;
@@ -130,8 +125,8 @@ try {
     $systemTotals = $db->fetchOne("
         SELECT
             (SELECT COUNT(*) FROM stations WHERE $stationWhere) as total_stations,
-            (SELECT COUNT(*) FROM users WHERE $officerWhere) as total_officers,
-            (SELECT COUNT(*) FROM users WHERE $citizenWhere) as total_citizens,
+            (SELECT COUNT(*) FROM officers o JOIN users u ON o.user_id = u.id WHERE u.role = 'officer' AND u.is_active = 1 AND o.station_id IN (SELECT id FROM stations WHERE " . ($county ? "county = :county_officers" : "1=1") . ")) as total_officers,
+            (SELECT COUNT(*) FROM users WHERE role = 'citizen'" . ($county ? " AND id IN (SELECT DISTINCT reported_by_citizen_id FROM cases WHERE incident_location_county = :county_citizens)" : "") . ") as total_citizens,
             (SELECT COUNT(*) FROM cases WHERE $casesWhere) as total_cases_ever
     ", $systemParams);
 

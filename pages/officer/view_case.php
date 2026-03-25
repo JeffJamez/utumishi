@@ -112,9 +112,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     </span>
                                 </p>
                                 <p><strong>Assigned Officer:</strong> 
-                                    <?php echo !empty($case['assigned_officer_name']) 
-                                        ? htmlspecialchars($case['assigned_officer_name']) . ' (' . htmlspecialchars($case['badge_number'] ?? 'N/A') . ')' 
-                                        : 'Not assigned'; ?>
+                                    <?php if (!empty($case['assigned_officer_name'])): ?>
+                                        <?php echo htmlspecialchars($case['assigned_officer_name']); ?> | 
+                                        ID: <?php echo htmlspecialchars($case['assigned_officer_national_id'] ?? 'N/A'); ?> | 
+                                        Badge: <?php echo htmlspecialchars($case['badge_number'] ?? 'N/A'); ?>
+                                        <br>
+                                        <strong>Station:</strong> <?php echo htmlspecialchars($case['station_name']); ?> - 
+                                        OCS: <?php echo htmlspecialchars($case['ocs_name'] ?? 'Not assigned'); ?>
+                                    <?php else: ?>
+                                        Not assigned
+                                    <?php endif; ?>
                                 </p>
                                 <p><strong>Date/Time of Incident:</strong> <?php echo !empty($case['occurred_at']) ? date('M j, Y \a\t g:i A', strtotime($case['occurred_at'])) : 'Not recorded'; ?></p>
                                 <p><strong>Reported:</strong> <?php echo htmlspecialchars($case['created_at']); ?></p>

@@ -1,5 +1,6 @@
 -- Utumishi - Digital OB System Database Schema
 -- Kenya Police Service Occurrence Book System
+-- Schema v3.0 - Station leadership hierarchy (ocs_id, county_commander_id)
 
 CREATE TABLE `stations` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -9,14 +10,17 @@ CREATE TABLE `stations` (
   `constituency` varchar(50) NOT NULL,
   `address` text NOT NULL,
   `contact_phone` varchar(15) DEFAULT NULL,
-  `commander_id` int(11) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `ocs_id` int(11) DEFAULT NULL,
+  `county_commander_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `station_code` (`station_code`),
   KEY `idx_county` (`county`),
   KEY `idx_constituency` (`constituency`),
-  KEY `idx_commander` (`commander_id`),
-  CONSTRAINT `stations_ibfk_1` FOREIGN KEY (`commander_id`) REFERENCES `users` (`id`)
+  KEY `idx_ocs` (`ocs_id`),
+  KEY `idx_county_commander` (`county_commander_id`),
+  CONSTRAINT `stations_ibfk_2` FOREIGN KEY (`ocs_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `stations_ibfk_3` FOREIGN KEY (`county_commander_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `users` (
@@ -27,7 +31,6 @@ CREATE TABLE `users` (
   `phone` varchar(15) NOT NULL,
   `password` varchar(255) NOT NULL,
   `role` enum('admin','ocs','officer','citizen','county_commander') NOT NULL,
-  `station_id` int(11) DEFAULT NULL,
   `county_in_charge` varchar(50) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT current_timestamp(),
   `last_login` timestamp NULL DEFAULT NULL,
@@ -36,15 +39,13 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `national_id` (`national_id`),
   KEY `idx_national_id` (`national_id`),
-  KEY `idx_role` (`role`),
-  KEY `idx_station` (`station_id`),
-  KEY `idx_users_role_station` (`role`,`station_id`),
-  CONSTRAINT `users_ibfk_1` FOREIGN KEY (`station_id`) REFERENCES `stations` (`id`)
+  KEY `idx_role` (`role`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `officers` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
+  `station_id` int(11) DEFAULT NULL,
   `badge_number` varchar(20) NOT NULL,
   `expertise_categories` text DEFAULT NULL,
   `current_case_load` int(11) DEFAULT 0,
@@ -54,9 +55,11 @@ CREATE TABLE `officers` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `badge_number` (`badge_number`),
   KEY `idx_user_id` (`user_id`),
+  KEY `idx_station_id` (`station_id`),
   KEY `idx_badge` (`badge_number`),
   KEY `idx_officers_case_load` (`current_case_load`),
-  CONSTRAINT `officers_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+  CONSTRAINT `officers_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `officers_ibfk_2` FOREIGN KEY (`station_id`) REFERENCES `stations` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `cases` (
