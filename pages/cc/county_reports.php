@@ -55,7 +55,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
     <main class="app-main">
         <div class="mb-4">
-            <h2>County Reports</h1>
+            <h2>County Reports</h2>
             <p class="text-muted">Generate and view detailed reports for your county</p>
         </div>
 
@@ -65,17 +65,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
         <?php endif; ?>
 
-        <div class="card mb-4">
+<div class="card mb-4">
             <div class="card-header">
                 <h3>Generate Report</h3>
             </div>
             <div class="card-body">
-                <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <div class="report-cards-container">
 
                     <!-- Annual Report -->
                     <div class="card">
                         <div class="card-body text-center">
-
                              <h5>Comprehensive Annual Statistics and Analysis</h5>
                              <p class="text-muted">Detailed yearly case statistics and monthly trends</p>
                             <form method="GET" class="mb-3">
@@ -101,16 +100,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Performance Report -->
                     <div class="card">
                         <div class="card-body text-center">
-
                              <h5>County Performance Metrics and Trends</h5>
                              <p class="text-muted">Performance analysis and efficiency metrics</p>
                             <form method="GET" class="mb-3">
                                 <input type="hidden" name="type" value="performance">
                                 <select name="timeframe" class="form-control mb-2">
-                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 30; ?>
-                                    <option value="7" <?php echo $selectedTimeframe == 7 ? 'selected' : ''; ?>>Last 7 days</option>
+                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 90; ?>
                                     <option value="30" <?php echo $selectedTimeframe == 30 ? 'selected' : ''; ?>>Last 30 days</option>
                                     <option value="90" <?php echo $selectedTimeframe == 90 ? 'selected' : ''; ?>>Last 90 days</option>
+                                    <option value="180" <?php echo $selectedTimeframe == 180 ? 'selected' : ''; ?>>Last 180 days</option>
+                                    <option value="365" <?php echo $selectedTimeframe == 365 ? 'selected' : ''; ?>>Last 365 days</option>
                                 </select>
                                 <button type="submit" class="btn btn-primary">Generate</button>
                             </form>
@@ -120,88 +119,36 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Crime Analysis Report -->
                     <div class="card">
                         <div class="card-body text-center">
-
                              <h5>Crime Patterns and Hotspot Analysis</h5>
                              <p class="text-muted">Crime trends and hotspot identification</p>
-                             <form method="GET" class="mb-3">
+                              <form method="GET" class="mb-3">
                                 <input type="hidden" name="type" value="crime_analysis">
                                 <select name="timeframe" class="form-control mb-2">
-                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 30; ?>
+                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 90; ?>
                                     <option value="30" <?php echo $selectedTimeframe == 30 ? 'selected' : ''; ?>>Last 30 days</option>
-                                    <option value="60" <?php echo $selectedTimeframe == 60 ? 'selected' : ''; ?>>Last 60 days</option>
                                     <option value="90" <?php echo $selectedTimeframe == 90 ? 'selected' : ''; ?>>Last 90 days</option>
+                                    <option value="180" <?php echo $selectedTimeframe == 180 ? 'selected' : ''; ?>>Last 180 days</option>
+                                    <option value="365" <?php echo $selectedTimeframe == 365 ? 'selected' : ''; ?>>Last 365 days</option>
                                 </select>
                                 <button type="submit" class="btn btn-primary">Generate</button>
                             </form>
                         </div>
                     </div>
 
-
                 </div>
             </div>
         </div>
 
         <?php if ($reportGenerated && !empty($reportData)): ?>
-        <div class="card">
+        <div class="card mt-4">
             <div class="card-header">
                 <h3><?php echo htmlspecialchars($reportData['type']); ?></h3>
-                <div>
-                    <button onclick="window.print()" class="btn btn-sm btn-outline btn-primary">Print Report</button>
-                </div>
             </div>
             <div class="card-body" id="report-content">
 
-                 <?php if ($reportType === 'annual'): ?>
-                      <div class="mb-4">
-                          <h4>Comprehensive Annual Statistics and Analysis - <?php echo $reportData['period']['year_name']; ?></h4>
-
-                         <div class="kpi-grid mb-4">
-                             <div class="kpi-card">
-                                 <div class="kpi-value"><?php echo $reportData['overall_stats']['total_cases'] ?? 0; ?></div>
-                                 <div class="kpi-label">Total Cases</div>
-                             </div>
-                             <div class="kpi-card">
-                                 <div class="kpi-value"><?php echo $reportData['overall_stats']['resolved_cases'] ?? 0; ?></div>
-                                 <div class="kpi-label">Resolved Cases</div>
-                             </div>
-                             <div class="kpi-card">
-                                 <div class="kpi-value"><?php echo $reportData['overall_stats']['resolution_rate'] ?? 0; ?>%</div>
-                                 <div class="kpi-label">Resolution Rate</div>
-                             </div>
-                               <div class="kpi-card">
-                                   <div class="kpi-value"><?php echo round(($reportData['overall_stats']['avg_resolution_time'] ?? 0) / 24, 0); ?> days</div>
-                                   <div class="kpi-label">Avg Resolution Time</div>
-                               </div>
-                         </div>
-
-                          <?php if (!empty($reportData['monthly_trends'])): ?>
-                          <h5>Monthly Trends</h5>
-                          <div style="height: 300px; margin-bottom: 2rem;">
-                              <canvas id="monthlyChart"></canvas>
-                          </div>
-                          <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                              <strong>What this means for you:</strong> This chart shows monthly case trends throughout the year. Identify seasonal patterns or changes in crime activity across your county.
-                          </p>
-                          <?php else: ?>
-                          <p class="text-muted">No monthly trend data available for this year.</p>
-                          <?php endif; ?>
-                         
-                          <?php if (!empty($reportData['category_breakdown'])): ?>
-                          <h5>Category Breakdown</h5>
-                          <div style="height: 400px; margin-bottom: 2rem;">
-                              <canvas id="categoryChart"></canvas>
-                          </div>
-                          <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                              <strong>What this means for you:</strong> This chart shows which crime types are most common across your county throughout the year. Focus resources on the top categories to improve response times.
-                          </p>
-                          <?php else: ?>
-                          <p class="text-muted">No category breakdown data available for this year.</p>
-                          <?php endif; ?>
-                      </div>
-
-                  <?php elseif ($reportType === 'performance'): ?>
-                      <div class="mb-4">
-                          <h4>County Performance Metrics and Trends - <?php echo $reportData['period']; ?></h4>
+<?php if ($reportType === 'annual'): ?>
+                       <div class="mb-4">
+                           <h4>Comprehensive Annual Statistics and Analysis - <?php echo $reportData['period']['year_name']; ?></h4>
 
                           <div class="kpi-grid mb-4">
                               <div class="kpi-card">
@@ -209,27 +156,54 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                   <div class="kpi-label">Total Cases</div>
                               </div>
                               <div class="kpi-card">
+                                  <div class="kpi-value"><?php echo $reportData['overall_stats']['resolved_cases'] ?? 0; ?></div>
+                                  <div class="kpi-label">Resolved Cases</div>
+                              </div>
+                              <div class="kpi-card">
                                   <div class="kpi-value"><?php echo $reportData['overall_stats']['resolution_rate'] ?? 0; ?>%</div>
                                   <div class="kpi-label">Resolution Rate</div>
                               </div>
-                               <div class="kpi-card">
-                                   <div class="kpi-value"><?php echo round(($reportData['overall_stats']['avg_resolution_time'] ?? 0) / 24, 0); ?> days</div>
-                                   <div class="kpi-label">Avg Resolution Time</div>
-                               </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-value"><?php echo round(($reportData['overall_stats']['avg_resolution_time'] ?? 0) / 24, 0); ?> days</div>
+                                    <div class="kpi-label">Avg Resolution Time</div>
+                                </div>
                           </div>
 
-                          <h5>Category Performance</h5>
-                          <div style="height: 400px; margin-bottom: 2rem;">
-                              <canvas id="performanceChart"></canvas>
-                          </div>
-                          <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                              <strong>What this means for you:</strong> This chart shows resolution rates by crime category in your county. Categories with lower rates may need additional resources.
-                          </p>
-                      </div>
+                           <?php if (!empty($reportData['monthly_trends'])): ?>
+                           <h5>Monthly Trends</h5>
+                           <div style="height: 300px; margin-bottom: 0.5rem;">
+                               <canvas id="monthlyChart"></canvas>
+                           </div>
+                           <div class="chart-key mb-3">
+                               <span class="key-item"><span class="key-color" style="background: #3b82f6;"></span> Total Cases</span>
+                               <span class="key-item"><span class="key-color" style="background: #22c55e;"></span> Resolved Cases</span>
+                           </div>
+                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                               <strong>What this means for you:</strong> This chart shows monthly case trends throughout the year. Identify seasonal patterns or changes in crime activity across your county.
+                           </p>
+                           <?php else: ?>
+                           <p class="text-muted">No monthly trend data available for this year.</p>
+                           <?php endif; ?>
+                          
+                           <?php if (!empty($reportData['category_breakdown'])): ?>
+                           <h5>Category Breakdown</h5>
+                           <div style="height: 400px; margin-bottom: 0.5rem;">
+                               <canvas id="categoryChart"></canvas>
+                           </div>
+                           <div class="chart-key mb-3">
+                               <span class="key-item">Each color represents a different crime category</span>
+                           </div>
+                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                               <strong>What this means for you:</strong> This chart shows which crime types are most common across your county throughout the year. Focus resources on the top categories to improve response times.
+                           </p>
+                           <?php else: ?>
+                           <p class="text-muted">No category breakdown data available for this year.</p>
+                           <?php endif; ?>
+                       </div>
 
-                  <?php elseif ($reportType === 'crime_analysis'): ?>
-                      <div class="mb-4">
-                          <h4>Crime Patterns and Hotspot Analysis - <?php echo $reportData['period']; ?></h4>
+<?php elseif ($reportType === 'performance'): ?>
+                       <div class="mb-4">
+                           <h4>County Performance Metrics and Trends - <?php echo $reportData['period']; ?></h4>
 
                            <div class="kpi-grid mb-4">
                                <div class="kpi-card">
@@ -237,23 +211,59 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                    <div class="kpi-label">Total Cases</div>
                                </div>
                                <div class="kpi-card">
-                                   <div class="kpi-value"><?php echo count($reportData['hotspots'] ?? []); ?></div>
-                                   <div class="kpi-label">Hotspots Identified</div>
+                                   <div class="kpi-value"><?php echo $reportData['overall_stats']['resolution_rate'] ?? 0; ?>%</div>
+                                   <div class="kpi-label">Resolution Rate</div>
                                </div>
-                               <div class="kpi-card">
-                                   <div class="kpi-value"><?php echo htmlspecialchars($reportData['most_common_category'] ?? 'N/A'); ?></div>
-                                   <div class="kpi-label">Most Common Crime</div>
-                               </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-value"><?php echo round(($reportData['overall_stats']['avg_resolution_time'] ?? 0) / 24, 0); ?> days</div>
+                                    <div class="kpi-label">Avg Resolution Time</div>
+                                </div>
                            </div>
 
-                          <h5>Hotspot Locations</h5>
-                          <div style="height: 400px; margin-bottom: 2rem;">
-                              <canvas id="hotspotChart"></canvas>
-                          </div>
-                          <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                              <strong>What this means for you:</strong> This chart shows which locations have the highest incident counts. Focus preventive measures and patrols on these areas.
-                          </p>
-                      </div>
+                           <h5>Category Performance</h5>
+                           <div style="height: 400px; margin-bottom: 0.5rem;">
+                               <canvas id="performanceChart"></canvas>
+                           </div>
+                           <div class="chart-key mb-3">
+                               <span class="key-item"><span class="key-color" style="background: #22c55e;"></span> Good (≥80%)</span>
+                               <span class="key-item"><span class="key-color" style="background: #f59e0b;"></span> Moderate (50-79%)</span>
+                               <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> Needs Improvement (&lt;50%)</span>
+                           </div>
+                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                               <strong>What this means for you:</strong> This chart shows resolution rates by crime category in your county. Categories with lower rates may need additional resources.
+                           </p>
+                       </div>
+
+<?php elseif ($reportType === 'crime_analysis'): ?>
+                       <div class="mb-4">
+                           <h4>Crime Patterns and Hotspot Analysis - <?php echo $reportData['period']; ?></h4>
+
+                            <div class="kpi-grid mb-4">
+                                <div class="kpi-card">
+                                    <div class="kpi-value"><?php echo $reportData['overall_stats']['total_cases'] ?? 0; ?></div>
+                                    <div class="kpi-label">Total Cases</div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-value"><?php echo count($reportData['hotspots'] ?? []); ?></div>
+                                    <div class="kpi-label">Hotspots Identified</div>
+                                </div>
+                                <div class="kpi-card">
+                                    <div class="kpi-value"><?php echo htmlspecialchars($reportData['most_common_category'] ?? 'N/A'); ?></div>
+                                    <div class="kpi-label">Most Common Crime</div>
+                                </div>
+                            </div>
+
+                           <h5>Hotspot Locations</h5>
+                           <div style="height: 400px; margin-bottom: 0.5rem;">
+                               <canvas id="hotspotChart"></canvas>
+                           </div>
+                           <div class="chart-key mb-3">
+                               <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> High case concentration area</span>
+                           </div>
+                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                               <strong>What this means for you:</strong> This chart shows which locations have the highest incident counts. Focus preventive measures and patrols on these areas.
+                           </p>
+                       </div>
 
                  <?php endif; ?>
 
@@ -474,20 +484,24 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
     </script>
 
     <style>
-        @media print {
-            .btn, .card-header .btn, .no-print {
-                display: none !important;
-            }
-            .card {
-                box-shadow: none;
-                border: 1px solid #ddd;
+        .report-cards-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        
+        @media (max-width: 992px) {
+            .report-cards-container {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
-    </style>
-</body>
-</html>
-    
-    <style>
+        
+        @media (max-width: 576px) {
+            .report-cards-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -515,17 +529,26 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             font-size: 0.9rem;
         }
         
-        @media print {
-            .btn, .card-header .btn, .no-print {
-                display: none !important;
-            }
-            .card {
-                box-shadow: none;
-                border: 1px solid #ddd;
-            }
-            .kpi-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
+        .chart-key {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+        .key-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .key-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
         }
         
         @media (max-width: 768px) {

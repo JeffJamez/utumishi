@@ -165,7 +165,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                             <?php if (count($recommendations) > 5): ?>
                                 <div class="text-center">
-                                    <a href="<?php echo BASE_URL; ?>/pages/ocs/crime_heatmap.php" class="btn btn-outline btn-primary">
+                                    <a href="<?php echo BASE_URL; ?>/pages/ocs/reports.php" class="btn btn-outline btn-primary">
                                         View All Recommendations (<?php echo count($recommendations); ?>)
                                     </a>
                                 </div>
@@ -398,7 +398,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     } else if (label.includes('Officers')) {
                         window.location.href = '<?php echo BASE_URL; ?>/pages/ocs/officer_workload.php';
                     } else if (label.includes('Recommendations')) {
-                        window.location.href = '<?php echo BASE_URL; ?>/pages/ocs/crime_heatmap.php';
+                        window.location.href = '<?php echo BASE_URL; ?>/pages/ocs/reports.php';
                     }
                 });
 

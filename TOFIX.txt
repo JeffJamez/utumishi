@@ -1,0 +1,7 @@
+pages/officer/update_case.php  --> 
+
+1. line 384, the "Request Case Closure" button leads to an error page
+
+
+2. County Commander searching for a case by OB number shows case "case not found" (Need to test this)
+ 
