@@ -89,42 +89,38 @@ class ReportManager {
 
         $whereClause = implode(' AND ', $whereConditions);
 
-        // Overall stats for the year
         $overallStats = $this->db->fetchOne("
             SELECT
                 COUNT(*) as total_cases,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
             FROM cases
             WHERE $whereClause", $params);
 
-        // Category breakdown for the year
         $categoryStats = $this->db->fetchAll("
             SELECT
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 ROUND(AVG(COALESCE(estimated_resolution_hours, 72)), 1) as avg_resolution_time
             FROM cases
             WHERE $whereClause
             GROUP BY category
             ORDER BY case_count DESC", $params);
 
-        // Monthly trends for the year
         $monthlyTrends = $this->db->fetchAll("
             SELECT
                 MONTH(COALESCE(occurred_at, created_at)) as month,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate
             FROM cases
             WHERE $whereClause
             GROUP BY MONTH(COALESCE(occurred_at, created_at))
             ORDER BY month ASC", $params);
 
-        // Hotspots for the year
         $hotspots = $this->db->fetchAll("
             SELECT
                 incident_location_constituency as location,
@@ -133,7 +129,7 @@ class ReportManager {
             FROM cases
             WHERE $whereClause
             GROUP BY incident_location_constituency, category
-            HAVING case_count > 2
+            HAVING case_count > 0
             ORDER BY case_count DESC
             LIMIT 10", $params);
 
@@ -161,11 +157,11 @@ class ReportManager {
             SELECT
                 COUNT(*) as total_cases,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
             FROM cases
             WHERE station_id = :station_id
-            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)
         ", $params);
 
         $categoryBreakdown = $this->db->fetchAll("
@@ -173,11 +169,11 @@ class ReportManager {
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 ROUND(AVG(COALESCE(estimated_resolution_hours, 72)), 1) as avg_resolution_time
             FROM cases
             WHERE station_id = :station_id
-            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)
             GROUP BY category
             ORDER BY case_count DESC
         ", $params);
@@ -185,13 +181,14 @@ class ReportManager {
         return [
             'type' => 'Station Performance Report',
             'period' => "Last {$timeframe} days",
+            'total_cases' => $stationStats['total_cases'] ?? 0,
             'station_stats' => $stationStats,
             'category_breakdown' => $categoryBreakdown,
             'generated_at' => date('Y-m-d H:i:s')
         ];
     }
 
-    /**
+/**
      * Generate crime analysis report
      */
     public function generateCrimeAnalysisReport($stationId, $timeframe = 30) {
@@ -199,13 +196,13 @@ class ReportManager {
 
         $trends = $this->db->fetchAll("
             SELECT
-                DATE(COALESCE(occurred_at, created_at)) as date,
+                DATE(created_at) as date,
                 COUNT(*) as case_count,
                 category
             FROM cases
             WHERE station_id = :station_id
-            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
-            GROUP BY DATE(COALESCE(occurred_at, created_at)), category
+            AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)
+            GROUP BY DATE(created_at), category
             ORDER BY date DESC
         ", $params);
 
@@ -216,15 +213,30 @@ class ReportManager {
                 COUNT(*) as case_count
             FROM cases
             WHERE station_id = :station_id
-            AND COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)
+            AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)
             GROUP BY incident_location_constituency, category
-            HAVING case_count > 2
+            HAVING case_count > 0
             ORDER BY case_count DESC
+            LIMIT 10
+        ", $params);
+
+        $totalCases = $this->db->fetchOne("SELECT COUNT(*) as total FROM cases WHERE station_id = :station_id AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)", $params)['total'] ?? 0;
+
+        $mostCommon = $this->db->fetchOne("
+            SELECT category, COUNT(*) as count
+            FROM cases
+            WHERE station_id = :station_id
+            AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)
+            GROUP BY category
+            ORDER BY count DESC
+            LIMIT 1
         ", $params);
 
         return [
             'type' => 'Crime Analysis Report',
             'period' => "Last {$timeframe} days",
+            'total_cases' => $totalCases,
+            'most_common_category' => $mostCommon['category'] ?? 'N/A',
             'trends' => $trends,
             'hotspots' => $hotspots,
             'generated_at' => date('Y-m-d H:i:s')

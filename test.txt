@@ -37,6 +37,7 @@ Test Accounts:
 ========= Officer ACCOUNTS   ========
 Officer : 45678901 / 45678901
 Officer : 56789012 / 56789012
+Officer : 24229289 / 24229289
 
 
 ========= CITIZEN ACCOUNTS   ========

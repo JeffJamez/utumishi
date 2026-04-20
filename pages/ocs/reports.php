@@ -63,17 +63,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             </div>
         <?php endif; ?>
 
-        <div class="card mb-4">
+<div class="card mb-4">
             <div class="card-header">
                 <h3>Generate Report</h3>
             </div>
             <div class="card-body">
-                <div class="d-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <div class="report-cards-container">
                     
                     <!-- Annual Report -->
                     <div class="card">
                         <div class="card-body text-center">
-
                              <h5>Comprehensive Annual Statistics and Analysis</h5>
                              <p class="text-muted">Detailed yearly case statistics and monthly trends</p>
                             <form method="GET" class="mb-3">
@@ -99,16 +98,16 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Performance Report -->
                     <div class="card">
                         <div class="card-body text-center">
-
                              <h5>Station Performance Metrics and Trends</h5>
                              <p class="text-muted">Performance analysis and efficiency metrics</p>
                              <form method="GET" class="mb-3">
                                 <input type="hidden" name="type" value="performance">
                                 <select name="timeframe" class="form-control mb-2">
-                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 30; ?>
-                                    <option value="7" <?php echo $selectedTimeframe == 7 ? 'selected' : ''; ?>>Last 7 days</option>
+                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 90; ?>
                                     <option value="30" <?php echo $selectedTimeframe == 30 ? 'selected' : ''; ?>>Last 30 days</option>
                                     <option value="90" <?php echo $selectedTimeframe == 90 ? 'selected' : ''; ?>>Last 90 days</option>
+                                    <option value="180" <?php echo $selectedTimeframe == 180 ? 'selected' : ''; ?>>Last 180 days</option>
+                                    <option value="365" <?php echo $selectedTimeframe == 365 ? 'selected' : ''; ?>>Last 365 days</option>
                                 </select>
                                 <button type="submit" class="btn btn-primary">Generate</button>
                             </form>
@@ -118,85 +117,87 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <!-- Crime Analysis Report -->
                     <div class="card">
                         <div class="card-body text-center">
-
                              <h5>Crime Patterns and Hotspot Analysis</h5>
                              <p class="text-muted">Crime trends and hotspot identification</p>
                              <form method="GET" class="mb-3">
                                 <input type="hidden" name="type" value="crime_analysis">
                                 <select name="timeframe" class="form-control mb-2">
-                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 30; ?>
+                                    <?php $selectedTimeframe = $_GET['timeframe'] ?? 90; ?>
                                     <option value="30" <?php echo $selectedTimeframe == 30 ? 'selected' : ''; ?>>Last 30 days</option>
-                                    <option value="60" <?php echo $selectedTimeframe == 60 ? 'selected' : ''; ?>>Last 60 days</option>
                                     <option value="90" <?php echo $selectedTimeframe == 90 ? 'selected' : ''; ?>>Last 90 days</option>
+                                    <option value="180" <?php echo $selectedTimeframe == 180 ? 'selected' : ''; ?>>Last 180 days</option>
+                                    <option value="365" <?php echo $selectedTimeframe == 365 ? 'selected' : ''; ?>>Last 365 days</option>
                                 </select>
                                 <button type="submit" class="btn btn-primary">Generate</button>
                             </form>
                         </div>
                     </div>
                     
-
                 </div>
             </div>
         </div>
 
         <?php if ($reportGenerated && !empty($reportData)): ?>
-        <div class="card">
+        <div class="card mt-4">
             <div class="card-header">
                 <h3><?php echo htmlspecialchars($reportData['type']); ?></h3>
-                <div>
-                    <button onclick="window.print()" class="btn btn-sm btn-outline btn-primary">Print Report</button>
-                    <button onclick="exportReport()" class="btn btn-sm btn-outline btn-secondary">Export</button>
-                </div>
             </div>
             <div class="card-body" id="report-content">
                 
-                 <?php if ($reportType === 'annual'): ?>
+<?php if ($reportType === 'annual'): ?>
                       <div class="mb-4">
                           <h4>Comprehensive Annual Statistics and Analysis - <?php echo $reportData['period']['year_name']; ?></h4>
                          
-                         <div class="kpi-grid mb-4">
-                             <div class="kpi-card">
-                                 <div class="kpi-value"><?php echo $reportData['overall_stats']['total_cases'] ?? 0; ?></div>
-                                 <div class="kpi-label">Total Cases</div>
-                             </div>
-                             <div class="kpi-card">
-                                 <div class="kpi-value"><?php echo $reportData['overall_stats']['resolved_cases'] ?? 0; ?></div>
-                                 <div class="kpi-label">Resolved Cases</div>
-                             </div>
-                             <div class="kpi-card">
-                                 <div class="kpi-value"><?php echo $reportData['overall_stats']['resolution_rate'] ?? 0; ?>%</div>
-                                 <div class="kpi-label">Resolution Rate</div>
-                             </div>
-                             <div class="kpi-card">
-                                  <div class="kpi-value"><?php echo round($reportData['overall_stats']['avg_resolution_time'] ?? 0, 1); ?>h</div>
-                                 <div class="kpi-label">Avg Resolution Time</div>
-                             </div>
-                         </div>
-                         
-                          <?php if (!empty($reportData['monthly_trends'])): ?>
-                          <h5>Monthly Trends</h5>
-                          <div style="height: 300px; margin-bottom: 2rem;">
-                              <canvas id="monthlyChart"></canvas>
+                          <div class="kpi-grid mb-4">
+                              <div class="kpi-card">
+                                  <div class="kpi-value"><?php echo $reportData['overall_stats']['total_cases'] ?? 0; ?></div>
+                                  <div class="kpi-label">Total Cases</div>
+                              </div>
+                              <div class="kpi-card">
+                                  <div class="kpi-value"><?php echo $reportData['overall_stats']['resolved_cases'] ?? 0; ?></div>
+                                  <div class="kpi-label">Resolved Cases</div>
+                              </div>
+                              <div class="kpi-card">
+                                  <div class="kpi-value"><?php echo $reportData['overall_stats']['resolution_rate'] ?? 0; ?>%</div>
+                                  <div class="kpi-label">Resolution Rate</div>
+                              </div>
+                              <div class="kpi-card">
+                                   <div class="kpi-value"><?php echo round($reportData['overall_stats']['avg_resolution_time'] ?? 0, 1); ?>h</div>
+                                  <div class="kpi-label">Avg Resolution Time</div>
+                              </div>
                           </div>
-                          <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                              <strong>What this means for you:</strong> This chart shows monthly case trends throughout the year. Identify seasonal patterns or changes in crime activity.
-                          </p>
-                          <?php else: ?>
-                          <p class="text-muted">No monthly trend data available for this year.</p>
-                          <?php endif; ?>
-                         
-                          <?php if (!empty($reportData['category_breakdown'])): ?>
-                          <h5>Category Breakdown</h5>
-                          <div style="height: 400px; margin-bottom: 2rem;">
-                              <canvas id="categoryChart"></canvas>
-                          </div>
-                          <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                              <strong>What this means for you:</strong> This chart shows which crime types are most common throughout the year. Focus resources on the top categories to improve response times.
-                          </p>
-                          <?php else: ?>
-                          <p class="text-muted">No category breakdown data available for this year.</p>
-                          <?php endif; ?>
-                     </div>
+                          
+                           <?php if (!empty($reportData['monthly_trends'])): ?>
+                           <h5>Monthly Trends</h5>
+                           <div style="height: 300px; margin-bottom: 0.5rem;">
+                               <canvas id="monthlyChart"></canvas>
+                           </div>
+                           <div class="chart-key mb-3">
+                               <span class="key-item"><span class="key-color" style="background: #3b82f6;"></span> Total Cases</span>
+                               <span class="key-item"><span class="key-color" style="background: #22c55e;"></span> Resolved Cases</span>
+                           </div>
+                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                               <strong>What this means for you:</strong> This chart shows monthly case trends throughout the year. Identify seasonal patterns or changes in crime activity.
+                           </p>
+                           <?php else: ?>
+                           <p class="text-muted">No monthly trend data available for this year.</p>
+                           <?php endif; ?>
+                          
+                           <?php if (!empty($reportData['category_breakdown'])): ?>
+                           <h5>Category Breakdown</h5>
+                           <div style="height: 400px; margin-bottom: 0.5rem;">
+                               <canvas id="categoryChart"></canvas>
+                           </div>
+                           <div class="chart-key mb-3">
+                               <span class="key-item">Each color represents a different crime category</span>
+                           </div>
+                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                               <strong>What this means for you:</strong> This chart shows which crime types are most common throughout the year. Focus resources on the top categories to improve response times.
+                           </p>
+                           <?php else: ?>
+                           <p class="text-muted">No category breakdown data available for this year.</p>
+                           <?php endif; ?>
+                      </div>
                     
                   <?php elseif ($reportType === 'performance'): ?>
                       <div class="mb-4">
@@ -218,8 +219,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                           </div>
 
                           <h5>Performance by Category</h5>
-                          <div style="height: 400px; margin-bottom: 2rem;">
+                          <div style="height: 400px; margin-bottom: 0.5rem;">
                               <canvas id="performanceChart"></canvas>
+                          </div>
+                          <div class="chart-key mb-3">
+                              <span class="key-item"><span class="key-color" style="background: #22c55e;"></span> Good (≥80%)</span>
+                              <span class="key-item"><span class="key-color" style="background: #f59e0b;"></span> Moderate (50-79%)</span>
+                              <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> Needs Improvement (&lt;50%)</span>
                           </div>
                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
                               <strong>What this means for you:</strong> This chart shows resolution rates by crime category. Categories with lower rates may need additional resources or process improvements.
@@ -246,8 +252,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                           </div>
 
                           <h5>Hotspot Locations</h5>
-                          <div style="height: 400px; margin-bottom: 2rem;">
+                          <div style="height: 400px; margin-bottom: 0.5rem;">
                               <canvas id="hotspotChart"></canvas>
+                          </div>
+                          <div class="chart-key mb-3">
+                              <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> High case concentration area</span>
                           </div>
                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
                               <strong>What this means for you:</strong> This chart shows which locations have the highest incident counts. Focus patrols and preventive measures on these areas.
@@ -461,49 +470,85 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             });
             <?php endif; ?>
         });
-
-        function exportReport() {
-            const content = document.getElementById('report-content');
-            if (!content) return;
-            
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Station Report</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 20px; }
-                            .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1rem 0; }
-                            .kpi-card { padding: 1rem; border: 1px solid #ddd; text-align: center; }
-                            .kpi-value { font-size: 2rem; font-weight: bold; }
-                            .kpi-label { color: #666; }
-                            table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-                            th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
-                            th { background-color: #f2f2f2; }
-                            .badge { padding: 2px 6px; border-radius: 3px; font-size: 0.8em; }
-                            .status-success { background-color: #d4edda; color: #155724; }
-                            .status-warning { background-color: #fff3cd; color: #856404; }
-                            .status-danger { background-color: #f8d7da; color: #721c24; }
-                        </style>
-                    </head>
-                    <body>
-                        ${content.innerHTML}
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
     </script>
     
     <style>
-        @media print {
-            .btn, .card-header .btn, .no-print {
-                display: none !important;
+        .report-cards-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+        
+        @media (max-width: 992px) {
+            .report-cards-container {
+                grid-template-columns: repeat(2, 1fr);
             }
-            .card {
-                box-shadow: none;
-                border: 1px solid #ddd;
+        }
+        
+        @media (max-width: 576px) {
+            .report-cards-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .kpi-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .kpi-label {
+            color: #666;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .chart-key {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+        }
+        .key-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .key-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        
+        @media (max-width: 768px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>

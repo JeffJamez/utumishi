@@ -38,7 +38,7 @@ class CountyReportsManager {
      * Get county crime statistics
      */
     public function getCountyStatistics($timeframe = 30, $county = null) {
-        $where = "COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
+        $where = "created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)";
         $params = ['timeframe' => $timeframe];
 
         if ($county) {
@@ -52,7 +52,7 @@ class CountyReportsManager {
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
                 COUNT(CASE WHEN status = 'reported' THEN 1 END) as pending_cases,
                 COUNT(CASE WHEN status IN ('assigned', 'in_progress') THEN 1 END) as active_cases,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time,
                 COUNT(DISTINCT station_id) as active_stations,
                 COUNT(DISTINCT incident_location_constituency) as affected_constituencies
@@ -94,7 +94,7 @@ class CountyReportsManager {
      * Get category trends
      */
     public function getCategoryTrends($timeframe = 30, $county = null) {
-        $where = "COALESCE(occurred_at, created_at) >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
+        $where = "created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)";
         $params = ['timeframe' => $timeframe];
 
         if ($county) {
@@ -102,21 +102,25 @@ class CountyReportsManager {
             $params['county'] = $county;
         }
 
-        $totalCases = $this->db->fetchOne("SELECT COUNT(*) as total FROM cases WHERE $where", $params)['total'];
+        $totalCases = $this->db->fetchOne("SELECT COUNT(*) as total FROM cases WHERE $where", $params)['total'] ?? 0;
+
+        if ($totalCases == 0) {
+            return [];
+        }
 
         $categoryTrends = $this->db->fetchAll("
             SELECT
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time,
                 ROUND(COUNT(*) * 100.0 / :total, 2) as percentage_of_total
             FROM cases
             WHERE $where
             GROUP BY category
             ORDER BY case_count DESC
-        ", array_merge($params, ['total' => $totalCases ?: 1]));
+        ", array_merge($params, ['total' => $totalCases]));
 
         return $categoryTrends;
     }
@@ -218,7 +222,7 @@ class CountyReportsManager {
      * Generate annual county report
      */
     public function generateAnnualCountyReport($year, $county = null) {
-        $where = "YEAR(COALESCE(occurred_at, created_at)) = :year";
+        $where = "YEAR(created_at) = :year";
         $params = ['year' => $year];
 
         if ($county) {
@@ -233,7 +237,7 @@ class CountyReportsManager {
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
                 COUNT(CASE WHEN status = 'reported' THEN 1 END) as pending_cases,
                 COUNT(CASE WHEN status IN ('assigned', 'in_progress') THEN 1 END) as active_cases,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time,
                 COUNT(DISTINCT station_id) as active_stations,
                 COUNT(DISTINCT incident_location_constituency) as affected_constituencies
@@ -244,13 +248,13 @@ class CountyReportsManager {
         // Monthly trends for the year
         $monthlyTrends = $this->db->fetchAll("
             SELECT
-                MONTH(COALESCE(occurred_at, created_at)) as month,
+                MONTH(created_at) as month,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate
             FROM cases
             WHERE $where
-            GROUP BY MONTH(COALESCE(occurred_at, created_at))
+            GROUP BY MONTH(created_at)
             ORDER BY month ASC
         ", $params);
 
@@ -260,7 +264,7 @@ class CountyReportsManager {
                 category,
                 COUNT(*) as case_count,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_count,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
             FROM cases
             WHERE $where
@@ -277,7 +281,7 @@ class CountyReportsManager {
             FROM cases
             WHERE $where
             GROUP BY incident_location_constituency, category
-            HAVING case_count > 2
+            HAVING case_count > 0
             ORDER BY case_count DESC
             LIMIT 10
         ", $params);
@@ -300,7 +304,7 @@ class CountyReportsManager {
      * Generate county performance report
      */
     public function generateCountyPerformanceReport($county = null, $timeframe = 30) {
-        $where = "created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
+        $where = "created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)";
         $params = ['timeframe' => $timeframe];
 
         if ($county) {
@@ -312,7 +316,7 @@ class CountyReportsManager {
             SELECT
                 COUNT(*) as total_cases,
                 COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) as resolved_cases,
-                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / COUNT(*), 1) as resolution_rate,
+                ROUND(COUNT(CASE WHEN status IN ('resolved', 'closed') THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as resolution_rate,
                 AVG(CASE WHEN actual_resolution_hours IS NOT NULL THEN actual_resolution_hours END) as avg_resolution_time
             FROM cases
             WHERE $where
@@ -333,7 +337,7 @@ class CountyReportsManager {
      * Generate county crime analysis report
      */
     public function generateCountyCrimeAnalysisReport($county = null, $timeframe = 30) {
-        $where = "created_at >= DATE_SUB(NOW(), INTERVAL :timeframe DAY)";
+        $where = "created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)";
         $params = ['timeframe' => $timeframe];
 
         if ($county) {
@@ -341,7 +345,7 @@ class CountyReportsManager {
             $params['county'] = $county;
         }
 
-        $totalCases = $this->db->fetchOne("SELECT COUNT(*) as total FROM cases WHERE $where", $params)['total'];
+        $totalCases = $this->db->fetchOne("SELECT COUNT(*) as total FROM cases WHERE $where", $params)['total'] ?? 0;
 
         $hotspots = $this->db->fetchAll("
             SELECT
@@ -351,7 +355,7 @@ class CountyReportsManager {
             FROM cases
             WHERE $where
             GROUP BY incident_location_constituency, category
-            HAVING case_count >= 3
+            HAVING case_count >= 1
             ORDER BY case_count DESC
             LIMIT 10
         ", $params);
@@ -363,7 +367,7 @@ class CountyReportsManager {
             GROUP BY category
             ORDER BY count DESC
             LIMIT 1
-        ", $params)['category'] ?? 'N/A';
+        ", $params);
 
         return [
             'type' => 'County Crime Analysis Report',
@@ -372,7 +376,7 @@ class CountyReportsManager {
                 'total_cases' => $totalCases
             ],
             'hotspots' => $hotspots,
-            'most_common_category' => $mostCommonCategory,
+            'most_common_category' => $mostCommonCategory['category'] ?? 'N/A',
             'generated_at' => date('Y-m-d H:i:s')
         ];
     }

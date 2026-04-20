@@ -1,7 +1,7 @@
 You are a senior PHP developer reviewing a project for a 4th-year computer science student. The project must use only PHP, HTML, CSS, and JavaScript—no frameworks or external libraries.
 
 Your task:
-1. Analyze all files and folders in the project directory to fully understand the system architecture.
+1. Analyze all files and folders in the project directory to fully understand the system architecture. Skip all .txt files
 2. Review the code for simplicity, correctness, and clarity—ensuring it’s easy for the student to explain during evaluation.
 3. Study how user roles work, specifically:
    - How a police officer is linked to a specific police station.
@@ -10,7 +10,7 @@ Your task:
 4. Examine the database schema to understand:
    - The relationship between users, police stations, and counties.
    - How an OCS user is tied to a station, and how stations belong to counties, and how county commanders have jurisdiction over counties they are incharge of.
-   The DB skeleton is in /var/www/html/utumishi/utumishi_skeleton.sql
+   You can use the DB credentials in includes/config/constants.php to read the DB structure
 5. Double-check your analysis to ensure no critical details—especially around data scoping and role-based access—are missed.
 
 Focus on clean, maintainable, and beginner-friendly code that strictly uses only the allowed technologies (PHP, HTML, CSS, JS).
