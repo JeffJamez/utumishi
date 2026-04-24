@@ -949,6 +949,7 @@ new Chart(trendCtx, {
 // Zone Mappings for Neural Network
 // ===========================================
 // Populate ZONE_MAPPINGS from PHP for the dropdown locations
+$zoneMappings = $zoneMappings ?? [];
 window.ZONE_MAPPINGS = <?php echo json_encode($zoneMappings); ?>;
 
 // ===========================================
