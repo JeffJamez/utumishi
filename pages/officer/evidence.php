@@ -66,8 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($uploadResult['success']) {
                     $success = $uploadResult['message'];
                     setFlashMessage('success', 'Evidence uploaded successfully');
-
                     $caseId = $uploadCaseId;
+                    $currentStatus = $caseManager->getCaseById($uploadCaseId, $currentUser['id'])['status'];
+                    $caseManager->addCaseUpdate(
+                        $uploadCaseId,
+                        $currentUser['id'],
+                        'Evidence uploaded: ' . htmlspecialchars($uploadResult['original_filename'] ?? 'File'),
+                        $currentStatus,
+                        $currentStatus
+                    );
                 } else {
                     $errors['upload'] = $uploadResult['message'];
                 }
@@ -83,11 +90,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $evidenceId = (int)$_POST['evidence_id'];
 
             if ($evidenceId) {
+                $evidenceRec = Database::getInstance()->fetchOne(
+                    "SELECT case_id FROM case_evidence WHERE id = :id",
+                    ['id' => $evidenceId]
+                );
+                $deleteCaseId = $evidenceRec['case_id'] ?? 0;
                 $deleteResult = deleteEvidence($evidenceId, $currentUser['id']);
 
                 if ($deleteResult['success']) {
                     $success = $deleteResult['message'];
                     setFlashMessage('success', 'Evidence deleted successfully');
+                    if ($deleteCaseId) {
+                        $currentStatus = $caseManager->getCaseById($deleteCaseId, $currentUser['id'])['status'];
+                        $caseManager->addCaseUpdate(
+                            $deleteCaseId,
+                            $currentUser['id'],
+                            'Evidence file deleted by officer',
+                            $currentStatus,
+                            $currentStatus
+                        );
+                    }
                 } else {
                     $errors['delete'] = $deleteResult['message'];
                 }
@@ -302,24 +324,25 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 </small>
                 </div>
              </div>
-                                        <div class="evidence-actions">
-                                            <a href="<?php echo BASE_URL; ?>/api/download_evidence.php?id=<?php echo $evidence['id']; ?>" 
+<div class="evidence-actions">
+                                            <a href="<?php echo BASE_URL; ?>/pages/officer/download_evidence.php?id=<?php echo $evidence['id']; ?>"
                                                class="btn btn-sm btn-outline btn-primary"
+                                               style="height: 14px;"
                                                target="_blank">
-                                                 Download
+                                                Download
                                             </a>
                                             <?php if ($evidence['uploaded_by_officer_id'] == $currentUser['id']): ?>
-                                                 <?php if (!$isOCS): ?>
-                                                 <form method="POST" style="display: inline;" 
-                                                       onsubmit="return confirm('Are you sure you want to delete this evidence file? This action cannot be undone.')">
-                                                     <?php echo csrfField(); ?>
-                                                     <input type="hidden" name="action" value="delete_evidence">
-                                                     <input type="hidden" name="evidence_id" value="<?php echo $evidence['id']; ?>">
-                                                     <button type="submit" class="btn btn-sm btn-outline btn-danger">
-                                                          Delete
-                                                     </button>
-                                                 </form>
-                                                 <?php endif; ?>
+                                                <?php if (!$isOCS): ?>
+                                                    <form method="POST" style="display: inline;"
+                                                          onsubmit="return confirm('Are you sure you want to delete this evidence file? This action cannot be undone.')">
+                                                        <?php echo csrfField(); ?>
+                                                        <input type="hidden" name="action" value="delete_evidence">
+                                                        <input type="hidden" name="evidence_id" value="<?php echo $evidence['id']; ?>">
+                                                        <button type="submit" class="btn btn-sm btn-outline btn-danger">
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -581,10 +604,28 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             font-size: 0.8rem;
         }
 
-        .evidence-actions {
-            display: flex;
-            flex-direction: column;
+.evidence-actions {
+            display: inline-flex;
             gap: 0.5rem;
+            align-items: center;
+        }
+
+        .evidence-actions .btn-sm {
+            min-width: 80px;
+            min-height: 38px;
+        }
+
+        .evidence-actions form {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .evidence-actions .btn {
+            /* width: 80px; */
+            text-align: center;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            white-space: nowrap;
         }
 
         @media (max-width: 768px) {

@@ -90,7 +90,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <?php if ($canEdit): ?>
                     <div class="mb-4">
                         <a href="<?php echo BASE_URL; ?>/pages/officer/update_case.php?id=<?php echo $caseId; ?>" class="btn btn-primary">
-                            Edit Case
+                            Update Case
                         </a>
                     </div>
                 <?php endif; ?>

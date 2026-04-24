@@ -68,7 +68,8 @@ class FileUploadHandler {
                     'message' => 'Evidence file uploaded successfully',
                     'file_id' => $fileId,
                     'file_path' => $filePath,
-                    'file_name' => $fileName
+                    'file_name' => $fileName,
+                    'original_filename' => $file['name']
                 ];
             } else {
 
