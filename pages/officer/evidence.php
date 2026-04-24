@@ -253,7 +253,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <strong><?php echo htmlspecialchars($selectedCase['title']); ?></strong><br>
                             <small>
                                 Category: <?php echo htmlspecialchars($selectedCase['category']); ?> • 
-                                Reporter: <?php echo htmlspecialchars($selectedCase['reporter_name']); ?> • 
+                                Reporter: <?php echo !empty($selectedCase['reporter_anonymized']) ? '<span style="color:#dc3545;font-weight:bold;">ANONYMIZED</span>' : htmlspecialchars($selectedCase['reporter_name']); ?> • 
                                 Status: <?php echo ucfirst(str_replace('_', ' ', $selectedCase['status'])); ?>
                             </small>
                         </div>
@@ -394,7 +394,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         id="description" 
                                         name="description" 
                                         class="form-control"
-                                        placeholder="e.g., CCTV footage from scene, witness statement, stolen items photo"
+                                        placeholder="e.g., Description of the documents povided as eveidence e.g. witness statement, stolen items photo"
                                         maxlength="200"
                                     >
                                     <div class="form-help">Brief description of the evidence (optional)</div>

@@ -111,24 +111,34 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <?php echo ucfirst(str_replace('_', ' ', $case['status'])); ?>
                                     </span>
                                 </p>
-                                <p><strong>Assigned Officer:</strong> 
+                                <p><strong>Assigned Officer</strong> 
+                                <br>
                                     <?php if (!empty($case['assigned_officer_name'])): ?>
                                         <?php echo htmlspecialchars($case['assigned_officer_name']); ?> | 
                                         ID: <?php echo htmlspecialchars($case['assigned_officer_national_id'] ?? 'N/A'); ?> | 
                                         Badge: <?php echo htmlspecialchars($case['badge_number'] ?? 'N/A'); ?>
                                         <br>
-                                        <strong>Station:</strong> <?php echo htmlspecialchars($case['station_name']); ?> - 
+                                        <strong>Station:</strong> <br>
+                                        <?php echo htmlspecialchars($case['station_name']); ?> - 
                                         OCS: <?php echo htmlspecialchars($case['ocs_name'] ?? 'Not assigned'); ?>
                                     <?php else: ?>
                                         Not assigned
                                     <?php endif; ?>
                                 </p>
+                                </div>
+                                <div class="col-md-6">
                                 <p><strong>Date/Time of Incident:</strong> <?php echo !empty($case['occurred_at']) ? date('M j, Y \a\t g:i A', strtotime($case['occurred_at'])) : 'Not recorded'; ?></p>
-                                <p><strong>Reported:</strong> <?php echo htmlspecialchars($case['created_at']); ?></p>
-                                <p><strong>Last Updated:</strong> <?php echo htmlspecialchars($case['updated_at'] ?? $case['created_at']); ?></p>
+                                    <p><strong>Reported:</strong> <?php echo htmlspecialchars($case['created_at']); ?></p>
+                                    <?php if (!empty($case['assigned_at'])): ?>
+                                    <p><strong>Assigned:</strong> <?php echo htmlspecialchars($case['assigned_at']); ?></p>
+                                    <?php endif; ?>
+                                    <p><strong>Last Updated:</strong> <?php echo htmlspecialchars($case['updated_at'] ?? $case['created_at']); ?></p>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <h5>Description</h5>
+
+                         <div class="row">
+                            <div class="col-md-12" style="margin-left: 12px; margin-top: 10px;">
+                                <strong>Description</strong>
                                 <p><?php echo nl2br(htmlspecialchars($case['description'])); ?></p>
                             </div>
                         </div>
@@ -142,16 +152,25 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-6">
-                                <h5>Incident Location</h5>
+                                <h4>Incident Location</h4>
                                 <p><strong>County:</strong> <?php echo htmlspecialchars($case['incident_location_county']); ?></p>
                                 <p><strong>Constituency:</strong> <?php echo htmlspecialchars($case['incident_location_constituency']); ?></p>
                                 <p><strong>Local Area:</strong> <?php echo htmlspecialchars($case['incident_local_area'] ?: 'Not specified'); ?></p>
                             </div>
                             <div class="col-md-6">
-                                <h5>Reporter Residence</h5>
-                                <p><strong>County:</strong> <?php echo htmlspecialchars($case['reporter_county']); ?></p>
-                                <p><strong>Constituency:</strong> <?php echo htmlspecialchars($case['reporter_constituency']); ?></p>
-                                <p><strong>Local Area:</strong> <?php echo htmlspecialchars($case['reporter_local_area'] ?: 'Not specified'); ?></p>
+                                <h4>Reporter Residence</h4>
+                                <?php if (!empty($case['reporter_anonymized'])): ?>
+                                    <div class="alert alert-warning">
+                                        <strong>Reporter information anonymized for safety purposes.</strong>
+                                        <p>The reporter has chosen to remain anonymous. Their personal details are not displayed.</p>
+                                    </div>
+                                <?php else: ?>
+                                    <!-- <p><strong>Name:</strong> <?php echo htmlspecialchars($reporterDetails['name'] ?? 'Unknown'); ?></p>
+                                    <p><strong>Phone:</strong> <?php echo htmlspecialchars($reporterDetails['phone'] ?? 'N/A'); ?></p> -->
+                                    <p><strong>County:</strong> <?php echo htmlspecialchars($case['reporter_county']); ?></p>
+                                    <p><strong>Constituency:</strong> <?php echo htmlspecialchars($case['reporter_constituency']); ?></p>
+                                    <p><strong>Local Area:</strong> <?php echo htmlspecialchars($case['reporter_local_area'] ?: 'Not specified'); ?></p>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -162,9 +181,17 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <h3>Reporter Information</h3>
                     </div>
                     <div class="card-body">
-                        <p><strong>Name:</strong> <?php echo htmlspecialchars($case['reporter_name']); ?></p>
-                        <p><strong>National ID:</strong> <?php echo htmlspecialchars($case['reporter_national_id'] ?? 'Not available'); ?></p>
-                        <p><strong>Phone:</strong> <?php echo htmlspecialchars($case['reporter_phone']); ?></p>
+
+                     <?php if (!empty($case['reporter_anonymized'])): ?>
+                        <div class="alert alert-warning">
+                            <strong>Reporter information anonymized for safety purposes.</strong>
+                            <p>The reporter has chosen to remain anonymous. Their personal details are not displayed.</p>
+                        </div>
+                        <?php else: ?>
+                            <p><strong>Name:</strong> <?php echo htmlspecialchars($case['reporter_name']); ?></p>
+                            <p><strong>National ID:</strong> <?php echo htmlspecialchars($case['reporter_national_id'] ?? 'Not available'); ?></p>
+                            <p><strong>Phone:</strong> <?php echo htmlspecialchars($case['reporter_phone']); ?></p>
+                        <?php endif; ?>
                     </div>
                 </div>
 

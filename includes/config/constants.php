@@ -25,7 +25,7 @@ define('DB_USER', 'jeff');
 define('DB_PASS', 'webmaster');
 define('DB_CHARSET', 'utf8mb4');
 
-define('SESSION_TIMEOUT', 1800);
+define('SESSION_TIMEOUT', 86400);
 define('PASSWORD_MIN_LENGTH', 6);
 define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOGIN_LOCKOUT_TIME', 900);

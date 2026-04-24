@@ -71,18 +71,38 @@ class Auth {
         }
     }
 
+    private function getUserStationId($userId, $role) {
+        $stationId = null;
+        
+        $officer = $this->db->fetchOne(
+            "SELECT station_id FROM officers WHERE user_id = :user_id",
+            ['user_id' => $userId]
+        );
+        
+        if ($officer && !empty($officer['station_id'])) {
+            return $officer['station_id'];
+        }
+        
+        if ($role === ROLE_OCS) {
+            $station = $this->db->fetchOne(
+                "SELECT id FROM stations WHERE ocs_id = :user_id",
+                ['user_id' => $userId]
+            );
+            if ($station) {
+                return $station['id'];
+            }
+        }
+        
+        return null;
+    }
+
     private function createSession($user) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['national_id'] = $user['national_id'];
         $_SESSION['name'] = $user['name'];
         $_SESSION['role'] = $user['role'];
         
-        // Get station_id from officers table
-        $officer = $this->db->fetchOne(
-            "SELECT station_id FROM officers WHERE user_id = :user_id",
-            ['user_id' => $user['id']]
-        );
-        $_SESSION['station_id'] = $officer['station_id'] ?? null;
+        $_SESSION['station_id'] = $this->getUserStationId($user['id'], $user['role']);
         
         $_SESSION['last_activity'] = time();
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -134,12 +154,7 @@ class Auth {
         $_SESSION['email'] = $user['email'];      
         $_SESSION['role'] = $user['role'];
         
-        // Get station_id from officers table
-        $officer = $db->fetchOne(
-            "SELECT station_id FROM officers WHERE user_id = :user_id",
-            ['user_id' => $user['id']]
-        );
-        $stationId = $officer['station_id'] ?? null;
+        $stationId = $this->getUserStationId($user['id'], $user['role']);
         $_SESSION['station_id'] = $stationId;
 
         return [

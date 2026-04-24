@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'reporter_county' => sanitizeText($_POST['reporter_county'] ?? ''),
             'reporter_constituency' => sanitizeText($_POST['reporter_constituency'] ?? ''),
             'reporter_local_area' => sanitizeText($_POST['reporter_local_area'] ?? ''),
+            'reporter_anonymized' => isset($_POST['reporter_anonymized']) ? 1 : 0,
         ];
 
         if (empty($formData['citizen_national_id'])) {
@@ -157,6 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'reporter_county' => $formData['reporter_county'],
                     'reporter_constituency' => $formData['reporter_constituency'],
                     'reporter_local_area' => $formData['reporter_local_area'],
+                    'reporter_anonymized' => $formData['reporter_anonymized'],
                     'reported_by_citizen_id' => $citizenId,
                     'recorded_by_officer_id' => $currentUser['id'],
                     'station_id' => $currentUser['station_id'],
@@ -225,7 +227,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <fieldset class="mb-4">
                         <legend class="h4 mb-3">Citizen Information (Reporter)</legend>
 
-                    <div class="d-grid" style="grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+                    <div class="d-grid" style="grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
                          <div class="form-group">
                                     <label for="citizen_name" class="form-label">Full Name *</label>
                                     <input 
@@ -262,7 +264,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 </div>
                                 </div>
 
-                        <div class="d-grid" style="grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+                        <div class="d-grid" style="grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
                             <div class="form-group">
                                 <label for="citizen_national_id" class="form-label">National ID *</label>
                                 <input 
@@ -296,28 +298,43 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                      <div class="form-error"><?php echo htmlspecialchars($errors['citizen_id_document']); ?></div>
                                  <?php endif; ?>
                                  <div class="form-help">Upload a PDF copy of the citizen's National ID for verification</div>
-                             </div>                               
+                             </div>  
+                             
+                             <div class="form-group">
+                                  <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                      <input 
+                                          type="checkbox" 
+                                          id="reporter_anonymized" 
+                                          name="reporter_anonymized"
+                                          value="1"
+                                          style="width: 18px; height: 18px;"
+                                      >
+                                      <span style="font-weight: 500;">Anonymize reporter details</span>
+                                  </label>
+                                  <div class="form-help">When checked, reporter information will be hidden from case details for safety purposes</div>
+                              </div>
                         </div>
                     </fieldset>
 
                     <fieldset class="mb-4">
                         <legend class="h4 mb-3">Case Details</legend>
 
-                        <div class="form-group">
-                            <label for="title" class="form-label">Case Title *</label>
-                            <input 
-                                type="text" 
-                                id="title" 
-                                name="title" 
-                                class="form-control <?php echo isset($errors['title']) ? 'error' : ''; ?>"
-                                placeholder="Brief summary of the case (e.g., Theft of Mobile Phone at Bus Stop)"
-                                value="<?php echo htmlspecialchars($formData['title'] ?? ''); ?>"
-                                maxlength="200"
-                                required
-                            >
-                            <?php if (isset($errors['title'])): ?>
-                                <div class="form-error"><?php echo htmlspecialchars($errors['title']); ?></div>
-                            <?php endif; ?>
+                        <div class="d-grid" style="grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
+                             <div class="form-group">
+                                <label for="title" class="form-label">Case Title *</label>
+                                <input 
+                                    type="text" 
+                                    id="title" 
+                                    name="title" 
+                                    class="form-control <?php echo isset($errors['title']) ? 'error' : ''; ?>"
+                                    placeholder="Brief summary of the case (e.g., Theft of Mobile Phone at Bus Stop)"
+                                    value="<?php echo htmlspecialchars($formData['title'] ?? ''); ?>"
+                                    maxlength="200"
+                                    required
+                                >
+                                <?php if (isset($errors['title'])): ?>
+                                    <div class="form-error"><?php echo htmlspecialchars($errors['title']); ?></div>
+                                <?php endif; ?>
                             <div class="form-help">Clear, concise title describing the incident</div>
                         </div>
 
@@ -342,6 +359,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <?php endif; ?>
                             <div class="form-help">Select the most appropriate category for this case</div>
                         </div>
+                        </div>                       
 
                         <div class="form-group">
                             <label for="occurred_at" class="form-label">Date and Time of Incident *</label>
@@ -434,10 +452,10 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                           <div class="form-help">Select the county and constituency where the incident occurred</div>
 
                           <!-- Google Places Autocomplete for Incident Location -->
-                          <div class="form-group google-places-group" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--light-gray);">
+                          <div class="form-group google-places-group" style="margin-top: 1rem; padding-top: 1.5rem; border-top: 1px dashed var(--light-gray);">
                               <label for="incident_place_search" class="form-label">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                  Search Incident Location (Optional)
+                                  Search Incident Location
                               </label>
                               <input 
                                   type="text" 
@@ -491,20 +509,22 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                  </select>
                              </div>
 
-                             <div class="form-group">
-                                 <label for="reporter_local_area" class="form-label">Local Area</label>
-                                 <input
-                                     type="text"
-                                     id="reporter_local_area"
-                                     name="reporter_local_area"
-                                     class="form-control"
-                                     placeholder="e.g., Estate name, village, street"
-                                     value="<?php echo htmlspecialchars($formData['reporter_local_area'] ?? ''); ?>"
-                                     maxlength="100"
-                                 >
-                                 <div class="form-help">Optional: Specific area or landmark</div>
-                             </div>
-                         </div>
+<div class="form-group">
+                                  <label for="reporter_local_area" class="form-label">Local Area</label>
+                                  <input
+                                      type="text"
+                                      id="reporter_local_area"
+                                      name="reporter_local_area"
+                                      class="form-control"
+                                      placeholder="e.g., Estate name, village, street"
+                                      value="<?php echo htmlspecialchars($formData['reporter_local_area'] ?? ''); ?>"
+                                      maxlength="100"
+                                  >
+                                  <div class="form-help">Optional: Specific area or landmark</div>
+                              </div>
+                              
+                              
+                          </div>
 
                            <?php if (isset($errors['reporter_location'])): ?>
                                <div class="form-error"><?php echo htmlspecialchars($errors['reporter_location']); ?></div>

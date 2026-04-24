@@ -75,6 +75,7 @@ class WorkloadManager {
                 c.category,
                 c.created_at,
                 c.estimated_resolution_hours,
+                c.reporter_anonymized,
                 u.name as reporter_name,
                 TIMESTAMPDIFF(HOUR, c.created_at, NOW()) as hours_pending,
                 CASE 

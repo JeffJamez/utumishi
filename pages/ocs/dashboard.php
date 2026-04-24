@@ -235,7 +235,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 <div><?php echo htmlspecialchars($case['title']); ?></div>
                                                 <small class="text-muted"><?php echo htmlspecialchars($case['category']); ?></small>
                                             </td>
-                                            <td><?php echo htmlspecialchars($case['reporter_name']); ?></td>
+                                            <td>
+                                                <?php if (!empty($case['reporter_anonymized'])): ?>
+                                                    <span style="color: #dc3545; font-weight: bold;">ANONYMIZED</span>
+                                                <?php else: ?>
+                                                    <?php echo htmlspecialchars($case['reporter_name']); ?>
+                                                <?php endif; ?>
+                                            </td>
                                             <td>
                                                 <?php if ($case['assigned_officer']): ?>
                                                     <?php echo htmlspecialchars($case['assigned_officer']); ?>

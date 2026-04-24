@@ -97,6 +97,7 @@ class Station {
                 c.estimated_resolution_hours,
                 c.actual_resolution_hours,
                 c.closed_at,
+                c.reporter_anonymized,
                 u1.name as reporter_name,
                 u2.name as recorded_by_name,
                 CONCAT(u3.name, ' (', o.badge_number, ')') as assigned_officer,
@@ -222,6 +223,7 @@ class Station {
                 c.created_at,
                 c.estimated_resolution_hours,
                 u1.name as reporter_name,
+                c.reporter_anonymized,
                 CONCAT(u3.name, ' (', o.badge_number, ')') as assigned_officer,
                 TIMESTAMPDIFF(HOUR, c.created_at, NOW()) as hours_since_reported,
                 TIMESTAMPDIFF(HOUR, c.created_at, NOW()) - c.estimated_resolution_hours as hours_overdue
@@ -250,6 +252,7 @@ class Station {
                 c.created_at,
                 c.occurred_at,
                 u1.name as reporter_name,
+                c.reporter_anonymized,
                 CONCAT(u3.name, ' (', o.badge_number, ')') as assigned_officer
             FROM cases c
             JOIN users u1 ON c.reported_by_citizen_id = u1.id
@@ -389,7 +392,7 @@ class Station {
             }
         }
         
-        $whereClause = implode(' AND ', $whereConditions);
+$whereClause = implode(' AND ', $whereConditions);
         
         return $this->db->fetchAll("
             SELECT 
@@ -399,6 +402,7 @@ class Station {
                 c.category,
                 c.status,
                 c.created_at,
+                c.reporter_anonymized,
                 u1.name as reporter_name,
                 CONCAT(u3.name, ' (', o.badge_number, ')') as assigned_officer
             FROM cases c
@@ -407,7 +411,7 @@ class Station {
             LEFT JOIN users u3 ON o.user_id = u3.id
              WHERE $whereClause
              ORDER BY c.created_at DESC
-             " . ($limit ? " LIMIT :limit OFFSET :offset" : " LIMIT 50"), array_merge($params, $limit ? ['limit' => $limit, 'offset' => $offset] : []));
+              " . ($limit ? " LIMIT :limit OFFSET :offset" : " LIMIT 50"), array_merge($params, $limit ? ['limit' => $limit, 'offset' => $offset] : []));
     }
 
     public function getSearchCasesCount($searchTerm, $filters = []) {

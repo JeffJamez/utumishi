@@ -81,7 +81,7 @@ body {
 
 .app-main {
   grid-area: main;
-  padding: 2rem;
+  padding: 1rem 2rem;
   overflow-y: auto;
 }
 
@@ -181,6 +181,7 @@ body {
 
 .card {
   background: var(--primary-white);
+  border: 1px solid #dee2e6;
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-sm);
   margin-bottom: 1.5rem;
@@ -189,9 +190,11 @@ body {
 
 .card-header {
   padding: 1rem 1.5rem;
-  background: var(--light-gray);
-  border-bottom: 1px solid #e0e0e0;
+  background: #e9ecef;
+  border-bottom: 1px solid #dee2e6;
   font-weight: 600;
+  border-top-left-radius: calc(var(--border-radius-lg) - 1px);
+  border-top-right-radius: calc(var(--border-radius-lg) - 1px);
 }
 
 .card-body {
@@ -200,8 +203,10 @@ body {
 
 .card-footer {
   padding: 1rem 1.5rem;
-  background: var(--light-gray);
-  border-top: 1px solid #e0e0e0;
+  background: #e9ecef;
+  border-top: 1px solid #dee2e6;
+  border-bottom-left-radius: calc(var(--border-radius-lg) - 1px);
+  border-bottom-right-radius: calc(var(--border-radius-lg) - 1px);
 }
 
 .form-group {

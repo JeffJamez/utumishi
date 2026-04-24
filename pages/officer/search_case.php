@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
             $sql = "
                 SELECT c.*, 
                        u1.name as reporter_name,
+                       c.reporter_anonymized,
                        u2.name as recorded_by_name,
                        u3.name as assigned_officer_name,
                        u3.national_id as assigned_officer_national_id,
@@ -203,6 +204,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <p class="mb-1"><strong>Created:</strong> <?php echo date('M j, Y g:i A', strtotime($case['created_at'])); ?></p>
                                         <?php if (isset($case['limited_access']) && $case['limited_access']): ?>
                                             <p class="text-muted small">Limited access </p>
+                                        <?php elseif (!empty($case['reporter_anonymized'])): ?>
+                                            <p class="mb-1"><strong>Reporter:</strong> <span style="color: #dc3545; font-weight: bold;">ANONYMIZED</span></p>
                                         <?php else: ?>
                                             <p class="mb-1"><strong>Reporter:</strong> <?php echo htmlspecialchars($case['reporter_name'] ?? 'N/A'); ?></p>
                                             <p class="mb-1"><strong>Recorded by:</strong> <?php echo htmlspecialchars($case['recorded_by_name'] ?? 'N/A'); ?></p>

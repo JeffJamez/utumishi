@@ -44,6 +44,14 @@ if (!empty($_GET['id'])) {
             } else {
                 $caseUpdates = $caseManager->getCaseUpdates($caseId);
                 $caseEvidence = getCaseEvidence($caseId);
+                $closureRequest = Database::getInstance()->fetchOne(
+                    "SELECT cr.*, u.name as reviewed_by_name, u2.name as requested_by_name
+                     FROM closure_requests cr
+                     LEFT JOIN users u ON cr.reviewed_by = u.id
+                     LEFT JOIN users u2 ON cr.requested_by = u2.id
+                     WHERE cr.case_id = ?",
+                    [$caseId]
+                );
             }
         }
     } catch (Exception $e) {
@@ -101,25 +109,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $case && empty($errors['general']))
                     $errors['general'] = $result['message'];
                 }
             }
-        } elseif ($action === 'request_closure') {
-            // Check if case is resolved
-            if ($case['status'] !== CASE_RESOLVED) {
-                $errors['general'] = 'Only resolved cases can be requested for closure.';
-            } else {
-                // Check if already requested
-                $existing = $db->fetchOne("SELECT id FROM closure_requests WHERE case_id = ? AND status = 'pending'", [$caseId]);
-                if ($existing) {
-                    $errors['general'] = 'Closure request already pending for this case.';
-                } else {
-                    $db->insert('closure_requests', [
-                        'case_id' => $caseId,
-                        'requested_by' => $currentUser['id']
-                    ]);
-                    $success = 'Closure request submitted successfully. Awaiting OCS approval.';
-                    setFlashMessage('success', $success);
-                }
-            }
         }
+        
     } catch (Exception $e) {
         error_log("Case Update Error: " . $e->getMessage());
         $errors['general'] = $e->getMessage();
@@ -154,8 +145,13 @@ if ($case) {
         case CASE_RESOLVED:
             $availableStatuses = [];
             break;
+        case CASE_CLOSED:
+            $availableStatuses = [];
+            break;
     }
 }
+
+$caseClosed = ($case && $case['status'] === CASE_CLOSED);
 
 $pageTitle = $case ? "Update Case - " . $case['ob_number'] : "Update Case";
 
@@ -226,7 +222,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                     <div><?php echo htmlspecialchars($assignedCase['title']); ?></div>
                                                     <small class="text-muted">
                                                         <?php echo htmlspecialchars($assignedCase['category']); ?> • 
-                                                        <?php echo htmlspecialchars($assignedCase['reporter_name']); ?>
+                                                        <?php echo !empty($assignedCase['reporter_anonymized']) ? '<span style="color:#dc3545;font-weight:bold;">ANONYMIZED</span>' : htmlspecialchars($assignedCase['reporter_name']); ?>
                                                     </small>
                                                 </td>
                                                 <td>
@@ -283,12 +279,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <strong>Title:</strong><br>
+                                <strong>Title:</strong> 
                                 <?php echo htmlspecialchars($case['title']); ?>
                             </div>
 
                             <div class="mb-3">
-                                <strong>Description:</strong><br>
+                                <strong>Description</strong><br>
                                 <div class="p-2" style="background: var(--light-gray); border-radius: var(--border-radius); white-space: pre-line;">
                                     <?php echo htmlspecialchars($case['description']); ?>
                                 </div>
@@ -296,24 +292,28 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
                             <div class="d-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
                                 <div>
-                                    <strong>Reporter:</strong><br>
-                                    <?php echo htmlspecialchars($case['reporter_name']); ?><br>
-                                    <small class="text-muted"><?php echo htmlspecialchars($case['reporter_phone']); ?></small>
+                                    <strong>Reporter</strong><br>
+                                    <?php if (!empty($case['reporter_anonymized'])): ?>
+                                        <span style="color: #dc3545; font-weight: bold;">ANONYMIZED</span>
+                                    <?php else: ?>
+                                        <?php echo htmlspecialchars($case['reporter_name']); ?><br>
+                                        <small class="text-muted"><?php echo htmlspecialchars($case['reporter_phone']); ?></small>
+                                    <?php endif; ?>
                                 </div>
                                 <div>
-                                    <strong>Category:</strong><br>
+                                    <strong>Category</strong><br>
                                     <span class="badge status-assigned"><?php echo htmlspecialchars($case['category']); ?></span>
                                 </div>
                             </div>
 
                             <div class="mt-3">
-                                <strong>Location:</strong><br>
+                                <strong>Location    </strong><br>
                                  <?php echo htmlspecialchars($case['incident_location_constituency']); ?>,
                                  <?php echo htmlspecialchars($case['incident_location_county']); ?>
                             </div>
 
                             <div class="mt-3">
-                                <strong>Dates:</strong><br>
+                                <strong>Dates</strong><br>
                                 <small>
                                     Reported: <?php echo date('M d, Y \a\t H:i', strtotime($case['created_at'])); ?><br>
                                     Last Updated: <?php echo date('M d, Y \a\t H:i', strtotime($case['updated_at'])); ?>
@@ -330,7 +330,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <h3>Update Case Status</h3>
                         </div>
                         <div class="card-body">
-                            <?php if (!empty($availableStatuses)): ?>
+                            <?php if ($caseClosed): ?>
+                                <div class="text-center p-4">
+                                    <h4>Case Closed</h4>
+                                    <p class="text-muted">This case has been closed. No further updates are allowed.</p>
+                                </div>
+                            <?php elseif (!empty($availableStatuses)): ?>
                                 <form method="POST" action="" id="updateCaseForm">
                                     <?php echo csrfField(); ?>
                                     <input type="hidden" name="action" value="update_case">
@@ -362,7 +367,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             id="update_notes"
                                             name="update_notes"
                                             class="form-control form-textarea <?php echo isset($errors['update_notes']) ? 'error' : ''; ?>"
-                                            placeholder="Describe what actions were taken, findings, next steps, etc.&#10;&#10;Example:&#10;- Interviewed witness at scene&#10;- Collected CCTV footage from nearby shops&#10;- Suspect identified through fingerprints&#10;- Case forwarded to court"
+                                            placeholder="Describe what actions were taken, findings, next steps, etc.&#10;&#10;Example:&#10;- Interviewed witness at scene&#10;- Suspect identified through fingerprints&#10;- Case forwarded to court"
                                             rows="6"
                                             maxlength="1000"
                                             required
@@ -379,8 +384,8 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 </form>
                             <?php else: ?>
                                 <div class="text-center p-4">
-                                    <h4>Case Resolved</h4>
-                                    <p class="text-muted">This case has been resolved. Request closure for final approval.</p>
+                                    <h4>Case Closed</h4>
+                                    <p class="text-muted">This case has been closed. No further updates are allowed.</p>
                                     <!-- <form method="POST" action="" style="display: inline;">
                                         <?php echo csrfField(); ?>
                                         <input type="hidden" name="action" value="request_closure">
@@ -476,13 +481,49 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     </div>
                                 <?php endforeach; ?>
 
+                                <?php if ($closureRequest): ?>
+                                    <div class="timeline-item">
+                                        <div class="timeline-date">
+                                            <?php echo date('M d, Y \a\t H:i', strtotime($closureRequest['reviewed_at'])); ?>
+                                        </div>
+                                        <div class="timeline-content">
+                                            <div class="d-flex justify-between items-center mb-2">
+                                                <strong>Case Closed</strong>
+                                                <small class="text-muted">
+                                                    Reviewed by <?php echo htmlspecialchars($closureRequest['reviewed_by_name']); ?>
+                                                </small>
+                                            </div>
+                                            <div>
+                                                Closure request <?php echo ucfirst($closureRequest['status']); ?>
+                                                <?php if ($closureRequest['review_notes']): ?>
+                                                    <br><small style="white-space: pre-line;"><?php echo htmlspecialchars($closureRequest['review_notes']); ?></small>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item">
+                                        <div class="timeline-date">
+                                            <?php echo date('M d, Y \a\t H:i', strtotime($closureRequest['requested_at'])); ?>
+                                        </div>
+                                        <div class="timeline-content">
+                                            <div class="d-flex justify-between items-center mb-2">
+                                                <strong>Closure Requested</strong>
+                                                <small class="text-muted">
+                                                    Requested by <?php echo htmlspecialchars($closureRequest['requested_by_name']); ?>
+                                                </small>
+                                            </div>
+                                            <div>Case flagged for closure pending OCS review.</div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div class="timeline-item">
                                     <div class="timeline-date">
                                         <?php echo date('M d, Y \a\t H:i', strtotime($case['created_at'])); ?>
                                     </div>
                                     <div class="timeline-content">
                                         <strong>Case Reported</strong><br>
-                                        Initial report filed by <?php echo htmlspecialchars($case['reporter_name']); ?> 
+                                        Initial report filed by <?php echo !empty($case['reporter_anonymized']) ? '<span style="color:#dc3545;font-weight:bold;">ANONYMIZED</span>' : htmlspecialchars($case['reporter_name']); ?> 
                                         at <?php echo htmlspecialchars($case['station_name']); ?>
                                     </div>
                                 </div>

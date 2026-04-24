@@ -40,6 +40,7 @@ class CaseManager {
                 'reporter_county' => sanitizeText($data['reporter_county']),
                 'reporter_constituency' => sanitizeText($data['reporter_constituency']),
                 'reporter_local_area' => sanitizeText($data['reporter_local_area'] ?? ''),
+                'reporter_anonymized' => !empty($data['reporter_anonymized']) ? 1 : 0,
                 'reported_by_citizen_id' => (int)$data['reported_by_citizen_id'],
                 'recorded_by_officer_id' => (int)$data['recorded_by_officer_id'],
                 'station_id' => (int)$data['station_id'],
@@ -150,6 +151,10 @@ class CaseManager {
                         $this->addCaseUpdate($caseId, $officerId, 
                             $data['update_notes'] ?? 'Case status updated',
                             $oldStatus, $updateData['status']);
+
+                        if ($updateData['status'] === CASE_RESOLVED) {
+                            $this->requestClosure($caseId, $officerId);
+                        }
                     } else {
                         $this->addCaseUpdate($caseId, $officerId, 
                             $data['update_notes'] ?? 'Case information updated',
@@ -174,6 +179,20 @@ class CaseManager {
             $this->db->rollback();
             error_log("Update Case Error: " . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function requestClosure($caseId, $officerId) {
+        $existing = $this->db->fetchOne(
+            "SELECT id FROM closure_requests WHERE case_id = ? AND status = 'pending'",
+            [$caseId]
+        );
+
+        if (!$existing) {
+            $this->db->insert('closure_requests', [
+                'case_id' => $caseId,
+                'requested_by' => $officerId
+            ]);
         }
     }
 
@@ -205,7 +224,7 @@ class CaseManager {
             $oldOfficerId = $currentCase ? $currentCase['assigned_officer_id'] : null;
 
             $updated = $this->db->update('cases', 
-                ['assigned_officer_id' => $officerId, 'status' => CASE_ASSIGNED],
+                ['assigned_officer_id' => $officerId, 'status' => CASE_ASSIGNED, 'assigned_at' => date('Y-m-d H:i:s')],
                 'id = :id', 
                 ['id' => $caseId]
             );
@@ -235,16 +254,41 @@ class CaseManager {
             return false;
         }
     }
+    
+    public function reassignCaseAuto($caseId, $category, $stationId, $recordedByOfficerId) {
+        $newOfficer = $this->autoAssignOfficer($category, $stationId);
+        
+        if (!$newOfficer) {
+            return ['success' => false, 'message' => 'No matching officer found for re-assignment based on expertise and workload.'];
+        }
+        
+        if ($newOfficer['user_id'] == $recordedByOfficerId) {
+            return ['success' => false, 'message' => 'Current officer is already the best match for this case.'];
+        }
+        
+        $assigned = $this->assignCase($caseId, $newOfficer['id']);
+        
+        if ($assigned) {
+            return [
+                'success' => true, 
+                'message' => "Case re-assigned to Officer {$newOfficer['name']} ({$newOfficer['badge_number']})",
+                'officer_name' => $newOfficer['name'],
+                'badge_number' => $newOfficer['badge_number']
+            ];
+        }
+        
+        return ['success' => false, 'message' => 'Failed to re-assign case.'];
+    }
 
     public function getCaseById($caseId, $userId = null) {
 
     if (!$userId) {
         $sql = "SELECT c.*,
-                       u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone,
+                       u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone, u1.id_document_path as reporter_id_document,
                        u2.name as recorded_by_name,
                        u3.name as assigned_officer_name, u3.national_id as assigned_officer_national_id, o.badge_number,
                        s.name as station_name, s.county as station_county,
-                       ocs.name as ocs_name
+                       ocs.name as ocs_name, c.assigned_at
                 FROM cases c
                 JOIN users u1 ON c.reported_by_citizen_id = u1.id
                 JOIN users u2 ON c.recorded_by_officer_id = u2.id
@@ -273,11 +317,11 @@ class CaseManager {
 
     $sql = "
         SELECT c.*,
-               u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone,
+               u1.name as reporter_name, u1.national_id as reporter_national_id, u1.phone as reporter_phone, u1.id_document_path as reporter_id_document,
                u2.name as recorded_by_name,
                u3.name as assigned_officer_name, u3.national_id as assigned_officer_national_id, o.badge_number, o.user_id as assigned_officer_user_id,
                s.name as station_name, s.county as station_county,
-               ocs.name as ocs_name
+               ocs.name as ocs_name, c.assigned_at
         FROM cases c
         JOIN users u1 ON c.reported_by_citizen_id = u1.id
         JOIN users u2 ON c.recorded_by_officer_id = u2.id
@@ -354,6 +398,7 @@ class CaseManager {
 
         $sql = "SELECT c.*, 
                     u.name as reporter_name,   
+                    c.reporter_anonymized,
                     s.name as station_name,
                     TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) as hours_since_reported
                 FROM cases c
@@ -571,6 +616,7 @@ class CaseManager {
 
         $sql = "SELECT c.ob_number, c.title, c.category, c.status, c.created_at,
                         c.incident_location_county, c.incident_location_constituency,
+                        c.reporter_anonymized,
                        u.name as reporter_name, s.name as station_name
                 FROM cases c
                 JOIN users u ON c.reported_by_citizen_id = u.id

@@ -112,9 +112,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div class="card mb-4">
                     <div class="card-header">
                         <h3>Case Details - <?php echo htmlspecialchars($caseDetails['ob_number']); ?></h3>
-                        <span class="badge <?php echo STATUS_COLORS[$caseDetails['status']] ?? 'status-reported'; ?>">
-                            <?php echo ucfirst(str_replace('_', ' ', $caseDetails['status'])); ?>
-                        </span>
                     </div>
                     <div class="card-body">
                         <div class="d-grid" style="grid-template-columns: 2fr 1fr; gap: 2rem;">
@@ -154,6 +151,9 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     <?php if ($caseDetails['assigned_officer_name']): ?>
                                         <?php echo htmlspecialchars($caseDetails['assigned_officer_name']); ?><br>
                                         <small class="text-muted">Badge: <?php echo htmlspecialchars($caseDetails['badge_number']); ?></small>
+                                        <?php if (!empty($caseDetails['assigned_at'])): ?>
+                                        <br><small class="text-muted">Assigned: <?php echo htmlspecialchars($caseDetails['assigned_at']); ?></small>
+                                        <?php endif; ?>
                                     <?php else: ?>
                                         <span class="text-muted">Not yet assigned</span>
                                     <?php endif; ?>

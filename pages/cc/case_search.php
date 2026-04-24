@@ -36,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
             $case = $db->fetchOne("
                 SELECT c.*,
                        u1.name as reporter_name,
+                       c.reporter_anonymized,
                        u2.name as recorded_by_name,
                        u3.name as assigned_officer_name,
                        o.badge_number,
@@ -284,7 +285,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             <h3>Reporter Information</h3>
                         </div>
                         <div class="card-body">
-                            <p><strong>Name:</strong> <?php echo htmlspecialchars($case['reporter_name']); ?></p>
+                            <p><strong>Name:</strong> <?php echo !empty($case['reporter_anonymized']) ? '<span style="color:#dc3545;font-weight:bold;">ANONYMIZED</span>' : htmlspecialchars($case['reporter_name']); ?></p>
                             <p><strong>National ID:</strong> <?php echo htmlspecialchars($case['reporter_national_id'] ?? 'Not available'); ?></p>
                             <p><strong>Phone:</strong> <?php echo htmlspecialchars($case['reporter_phone']); ?></p>
                         </div>

@@ -106,6 +106,7 @@ public function getPendingTasks($limit = 5) {
             SELECT c.*,
                    TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) as hours_since_reported,
                    u.name as reporter_name,
+                   c.reporter_anonymized,
                    s.name as station_name,
                    'recorded' as case_type
             FROM cases c
@@ -453,6 +454,7 @@ public function getCasesRequiringAttention() {
     $sql = "
         SELECT c.*,
                u.name as reporter_name,
+               c.reporter_anonymized,
                TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) as hours_since_reported,
                CASE
                    WHEN TIMESTAMPDIFF(HOUR, COALESCE(c.occurred_at, c.created_at), NOW()) > 72 THEN 'overdue'

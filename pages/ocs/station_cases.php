@@ -6,6 +6,7 @@ session_start();
 require_once __DIR__ . '/../../includes/config/constants.php';
 require_once __DIR__ . '/../../includes/core/db.php';
 require_once __DIR__ . '/../../includes/core/auth.php';
+require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/classes/User.php';
 require_once __DIR__ . '/../../includes/classes/Station.php';
 
@@ -55,12 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'status' => 'approved',
                 'reviewed_by' => $currentUser['id'],
                 'reviewed_at' => date('Y-m-d H:i:s')
-            ], 'id = ?', [$requestId]);
+            ], 'id = :id', ['id' => $requestId]);
 
             $db->update('cases', [
                 'status' => CASE_CLOSED,
                 'closed_at' => date('Y-m-d H:i:s')
-            ], 'id = ?', [$caseId]);
+            ], 'id = :id', ['id' => $caseId]);
 
             setFlashMessage('success', 'Case closure approved and case closed.');
         } elseif ($action === 'reject_closure' && $requestId) {
@@ -70,9 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'reviewed_by' => $currentUser['id'],
                 'reviewed_at' => date('Y-m-d H:i:s'),
                 'review_notes' => $rejectNotes
-            ], 'id = ?', [$requestId]);
+            ], 'id = :id', ['id' => $requestId]);
 
-            setFlashMessage('success', 'Case closure request rejected.');
+            $db->update('cases', [
+                'status' => CASE_IN_PROGRESS
+            ], 'id = :id', ['id' => $caseId]);
+
+            setFlashMessage('success', 'Case closure request rejected. Case returned to In Progress.');
         }
 
         header('Location: ' . $_SERVER['REQUEST_URI']);
@@ -101,7 +106,7 @@ try {
 
 
     $closureRequests = $db->fetchAll("
-        SELECT cr.*, c.title, c.ob_number, u.name as requester_name
+        SELECT cr.*, c.title, c.ob_number, c.reporter_anonymized, u.name as requester_name
         FROM closure_requests cr
         JOIN cases c ON cr.case_id = c.id
         JOIN users u ON cr.requested_by = u.id
@@ -292,7 +297,15 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <div><?php echo htmlspecialchars($case['title']); ?></div>
                                             <small class="text-muted"><?php echo htmlspecialchars($case['category']); ?></small>
                                         </td>
-                                        <td><?php echo htmlspecialchars($case['reporter_name']); ?></td>
+                                        <td>
+                                            <!-- <?php echo htmlspecialchars($case['reporter_name']); ?> -->
+
+                                             <?php if (!empty($case['reporter_anonymized'])): ?>
+                                                    ANONYMIZED
+                                                <?php else: ?>
+                                                  <?php echo htmlspecialchars($case['reporter_name']); ?> 
+                                                <?php endif; ?>
+                                        </td>
                                         <td>
                                             <?php if ($case['assigned_officer']): ?>
                                                 <?php echo htmlspecialchars($case['assigned_officer']); ?>

@@ -138,6 +138,100 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     </div>
                 </div>
 
+                 <div class="col-md-4">
+                        <!-- Case Details Panel -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h4>Case Details</h4>
+                            </div>
+                            <div class="card-body" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem 2rem;">
+                                <div>
+                                    <div class="mb-3">
+                                        <strong>Current Status</strong><br>
+                                        <span class="badge <?php echo STATUS_COLORS[$caseDetails['status']] ?? 'status-reported'; ?>">
+                                            <?php echo ucfirst(str_replace('_', ' ', $caseDetails['status'])); ?>
+                                        </span>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Reporter</strong><br>
+                                        <?php if (!empty($caseDetails['reporter_anonymized'])): ?>
+                                            <span class="text-danger" style="font-weight: bold;">ANONYMIZED</span>
+                                        <?php else: ?>
+                                            <?php echo htmlspecialchars($caseDetails['reporter_name'] ?? 'N/A'); ?><br>
+                                            <?php if ($caseDetails['reporter_phone']): ?>
+                                                <small class="text-muted"><?php echo htmlspecialchars($caseDetails['reporter_phone']); ?></small>
+                                            <?php endif; ?>
+                                            <?php if ($caseDetails['reporter_national_id']): ?>
+                                                <br><small class="text-muted">ID: <?php echo htmlspecialchars($caseDetails['reporter_national_id']); ?></small>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Location</strong><br>
+                                        <small><?php echo htmlspecialchars($caseDetails['incident_location_constituency']); ?>, <?php echo htmlspecialchars($caseDetails['incident_location_county']); ?></small>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="mb-3">
+                                        <strong>Assigned Officer</strong><br>
+                                        <?php if ($caseDetails['assigned_officer_name']): ?>
+                                            <?php echo htmlspecialchars($caseDetails['assigned_officer_name']); ?><br>
+                                            <small class="text-muted">Badge: <?php echo htmlspecialchars($caseDetails['badge_number']); ?></small>
+                                            <?php if ($caseDetails['assigned_officer_national_id']): ?>
+                                                <br><small class="text-muted">ID: <?php echo htmlspecialchars($caseDetails['assigned_officer_national_id']); ?></small>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">Not yet assigned</span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Assigned At</strong><br>
+                                        <?php if ($caseDetails['assigned_at']): ?>
+                                            <small><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['assigned_at'])); ?></small>
+                                        <?php else: ?>
+                                            <span class="text-muted">Not assigned</span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Recorded By</strong><br>
+                                        <small><?php echo htmlspecialchars($caseDetails['recorded_by_name']); ?></small>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="mb-3">
+                                        <strong>Occurred</strong><br>
+                                        <?php if ($caseDetails['occurred_at']): ?>
+                                            <small><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['occurred_at'])); ?></small>
+                                        <?php else: ?>
+                                            <span class="text-muted">Not specified</span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Created</strong><br>
+                                        <small><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['created_at'])); ?></small>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong>Last Updated</strong><br>
+                                        <small><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['updated_at'])); ?></small>
+                                    </div>
+
+                                    <?php if ($caseDetails['status'] === 'closed' && $caseDetails['closed_at']): ?>
+                                        <div class="mb-3">
+                                            <strong>Closed</strong><br>
+                                            <small><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['closed_at'])); ?></small>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>                       
+                    </div>
+
                 <!-- Case Information -->
                 <div class="row">
                     <div class="col-md-8">
@@ -172,6 +266,27 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+
+                         <!-- Add Update Form -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h4>Add Case Update</h4>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST">
+                                    <?php echo csrfField(); ?>
+                                    <input type="hidden" name="action" value="add_update">
+
+                                    <div class="mb-3">
+                                        <label for="update_text" class="form-label">Update Details</label>
+                                        <textarea name="update_text" id="update_text" class="form-control" rows="3" required></textarea>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary">Add Update</button>
+                                </form>
                             </div>
                         </div>
 
@@ -217,95 +332,15 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             </div>
                         <?php endif; ?>
                     </div>
+                </div>
 
-                    <div class="col-md-4">
-                        <!-- Case Details Panel -->
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <h4>Case Details</h4>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <strong>Current Status:</strong>
-                                    <span class="badge <?php echo STATUS_COLORS[$caseDetails['status']] ?? 'status-reported'; ?>" style="font-size: 13px;">
-                                        <?php echo ucfirst(str_replace('_', ' ', $caseDetails['status'])); ?>
-                                    </span>
-                                </div>
-
-                                <div class="mb-3">
-                                    <strong>Assigned Officer:</strong>
-                                    <?php if ($caseDetails['assigned_officer_name']): ?>
-                                        <div><?php echo htmlspecialchars($caseDetails['assigned_officer_name']); ?></div>
-                                        <small class="text-muted">Badge: <?php echo htmlspecialchars($caseDetails['badge_number']); ?></small>
-                                    <?php else: ?>
-                                        <div class="text-muted">Not yet assigned</div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="mb-3">
-                                    <strong>Reporter:</strong>
-                                    <div><?php echo htmlspecialchars($caseDetails['reporter_name'] ?? 'N/A'); ?></div>
-                                    <?php if ($caseDetails['reporter_phone']): ?>
-                                        <small class="text-muted"><?php echo htmlspecialchars($caseDetails['reporter_phone']); ?></small> <br>
-                                    <?php endif; ?>
-
-                                     <?php if ($caseDetails['reporter_national_id']): ?>
-                                        <small class="text-muted">National Id: <?php echo htmlspecialchars($caseDetails['reporter_national_id']); ?></small> <br>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="mb-3">
-                                    <strong>Created:</strong>
-                                    <div><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['created_at'])); ?></div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <strong>Last Updated:</strong>
-                                    <div><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['updated_at'])); ?></div>
-                                </div>
-
-                                <?php if ($caseDetails['status'] === 'closed' && $caseDetails['closed_at']): ?>
-                                    <div class="mb-3">
-                                        <strong>Closed:</strong>
-                                        <div><?php echo date('M d, Y \a\t H:i', strtotime($caseDetails['closed_at'])); ?></div>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <!-- Add Update Form -->
-                        <div class="card">
-                            <div class="card-header">
-                                <h4>Add Case Update</h4>
-                            </div>
-                            <div class="card-body">
-                                <form method="POST">
-                                    <?php echo csrfField(); ?>
-                                    <input type="hidden" name="action" value="add_update">
-
-                                    <div class="mb-3">
-                                        <label for="update_text" class="form-label">Update Details</label>
-                                        <textarea name="update_text" id="update_text" class="form-control" rows="3" required></textarea>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-primary">Add Update</button>
-                                </form>
-                            </div>
-                        </div>
+                <?php else: ?>
+                    <div class="text-center p-5">
+                        <h4>Case Not Found</h4>
+                        <p class="text-muted">The requested case could not be found or you do not have permission to view it.</p>
+                        <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-primary">Back to Cases</a>
                     </div>
-                </div>
-
-
-
-
-
-            <?php else: ?>
-                <div class="text-center p-5">
-                    <h4>Case Not Found</h4>
-                    <p class="text-muted">The requested case could not be found or you do not have permission to view it.</p>
-                    <a href="<?php echo BASE_URL; ?>/pages/ocs/station_cases.php" class="btn btn-primary">Back to Cases</a>
-                </div>
-            <?php endif; ?>
+                <?php endif; ?>
         </main>
     </div>
     

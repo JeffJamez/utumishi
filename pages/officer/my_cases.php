@@ -93,7 +93,13 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                          <tr>
                                              <td><?php echo htmlspecialchars($case['ob_number'] ?? 'N/A'); ?></td>
                                              <td><?php echo htmlspecialchars($case['title'] ?? 'No title'); ?></td>
-                                             <td><?php echo htmlspecialchars($case['reporter_name'] ?? 'Unknown'); ?></td>
+                                             <td>
+                                                 <?php if (!empty($case['reporter_anonymized'])): ?>
+                                                     <span style="color: #dc3545; font-weight: bold;">ANONYMIZED</span>
+                                                 <?php else: ?>
+                                                     <?php echo htmlspecialchars($case['reporter_name'] ?? 'Unknown'); ?>
+                                                 <?php endif; ?>
+                                             </td>
                                          <td>
                                                   <span class="badge <?php echo STATUS_COLORS[$case['status']] ?? 'status-reported'; ?>">
                                                       <?php echo ucfirst(str_replace('_', ' ', $case['status'] ?? 'unknown')); ?>

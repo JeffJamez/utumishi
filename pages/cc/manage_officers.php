@@ -33,9 +33,6 @@ if ($currentUser['role'] === 'county_commander' && !$county) {
     $error = "Your account is not properly configured with a county assignment. Please contact system administrator.";
 }
 
-// Debug
-echo "<!-- Debug: userID = {$currentUser['id']}, role = {$currentUser['role']}, userDetails = " . json_encode($userDetails) . ", county = $county -->";
-
 $filters = [
     'station_id' => $_GET['station_id'] ?? '',
     'status' => $_GET['status'] ?? 'active'

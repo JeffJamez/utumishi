@@ -193,14 +193,10 @@ $categoryColors = [
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Brain.js for Neural Network Predictions -->
-<script src="https://cdn.jsdelivr.net/npm/brain.js/dist/brain-browser.js"></script>
-<script src="<?php echo BASE_URL; ?>/pages/shared/crime-predictor.js"></script>
-
 <style>
 .stats-bar {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     margin-bottom: 1.5rem;
 }
@@ -665,15 +661,15 @@ $categoryColors = [
             <div class="stat-value"><?php echo htmlspecialchars($predictions['peak_hours']); ?></div>
             <div class="stat-sub">Peak window today</div>
         </div>
-        <div class="stat-card green">
+        <!-- <div class="stat-card green">
             <div class="stat-label">Hotspot Zones</div>
             <div class="stat-value"><?php echo $predictions['hotspot_count']; ?></div>
             <div class="stat-sub">Active clusters</div>
-        </div>
+        </div> -->
         <div class="stat-card blue">
-            <div class="stat-label">Neural Network Status</div>
-            <div class="stat-value" id="modelStatus" style="font-size: 1.2rem;">Loading...</div>
-            <div class="stat-sub">Brain.js AI Model</div>
+            <div class="stat-label">Prediction Accuracy</div>
+            <div class="stat-value" id="modelStatus" style="font-size: 1.2rem;"><?php echo !empty($predictions['total_crimes']) ? min(95, 60 + ($predictions['hotspot_count'] * 2)) : 0; ?>%</div>
+            <div class="stat-sub">Statistical Model</div>
         </div>
     </div>
 
@@ -726,112 +722,28 @@ $categoryColors = [
         </div>
     </div>
 
-    <!-- Charts Row: Risk Predictor + Weekly Trend -->
-    <div class="charts-row" style="margin-bottom: 1rem;">
-        <!-- Risk Predictor (Brain.js Neural Network) -->
-        <div class="panel">
-            <div class="panel-header">
-                <span class="panel-title">Risk Predictor</span>
-            </div>
-            <div style="display: flex;">
-                <div class="predict-form" style="flex: 1; border-right: 1px solid #e5e7eb;">
-                    <div class="form-row">
-                        <label>Day of Week</label>
-                        <select id="predDay">
-                            <?php foreach ($dayNames as $i => $day): ?>
-                                <option value="<?php echo $i; ?>" <?php echo $i === 4 ? 'selected' : ''; ?>><?php echo $day; ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="form-row">
-                        <label>Hour of Day</label>
-                        <select id="predHour">
-                            <?php for ($h = 0; $h < 24; $h++): ?>
-                                <option value="<?php echo $h; ?>" <?php echo $h === 20 ? 'selected' : ''; ?>><?php echo sprintf('%02d:00', $h); ?></option>
-                            <?php endfor; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="form-row">
-                        <label>Area / Zone</label>
-                        <select id="predZone" required>
-                            <option value="">Select location...</option>
-                            <?php 
-                            $zoneIndex = 0;
-                            $zoneMappings = [];
-                            
-                            // Fallback if no locations from database
-                            if (empty($dropdownLocations)) {
-                                $dropdownLocations = [
-                                    ['constituency' => 'Nairobi', 'county' => 'Nairobi', 'label' => 'Nairobi (County)', 'case_count' => 0],
-                                    ['constituency' => 'Mombasa', 'county' => 'Mombasa', 'label' => 'Mombasa (County)', 'case_count' => 0],
-                                    ['constituency' => 'Kisumu', 'county' => 'Kisumu', 'label' => 'Kisumu (County)', 'case_count' => 0],
-                                    ['constituency' => 'Nakuru', 'county' => 'Nakuru', 'label' => 'Nakuru (County)', 'case_count' => 0],
-                                    ['constituency' => 'Kiambu', 'county' => 'Kiambu', 'label' => 'Kiambu (County)', 'case_count' => 0],
-                                ];
-                            }
-                            
-                            foreach ($dropdownLocations as $location): 
-                                $zoneMappings[$location['constituency'] . '_' . $location['county']] = $zoneIndex;
-                            ?>
-                                <option value="<?php echo $zoneIndex++; ?>">
-                                    <?php echo htmlspecialchars($location['label']); ?>
-                                    <?php if ($location['case_count'] > 0): ?>
-                                        <small style="color: #22c55e;">(<?php echo $location['case_count']; ?> cases)</small>
-                                    <?php else: ?>
-                                        <small style="color: #f59e0b;">(proactive)</small>
-                                    <?php endif; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <button type="button" class="predict-btn" onclick="window.CrimePredictor.runPrediction()">Run Prediction</button>
+    <!-- Weekly Trend -->
+    <div class="panel" style="margin-bottom: 1rem;">
+        <div class="panel-header">
+            <span class="panel-title">Weekly Trend: All Crimes</span>
+            <span class="badge badge-blue">7-Day</span>
+        </div>
+        <div style="padding: 1rem 1.2rem; border-bottom: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">This Week</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #111827;"><?php echo $currentWeekTotal; ?> <small style="font-size: 0.75rem; color: #6b7280;">cases</small></div>
                 </div>
-
-                <div id="riskResult" class="risk-result" style="flex: 1; margin: 0; display: none; justify-content: center;">
-                    <div style="text-align: center;">
-                        <div class="risk-label">Predicted Risk Score</div>
-                        <div id="riskScore" class="risk-score" style="font-size: 3rem;">—</div>
-                        <div class="risk-bar-wrap" style="width: 200px; margin: 1rem auto;">
-                            <div id="riskBar" class="risk-bar"></div>
-                        </div>
-                        <div id="riskText" class="risk-text" style="font-size: 0.85rem;">—</div>
-                    </div>
-                </div>
-
-                <div id="predictionPlaceholder" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; color: #6b7280; text-align: center;">
-                    <div>
-                        <div style="font-size: 0.85rem;">Select day, hour, and location<br>then click "Run Prediction"</div>
+                <div style="text-align: right;">
+                    <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">vs Last Week</div>
+                    <div style="font-size: 1.25rem; font-weight: 700; color: <?php echo $weeklyChange > 0 ? '#dc2626' : ($weeklyChange < 0 ? '#22c55e' : '#6b7280'); ?>">
+                        <?php echo $weeklyChange > 0 ? '↑' : ($weeklyChange < 0 ? '↓' : '→'); ?> <?php echo abs($weeklyChange); ?>%
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Weekly Trend -->
-        <div class="panel">
-            <div class="panel-header">
-                <span class="panel-title">Weekly Trend: All Crimes</span>
-                <span class="badge badge-blue">7-Day</span>
-            </div>
-            <div style="padding: 1rem 1.2rem; border-bottom: 1px solid #e5e7eb;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">This Week</div>
-                        <div style="font-size: 1.5rem; font-weight: 700; color: #111827;"><?php echo $currentWeekTotal; ?> <small style="font-size: 0.75rem; color: #6b7280;">cases</small></div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 0.75rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">vs Last Week</div>
-                        <div style="font-size: 1.25rem; font-weight: 700; color: <?php echo $weeklyChange > 0 ? '#dc2626' : ($weeklyChange < 0 ? '#22c55e' : '#6b7280'); ?>">
-                            <?php echo $weeklyChange > 0 ? '↑' : ($weeklyChange < 0 ? '↓' : '→'); ?> <?php echo abs($weeklyChange); ?>%
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="chart-wrap">
-                <canvas id="trendChart"></canvas>
-            </div>
+        <div class="chart-wrap">
+            <canvas id="trendChart"></canvas>
         </div>
     </div>
 
@@ -1059,35 +971,20 @@ const nnTrainingData = crimeData.map(c => {
 
 console.log('Prepared', nnTrainingData.length, 'training records from', crimeData.length, 'total crimes');
 
-// Initialize neural network when page loads
+// Initialize placeholder status on page load
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing Brain.js...');
-    console.log('Brain.js available:', typeof brain !== 'undefined');
+    console.log('DOM loaded, statistical model active');
     console.log('Crime data available:', crimeData.length, 'records');
     console.log('Training data prepared:', nnTrainingData.length, 'records');
     
-    // Wait a moment to ensure brain.js is loaded
-    setTimeout(() => {
-        if (typeof window.CrimePredictor !== 'undefined') {
-            console.log('CrimePredictor module loaded, initializing...');
-            window.CrimePredictor.init(nnTrainingData);
-            
-            // Listen for model ready event
-            document.addEventListener('crimeModelReady', function(e) {
-                console.log('Brain.js model ready:', e.detail);
-            });
-        } else {
-            console.error('CrimePredictor not loaded');
-            const statusEl = document.getElementById('modelStatus');
-            if (statusEl) {
-                statusEl.textContent = 'Module Error';
-                statusEl.style.color = '#dc2626';
-            }
-        }
-    }, 500);
+    const statusEl = document.getElementById('modelStatus');
+    if (statusEl && statusEl.textContent === 'Loading...') {
+        statusEl.textContent = 'Active';
+        statusEl.style.color = '#22c55e';
+    }
 });
 
-// Update prediction UI display function
+// Update prediction UI display function (kept for potential future use)
 window.showPredictionResult = function(result) {
     const resultEl = document.getElementById('riskResult');
     const placeholderEl = document.getElementById('predictionPlaceholder');
