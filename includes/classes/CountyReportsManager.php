@@ -272,19 +272,39 @@ class CountyReportsManager {
             ORDER BY case_count DESC
         ", $params);
 
-        // Hotspots for the year
-        $hotspots = $this->db->fetchAll("
+        // Hotspots for the year - nested by constituency and local area
+        $constituencyHotspots = $this->db->fetchAll("
             SELECT
                 incident_location_constituency as location,
-                category,
                 COUNT(*) as case_count
             FROM cases
             WHERE $where
-            GROUP BY incident_location_constituency, category
-            HAVING case_count > 0
+            GROUP BY incident_location_constituency
             ORDER BY case_count DESC
-            LIMIT 10
+            LIMIT 5
         ", $params);
+
+        $nestedHotspots = [];
+        foreach ($constituencyHotspots as $constituency) {
+            $constituencyName = $constituency['location'];
+            $localAreas = $this->db->fetchAll("
+                SELECT
+                    incident_local_area as location,
+                    COUNT(*) as case_count
+                FROM cases
+                WHERE $where AND incident_location_constituency = :constituency
+                GROUP BY incident_local_area
+                HAVING incident_local_area IS NOT NULL AND incident_local_area != ''
+                ORDER BY case_count DESC
+                LIMIT 8
+            ", array_merge($params, ['constituency' => $constituencyName]));
+
+            $nestedHotspots[] = [
+                'constituency' => $constituencyName,
+                'total_cases' => (int)$constituency['case_count'],
+                'local_areas' => $localAreas
+            ];
+        }
 
         return [
             'type' => 'Annual County Report',
@@ -295,7 +315,7 @@ class CountyReportsManager {
             'overall_stats' => $overallStats,
             'monthly_trends' => $monthlyTrends,
             'category_breakdown' => $categoryBreakdown,
-            'hotspots' => $hotspots,
+            'hotspots' => $nestedHotspots,
             'generated_at' => date('Y-m-d H:i:s')
         ];
     }
@@ -347,18 +367,38 @@ class CountyReportsManager {
 
         $totalCases = $this->db->fetchOne("SELECT COUNT(*) as total FROM cases WHERE $where", $params)['total'] ?? 0;
 
-        $hotspots = $this->db->fetchAll("
+        $constituencyHotspots = $this->db->fetchAll("
             SELECT
                 incident_location_constituency as location,
-                COUNT(*) as case_count,
-                category
+                COUNT(*) as case_count
             FROM cases
             WHERE $where
-            GROUP BY incident_location_constituency, category
-            HAVING case_count >= 1
+            GROUP BY incident_location_constituency
             ORDER BY case_count DESC
-            LIMIT 10
+            LIMIT 5
         ", $params);
+
+        $nestedHotspots = [];
+        foreach ($constituencyHotspots as $constituency) {
+            $constituencyName = $constituency['location'];
+            $localAreas = $this->db->fetchAll("
+                SELECT
+                    incident_local_area as location,
+                    COUNT(*) as case_count
+                FROM cases
+                WHERE $where AND incident_location_constituency = :constituency
+                GROUP BY incident_local_area
+                HAVING incident_local_area IS NOT NULL AND incident_local_area != ''
+                ORDER BY case_count DESC
+                LIMIT 8
+            ", array_merge($params, ['constituency' => $constituencyName]));
+
+            $nestedHotspots[] = [
+                'constituency' => $constituencyName,
+                'total_cases' => (int)$constituency['case_count'],
+                'local_areas' => $localAreas
+            ];
+        }
 
         $mostCommonCategory = $this->db->fetchOne("
             SELECT category, COUNT(*) as count
@@ -375,7 +415,7 @@ class CountyReportsManager {
             'overall_stats' => [
                 'total_cases' => $totalCases
             ],
-            'hotspots' => $hotspots,
+            'hotspots' => $nestedHotspots,
             'most_common_category' => $mostCommonCategory['category'] ?? 'N/A',
             'generated_at' => date('Y-m-d H:i:s')
         ];

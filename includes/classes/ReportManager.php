@@ -206,19 +206,41 @@ class ReportManager {
             ORDER BY date DESC
         ", $params);
 
-        $hotspots = $this->db->fetchAll("
+        $constituencyHotspots = $this->db->fetchAll("
             SELECT
-                incident_location_constituency,
-                category,
+                incident_location_constituency as location,
                 COUNT(*) as case_count
             FROM cases
             WHERE station_id = :station_id
             AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)
-            GROUP BY incident_location_constituency, category
-            HAVING case_count > 0
+            GROUP BY incident_location_constituency
             ORDER BY case_count DESC
-            LIMIT 10
+            LIMIT 5
         ", $params);
+
+        $nestedHotspots = [];
+        foreach ($constituencyHotspots as $constituency) {
+            $constituencyName = $constituency['location'];
+            $localAreas = $this->db->fetchAll("
+                SELECT
+                    incident_local_area as location,
+                    COUNT(*) as case_count
+                FROM cases
+                WHERE station_id = :station_id
+                AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)
+                AND incident_location_constituency = :constituency
+                GROUP BY incident_local_area
+                HAVING incident_local_area IS NOT NULL AND incident_local_area != ''
+                ORDER BY case_count DESC
+                LIMIT 8
+            ", array_merge($params, ['constituency' => $constituencyName]));
+
+            $nestedHotspots[] = [
+                'constituency' => $constituencyName,
+                'total_cases' => (int)$constituency['case_count'],
+                'local_areas' => $localAreas
+            ];
+        }
 
         $totalCases = $this->db->fetchOne("SELECT COUNT(*) as total FROM cases WHERE station_id = :station_id AND created_at >= DATE_SUB(CURDATE(), INTERVAL :timeframe DAY)", $params)['total'] ?? 0;
 
@@ -238,7 +260,7 @@ class ReportManager {
             'total_cases' => $totalCases,
             'most_common_category' => $mostCommon['category'] ?? 'N/A',
             'trends' => $trends,
-            'hotspots' => $hotspots,
+            'hotspots' => $nestedHotspots,
             'generated_at' => date('Y-m-d H:i:s')
         ];
     }
