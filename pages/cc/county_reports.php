@@ -195,11 +195,36 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                            </div>
                            <p class="text-muted mb-4" style="font-size: 0.85rem;">
                                <strong>What this means for you:</strong> This chart shows which crime types are most common across your county throughout the year. Focus resources on the top categories to improve response times.
+</p>
+                            <?php else: ?>
+                            <p class="text-muted">No category breakdown data available for this year.</p>
+                            <?php endif; ?>
+                           
+                           <?php if (!empty($reportData['hotspots'])): ?>
+                           <h5>Hotspot Locations</h5>
+                           <p class="text-muted" style="font-size: 0.85rem;">
+                               Top constituencies with highest incident counts for the year.
                            </p>
-                           <?php else: ?>
-                           <p class="text-muted">No category breakdown data available for this year.</p>
+                           
+                           <div style="height: 350px; margin-bottom: 0.5rem;">
+                               <canvas id="annualHotspotChart"></canvas>
+                           </div>
+                           
+                           <?php foreach ($reportData['hotspots'] as $index => $hotspot): ?>
+                           <?php if (!empty($hotspot['local_areas'])): ?>
+                           <div class="mt-4">
+                               <h5><?php echo htmlspecialchars($hotspot['constituency']); ?> - Local Areas</h5>
+                               <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+                                   <?php echo htmlspecialchars($hotspot['constituency']); ?> has <?php echo $hotspot['total_cases']; ?> total cases. Breakdown by specific location:
+                               </p>
+                               <div style="height: 300px; margin-bottom: 0.5rem;">
+                                   <canvas id="annualLocalChart<?php echo $index; ?>"></canvas>
+                               </div>
+                           </div>
                            <?php endif; ?>
-                       </div>
+                           <?php endforeach; ?>
+                           <?php endif; ?>
+                        </div>
 
 <?php elseif ($reportType === 'performance'): ?>
                        <div class="mb-4">
@@ -245,7 +270,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 </div>
                                 <div class="kpi-card">
                                     <div class="kpi-value"><?php echo count($reportData['hotspots'] ?? []); ?></div>
-                                    <div class="kpi-label">Hotspots Identified</div>
+                                    <div class="kpi-label">Hotspot Constituencies</div>
                                 </div>
                                 <div class="kpi-card">
                                     <div class="kpi-value"><?php echo htmlspecialchars($reportData['most_common_category'] ?? 'N/A'); ?></div>
@@ -253,17 +278,36 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                 </div>
                             </div>
 
-                           <h5>Hotspot Locations</h5>
-                           <div style="height: 400px; margin-bottom: 0.5rem;">
-                               <canvas id="hotspotChart"></canvas>
-                           </div>
-                           <div class="chart-key mb-3">
-                               <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> High case concentration area</span>
-                           </div>
-                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                               <strong>What this means for you:</strong> This chart shows which locations have the highest incident counts. Focus preventive measures and patrols on these areas.
-                           </p>
-                       </div>
+<h5>Top Hotspot Constituencies</h5>
+                            <div style="height: 350px; margin-bottom: 0.5rem;">
+                                <canvas id="hotspotChart"></canvas>
+                            </div>
+                            <div class="chart-key mb-3">
+                                <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> High case concentration</span>
+                            </div>
+                            <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                                <strong>What this means for you:</strong> These are the top constituencies with highest incident counts in your county.
+                            </p>
+
+                            <?php if (!empty($reportData['hotspots'])): ?>
+                            <?php foreach ($reportData['hotspots'] as $index => $hotspot): ?>
+                            <?php if (!empty($hotspot['local_areas'])): ?>
+                            <div class="mt-4">
+                                <h5><?php echo htmlspecialchars($hotspot['constituency']); ?> - Local Areas</h5>
+                                <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+                                    <?php echo htmlspecialchars($hotspot['constituency']); ?> has <?php echo $hotspot['total_cases']; ?> total cases. Breakdown by specific location:
+                                </p>
+                                <div style="height: 300px; margin-bottom: 0.5rem;">
+                                    <canvas id="localAreaChart<?php echo $index; ?>"></canvas>
+                                </div>
+                                <div class="chart-key mb-3">
+                                    <span class="key-item"><span class="key-color" style="background: #3b82f6;"></span> Specific location within <?php echo htmlspecialchars($hotspot['constituency']); ?></span>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
 
                  <?php endif; ?>
 
@@ -368,6 +412,95 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
             <?php endif; ?>
             
+            <?php if ($reportGenerated && $reportType === 'annual' && !empty($reportData['hotspots'])): ?>
+            const annualHotspotData = <?php echo json_encode($reportData['hotspots']); ?>;
+            const annualLabels = annualHotspotData.map(h => h.constituency);
+            const annualCases = annualHotspotData.map(h => parseInt(h.total_cases));
+            
+            const annualChartColors = {
+                primary: '#3b82f6',
+                danger: '#ef4444'
+            };
+            
+            new Chart(document.getElementById('annualHotspotChart'), {
+                type: 'bar',
+                data: {
+                    labels: annualLabels,
+                    datasets: [{
+                        label: 'Total Cases',
+                        data: annualCases,
+                        backgroundColor: annualChartColors.danger,
+                        borderColor: annualChartColors.danger,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Cases: ' + context.parsed.x;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { beginAtZero: true }
+                    }
+                }
+            });
+
+            <?php foreach ($reportData['hotspots'] as $index => $hotspot): ?>
+            <?php if (!empty($hotspot['local_areas'])): ?>
+            try {
+                const annualLocal<?php echo $index; ?> = <?php echo json_encode($hotspot['local_areas']); ?>;
+                const annualLocalLabels<?php echo $index; ?> = annualLocal<?php echo $index; ?>.map(h => h.location || 'Unknown');
+                const annualLocalCases<?php echo $index; ?> = annualLocal<?php echo $index; ?>.map(h => parseInt(h.case_count));
+                
+                new Chart(document.getElementById('annualLocalChart<?php echo $index; ?>'), {
+                    type: 'bar',
+                    data: {
+                        labels: annualLocalLabels<?php echo $index; ?>,
+                        datasets: [{
+                            label: 'Case Count',
+                            data: annualLocalCases<?php echo $index; ?>,
+                            backgroundColor: annualChartColors.primary,
+                            borderColor: annualChartColors.primary,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Cases: ' + context.parsed.x;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Annual local chart error:', e);
+            }
+            <?php endif; ?>
+            <?php endforeach; ?>
+            <?php endif; ?>
+            
             <?php if ($reportGenerated && $reportType === 'performance' && !empty($reportData['category_breakdown'])): ?>
             const perfData = <?php echo json_encode($reportData['category_breakdown']); ?>;
             const perfLabels = perfData.map(c => c.category);
@@ -429,12 +562,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             
             <?php if ($reportGenerated && $reportType === 'crime_analysis' && !empty($reportData['hotspots'])): ?>
             console.log('Crime analysis chart: checking conditions...');
-            console.log('ChartUtils available:', typeof ChartUtils !== 'undefined');
             console.log('Chart available:', typeof Chart !== 'undefined');
             const hotspotData = <?php echo json_encode($reportData['hotspots']); ?>;
             console.log('Hotspot data:', hotspotData);
-            const hotspotLabels = hotspotData.map(h => h.location);
-            const hotspotCases = hotspotData.map(h => parseInt(h.case_count));
+            const hotspotLabels = hotspotData.map(h => h.constituency);
+            const hotspotCases = hotspotData.map(h => parseInt(h.total_cases));
             
             const chartColors = {
                 primary: '#3b82f6',
@@ -477,8 +609,53 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 }
             });
             } catch (e) {
-                console.error('Chart error:', e);
+                console.error('Main hotspot chart error:', e);
             }
+
+            <?php foreach ($reportData['hotspots'] as $index => $hotspot): ?>
+            <?php if (!empty($hotspot['local_areas'])): ?>
+            try {
+                const localAreas<?php echo $index; ?> = <?php echo json_encode($hotspot['local_areas']); ?>;
+                const localLabels<?php echo $index; ?> = localAreas<?php echo $index; ?>.map(h => h.location || 'Unknown');
+                const localCases<?php echo $index; ?> = localAreas<?php echo $index; ?>.map(h => parseInt(h.case_count));
+                
+                new Chart(document.getElementById('localAreaChart<?php echo $index; ?>'), {
+                    type: 'bar',
+                    data: {
+                        labels: localLabels<?php echo $index; ?>,
+                        datasets: [{
+                            label: 'Case Count',
+                            data: localCases<?php echo $index; ?>,
+                            backgroundColor: chartColors.primary,
+                            borderColor: chartColors.primary,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Cases: ' + context.parsed.x;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Local area chart <?php echo $index; ?> error:', e);
+            }
+            <?php endif; ?>
+            <?php endforeach; ?>
             <?php endif; ?>
         });
     </script>

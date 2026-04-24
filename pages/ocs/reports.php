@@ -241,26 +241,45 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                   <div class="kpi-value"><?php echo $reportData['total_cases'] ?? 0; ?></div>
                                   <div class="kpi-label">Total Cases</div>
                               </div>
-                              <div class="kpi-card">
-                                  <div class="kpi-value"><?php echo count($reportData['hotspots'] ?? []); ?></div>
-                                  <div class="kpi-label">Hotspots Identified</div>
-                              </div>
+<div class="kpi-card">
+                                   <div class="kpi-value"><?php echo count($reportData['hotspots'] ?? []); ?></div>
+                                   <div class="kpi-label">Hotspot Constituencies</div>
+                               </div>
                               <div class="kpi-card">
                                   <div class="kpi-value"><?php echo $reportData['most_common_category'] ?? 'N/A'; ?></div>
                                   <div class="kpi-label">Most Common Crime</div>
                               </div>
                           </div>
 
-                          <h5>Hotspot Locations</h5>
-                          <div style="height: 400px; margin-bottom: 0.5rem;">
+                          <h5>Top Hotspot Constituencies</h5>
+                          <div style="height: 350px; margin-bottom: 0.5rem;">
                               <canvas id="hotspotChart"></canvas>
                           </div>
                           <div class="chart-key mb-3">
-                              <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> High case concentration area</span>
+                              <span class="key-item"><span class="key-color" style="background: #ef4444;"></span> High case concentration</span>
                           </div>
                           <p class="text-muted mb-4" style="font-size: 0.85rem;">
-                              <strong>What this means for you:</strong> This chart shows which locations have the highest incident counts. Focus patrols and preventive measures on these areas.
+                              <strong>What this means for you:</strong> These are the top constituencies with highest incident counts in your station area.
                           </p>
+
+                          <?php if (!empty($reportData['hotspots'])): ?>
+                          <?php foreach ($reportData['hotspots'] as $index => $hotspot): ?>
+                          <?php if (!empty($hotspot['local_areas'])): ?>
+                          <div class="mt-4">
+                              <h5><?php echo htmlspecialchars($hotspot['constituency']); ?> - Local Areas</h5>
+                              <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+                                  <?php echo htmlspecialchars($hotspot['constituency']); ?> has <?php echo $hotspot['total_cases']; ?> total cases. Breakdown by specific location:
+                              </p>
+                              <div style="height: 300px; margin-bottom: 0.5rem;">
+                                  <canvas id="ocsLocalAreaChart<?php echo $index; ?>"></canvas>
+                              </div>
+                              <div class="chart-key mb-3">
+                                  <span class="key-item"><span class="key-color" style="background: #3b82f6;"></span> Specific location within <?php echo htmlspecialchars($hotspot['constituency']); ?></span>
+                              </div>
+                          </div>
+                          <?php endif; ?>
+                          <?php endforeach; ?>
+                          <?php endif; ?>
                       </div>
                      
 
@@ -429,10 +448,11 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             
             <?php if ($reportGenerated && $reportType === 'crime_analysis' && !empty($reportData['hotspots'])): ?>
             const hotspotData = <?php echo json_encode($reportData['hotspots']); ?>;
-            const hotspotLabels = hotspotData.map(h => h.location);
-            const hotspotCases = hotspotData.map(h => parseInt(h.case_count));
+            const hotspotLabels = hotspotData.map(h => h.constituency);
+            const hotspotCases = hotspotData.map(h => parseInt(h.total_cases));
             
             const hotspotChartColors = {
+                primary: '#3b82f6',
                 danger: '#ef4444'
             };
             
@@ -468,6 +488,51 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     }
                 }
             });
+
+            <?php foreach ($reportData['hotspots'] as $index => $hotspot): ?>
+            <?php if (!empty($hotspot['local_areas'])): ?>
+            try {
+                const localAreasOcs<?php echo $index; ?> = <?php echo json_encode($hotspot['local_areas']); ?>;
+                const localLabelsOcs<?php echo $index; ?> = localAreasOcs<?php echo $index; ?>.map(h => h.location || 'Unknown');
+                const localCasesOcs<?php echo $index; ?> = localAreasOcs<?php echo $index; ?>.map(h => parseInt(h.case_count));
+                
+                new Chart(document.getElementById('ocsLocalAreaChart<?php echo $index; ?>'), {
+                    type: 'bar',
+                    data: {
+                        labels: localLabelsOcs<?php echo $index; ?>,
+                        datasets: [{
+                            label: 'Case Count',
+                            data: localCasesOcs<?php echo $index; ?>,
+                            backgroundColor: hotspotChartColors.primary,
+                            borderColor: hotspotChartColors.primary,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: true,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Cases: ' + context.parsed.x;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('OCS Local area chart error:', e);
+            }
+            <?php endif; ?>
+            <?php endforeach; ?>
             <?php endif; ?>
         });
     </script>
