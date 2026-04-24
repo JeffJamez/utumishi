@@ -431,7 +431,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                         </small>
                                                     </div>
                                                     <div class="text-right">
-                                                        <a href="<?php echo BASE_URL; ?>/api/download_evidence.php?id=<?php echo $evidence['id']; ?>" 
+                                                        <a href="<?php echo BASE_URL; ?>/pages/officer/download_evidence.php?id=<?php echo $evidence['id']; ?>" 
                                                            class="btn btn-sm btn-outline btn-primary"
                                                            target="_blank">
                                                             Download
