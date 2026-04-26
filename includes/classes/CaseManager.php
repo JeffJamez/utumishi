@@ -236,6 +236,8 @@ class CaseManager {
                         "UPDATE officers SET current_case_load = current_case_load - 1 WHERE id = :id",
                         ['id' => $oldOfficerId]
                     );
+                    // Sync old officer's counters after unassign
+                    $this->syncOfficerWorkload($oldOfficerId);
                 }
 
                 // Increment new officer's workload
@@ -243,6 +245,9 @@ class CaseManager {
                     "UPDATE officers SET current_case_load = current_case_load + 1 WHERE id = :id",
                     ['id' => $officerId]
                 );
+
+                // Sync counters for new officer to ensure accuracy
+                $this->syncOfficerWorkload($officerId);
 
                 return true;
             }
@@ -468,8 +473,16 @@ class CaseManager {
 
             $this->db->update('cases', $updateData, 'id = :id', ['id' => $caseId]);
 
+            // Get assigned officer before status change
+            $assignedOfficer = $this->db->fetchOne("SELECT assigned_officer_id FROM cases WHERE id = :id", ['id' => $caseId]);
+
             // Add update
             $this->addCaseUpdate($caseId, $officerId, $updateText, $oldStatus, $newStatus);
+
+            // Sync counters if case status changed to resolved/closed
+            if ($assignedOfficer && in_array($newStatus, ['resolved', 'closed'])) {
+                $this->syncOfficerWorkload($assignedOfficer['assigned_officer_id']);
+            }
 
             $this->db->commit();
             return true;
@@ -498,6 +511,32 @@ class CaseManager {
             error_log("Add Case Update Error: " . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Sync officer workload counters from actual case data
+     * Ensures accuracy after case operations
+     */
+    public function syncOfficerWorkload($officerId) {
+        if (!$officerId) {
+            return;
+        }
+        
+        $current = $this->db->fetchOne("
+            SELECT COUNT(*) as cnt FROM cases 
+            WHERE assigned_officer_id = :id AND status NOT IN ('resolved', 'closed')
+        ", ['id' => $officerId])['cnt'] ?? 0;
+        
+        $resolved = $this->db->fetchOne("
+            SELECT COUNT(*) as cnt FROM cases 
+            WHERE assigned_officer_id = :id AND status IN ('resolved', 'closed')
+        ", ['id' => $officerId])['cnt'] ?? 0;
+        
+        $this->db->query("
+            UPDATE officers 
+            SET current_case_load = :current, total_cases_resolved = :resolved 
+            WHERE id = :id
+        ", ['id' => $officerId, 'current' => $current, 'resolved' => $resolved]);
     }
 
     private function canOfficerUpdateCase($caseId, $officerId) {
