@@ -100,7 +100,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                 <div class="card-header">
                     <h3>Police Stations</h3>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding: 0;">
                     <?php if (!empty($stations)): ?>
                         <div class="table-responsive">
                             <table class="table">
@@ -193,23 +193,27 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             if (station) {
                 const ocsName = station.ocs_name || 'No OCS Assigned';
                 const countyCommanderName = station.county_commander_name || 'No County Commander';
+                const viewCasesUrl = '<?php echo BASE_URL; ?>/pages/cc/station_cases.php?station_id=' + id;
                 const content = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h5>Station Information</h5>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div>
+                            <h3>Station Information</h3> <br/>
                             <p><strong>Name:</strong> ${station.name}</p>
                             <p><strong>Code:</strong> ${station.station_code}</p>
                             <p><strong>County:</strong> ${station.county}</p>
                             <p><strong>Constituency:</strong> ${station.constituency}</p>
                             <p><strong>Contact Phone:</strong> ${station.contact_phone || 'Not provided'}</p>
                             <p><strong>Address:</strong> ${station.address || 'Not provided'}</p>
+                        </div>
+                        <div>
+                            <h3>Assigned Officers</h3> <br/>
                             <p><strong>OCS:</strong> ${ocsName}</p>
                             <p><strong>County Commander:</strong> ${countyCommanderName}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5>Assigned Officers</h5>
                             <p><strong>Total Officers:</strong> ${station.officer_count}</p>
                             <p><strong>Total Cases:</strong> ${station.total_cases}</p>
+                            <div style="margin-top: 1rem;">
+                                <a href="${viewCasesUrl}" class="btn btn-primary">View Station Cases</a>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -279,7 +283,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         .modal-title {
             margin: 0;
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 500;
         }
 

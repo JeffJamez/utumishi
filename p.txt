@@ -1,3 +1,5 @@
+opencode -s ses_24280bf17ffeE1f8N3bzUgm7KK
+
 You are a senior PHP developer reviewing a project for a 4th-year computer science student. The project must use only PHP, HTML, CSS, and JavaScript—no frameworks or external libraries.
 
 Your task:

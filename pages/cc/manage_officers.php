@@ -81,7 +81,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
              <div class="card-header">
                  <h3>Filter Officers (<?php echo htmlspecialchars($county); ?> County Only)</h3>
              </div>
-            <div class="card-body">
+            <div class="card-body" >
                 <form method="GET" class="d-flex gap-3 align-items-end">
                     <div>
                         <label for="station_filter" class="form-label">Station</label>
@@ -117,7 +117,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             <div class="card-header">
                 <h3>Officers (<?php echo count($officers); ?>)</h3>
             </div>
-            <div class="card-body">
+            <div class="card-body" style="padding: 0;">
                 <?php if (!empty($officers)): ?>
                     <div class="table-responsive">
                         <table class="table">
