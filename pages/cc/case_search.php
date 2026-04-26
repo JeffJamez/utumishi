@@ -23,8 +23,17 @@ $searchResults = [];
 $error = null;
 $success = null;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
-    $obNumber = sanitizeText(trim($_POST['ob_number']));
+// Support both POST and GET for case search (GET used when linked from station_cases.php)
+$obNumberInput = $_POST['ob_number'] ?? ($_GET['ob_number'] ?? ($_GET['search'] ?? ''));
+
+if ($obNumberInput) {
+    // Pre-fill for GET requests but process as POST logic
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_POST['ob_number'] = $obNumberInput;
+    }
+    
+    $obNumber = sanitizeText(trim($obNumberInput));
     
     if (empty($obNumber)) {
         $error = "Please enter an OB number";
@@ -40,7 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ob_number'])) {
                        u2.name as recorded_by_name,
                        u3.name as assigned_officer_name,
                        o.badge_number,
-                       s.name as station_name
+                       s.name as station_name,
+                       u1.national_id as reporter_national_id,
+                       u1.phone as reporter_phone
                 FROM cases c
                 LEFT JOIN users u1 ON c.reported_by_citizen_id = u1.id
                 LEFT JOIN users u2 ON c.recorded_by_officer_id = u2.id
@@ -204,7 +215,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     <h3>Search by OB Number</h3>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="">
+                    <form method="GET" action="">
                         <div class="d-flex justify-content-center align-items-center">
                             <label for="ob_number" style="margin-right: 16px; margin-bottom: 16px; padding-top: 8px; font-weight: bold;">OB Number</label>
                             <input type="text"
@@ -212,7 +223,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                    id="ob_number"
                                    name="ob_number"
                                    placeholder="OB-NRB-2025-00001"
-                                   value="<?php echo htmlspecialchars($_POST['ob_number'] ?? ''); ?>"
+                                   value="<?php echo htmlspecialchars($obNumberInput); ?>"
                                    required
                                    style="width: 350px; margin-right: 24px;">
                             <button type="submit" class="btn btn-primary">
@@ -287,7 +298,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         <div class="card-body">
                             <p><strong>Name:</strong> <?php echo !empty($case['reporter_anonymized']) ? '<span style="color:#dc3545;font-weight:bold;">ANONYMIZED</span>' : htmlspecialchars($case['reporter_name']); ?></p>
                             <p><strong>National ID:</strong> <?php echo htmlspecialchars($case['reporter_national_id'] ?? 'Not available'); ?></p>
-                            <p><strong>Phone:</strong> <?php echo htmlspecialchars($case['reporter_phone']); ?></p>
+                            <p><strong>Phone:</strong> <?php echo !empty($case['reporter_phone']) ? htmlspecialchars($case['reporter_phone']) : 'Not available'; ?></p>
                         </div>
                     </div>
 

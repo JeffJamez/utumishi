@@ -97,7 +97,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <th>Category</th>
                                         <th>Status</th>
                                         <th>Assigned Date</th>
-                                        <th>Time Pending</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -112,7 +111,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                 </span>
                                             </td>
                                             <td><?php echo date('M d, Y', strtotime($case['assigned_at'])); ?></td>
-                                            <td><?php echo floor((time() - strtotime($case['assigned_at'])) / 3600); ?> hours</td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>

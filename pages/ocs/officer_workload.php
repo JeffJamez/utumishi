@@ -285,7 +285,6 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                         <th>OB Number</th>
                                         <th>Case Details</th>
                                         <th>Reporter</th>
-                                        <th>Time Pending</th>
                                         <th>Urgency</th>
                                         <th>Assign To</th>
                                     </tr>
@@ -315,14 +314,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                                     <?php echo htmlspecialchars($case['reporter_name']); ?>
                                                 <?php endif; ?>
                                             </td>
-                                            <td>
-                                                <?php echo $case['hours_pending']; ?>h
-                                                <?php if ($case['hours_pending'] > 48): ?>
-                                                    <br><small class="text-danger">Critical</small>
-                                                <?php elseif ($case['hours_pending'] > 24): ?>
-                                                    <br><small class="text-warning">Overdue</small>
-                                                <?php endif; ?>
-                                            </td>
+                                            
                                             <td>
                                                 <span class="badge status-<?php echo $case['urgency_level'] === 'critical' ? 'danger' : ($case['urgency_level'] === 'high' ? 'warning' : 'info'); ?>">
                                                     <?php echo ucfirst($case['urgency_level']); ?>
