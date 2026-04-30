@@ -387,6 +387,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     >
                                         <option value="">Choose a case to upload evidence...</option>
                                         <?php foreach ($officerCases as $case): ?>
+                                             <?php if (in_array($case['status'], ['resolved', 'closed'])) continue; ?>
                                             <option value="<?php echo $case['id']; ?>" 
                                                     <?php echo $case['id'] == $caseId ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($case['ob_number']); ?> - 

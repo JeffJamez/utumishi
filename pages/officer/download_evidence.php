@@ -9,7 +9,7 @@ require_once __DIR__ . '/../../includes/core/db.php';
 require_once __DIR__ . '/../../includes/core/auth.php';
 require_once __DIR__ . '/../../includes/utils/file_upload.php';
 
-if (!in_array($_SESSION['role'] ?? '', [ROLE_OFFICER, ROLE_OCS])) {
+if (!in_array($_SESSION['role'] ?? '', [ROLE_OFFICER, ROLE_OCS, ROLE_COUNTY_COMMANDER])) {
     http_response_code(403);
     exit('Access denied');
 }

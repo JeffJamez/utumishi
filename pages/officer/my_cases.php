@@ -75,7 +75,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                      <span class="badge status-progress"><?php echo count($myCases); ?> case(s)</span>
                  </div>
 
-                 <div class="card-body">
+                 <div class="card-body" style="padding: 0;">
                      <?php if (!empty($myCases)): ?>
                          <div class="table-responsive">
                              <table class="table">
@@ -127,7 +127,7 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                      <?php else: ?>
                      <div class="text-center p-4">
                               <h4>No Cases Found</h4>
-                              <p class="text-muted">No cases match the selected filter.</p>
+                              <p class="text-muted">No cases assigned to you yet.</p>
                               <a href="<?php echo BASE_URL; ?>/pages/officer/dashboard.php" class="btn btn-primary">
                                   Return to Dashboard
                               </a>

@@ -15,6 +15,7 @@ Test Accounts:
 ========= OCS ACCOUNTS   ========
 | ocs_name                   | ocs_national_id | station_name                 | county       |
 |----------------------------|-----------------|------------------------------|--------------|
+| Chief Officer Ann Gathoni  | 13046462        | Nairobi Central Police Stn   | Nairobi      |
 | C Officer Lawrence Wanyama | 22222222        | Nakuru Naivasha Police       | Nakuru       |
 | Chief Officer Ann Ndung'u  | 67890123        | Langata Police Station       | Nairobi      |
 | Inspector Andrew Mbone     | 75180805        | Mombasa Central Police       | Mombasa      |
@@ -24,7 +25,6 @@ Test Accounts:
 | St Commander Winnie Nyamai | 47966796        | Nairobi Westlands Police     | Nairobi      |
 | StCommander Richard Kimani | 11111111        | Kisumu Milimani Police       | Kisumu       |
 | Constable Judith Kipchoge  | 25319327        | Mombasa Central Police Stn   | Mombasa      |
-| Chief Officer Ann Gathoni  | 13046462        | Nairobi Central Police Stn   | Nairobi      |
 | Officer Peter Nyokabi      | 60870847        | Eldoret Police Station       | Uasin Gishu  |
 | Inspector Vincent Kagendo  | 67542005        | Nakuru Central Police        | Nakuru       |
 | OCS Mary Opondo            | 33333333        | Eldoret Soy Police           | Eldoret      |

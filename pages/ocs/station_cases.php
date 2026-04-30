@@ -322,10 +322,15 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                             <div class="d-flex gap-1">
                                                 <a href="<?php echo BASE_URL; ?>/pages/ocs/case_details.php?id=<?php echo $case['id']; ?>"
                                                 class="btn btn-sm btn-primary">View</a>
+                                              
+                                                <?php /*
                                                 <?php if (!in_array($case['status'], ['resolved', 'closed'])): ?>
                                                     <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php?case_id=<?php echo $case['id']; ?>" 
                                                     class="btn btn-sm btn-outline btn-secondary">Evidence</a>
                                                 <?php endif; ?>
+                                                */ ?>
+                                                    <a href="<?php echo BASE_URL; ?>/pages/officer/evidence.php?case_id=<?php echo $case['id']; ?>" 
+                                                    class="btn btn-sm btn-outline btn-secondary">Evidence</a>
                                             </div>
                                         </td>
                                     </tr>
