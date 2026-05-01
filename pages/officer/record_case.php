@@ -396,83 +396,62 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         </div>
                     </fieldset>
 
-                    <fieldset class="mb-4">
+<fieldset class="mb-4">
                         <legend class="h4 mb-3">Location of Incident</legend>
 
-                        <div class="d-grid" style="grid-template-columns: 1fr 1fr 2fr; gap: 1.5rem;">
-                            <div class="form-group">
-                                 <label for="incident_location_county" class="form-label">County *</label>
-                                 <select
-                                     id="incident_location_county"
-                                     name="incident_location_county"
-                                     class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
-                                     required
-                                 >
-                                     <option value="">Select county...</option>
-                                     <?php foreach (KENYAN_COUNTIES as $county => $constituencies): ?>
-                                         <option value="<?php echo htmlspecialchars($county); ?>"
-                                                 <?php echo ($formData['incident_location_county'] ?? '') === $county ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($county); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
+                        <!-- Hidden inputs for form submission -->
+                        <input type="hidden" name="incident_location_county" id="incident_location_county" value="<?php echo htmlspecialchars($formData['incident_location_county'] ?? ''); ?>">
+                        <input type="hidden" name="incident_location_constituency" id="incident_location_constituency" value="<?php echo htmlspecialchars($formData['incident_location_constituency'] ?? ''); ?>">
+                        <input type="hidden" name="incident_local_area" id="incident_local_area" value="<?php echo htmlspecialchars($formData['incident_local_area'] ?? ''); ?>">
+                        
+                        <!-- Google Places Autocomplete for Incident Location -->
+                        <div class="mb-3">
+                            <label for="incident_place_search" class="form-label">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                Search Incident Location
+                            </label>
+                            <input 
+                                type="text" 
+                                id="incident_place_search" 
+                                class="form-control"
+                                placeholder="Start typing to search location in Kenya..."
+                                autocomplete="off"
+                            >
+                            <div class="form-help">Use Google Places to search and capture location automatically</div>
+                            <div id="incident_place_details" class="place-details" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #3b82f6; font-size: 0.85rem;">
+                                <strong style="color: #1e40af;">Selected:</strong> <span id="incident_place_name" style="color: #1e40af;"></span><br>
+                                <small style="color: #6b7280;">GPS: <span id="incident_coords"></span></small>
                             </div>
+                            <!-- Hidden fields for coordinates -->
+                            <input type="hidden" name="incident_latitude" id="incident_latitude" value="<?php echo htmlspecialchars($formData['incident_latitude'] ?? ''); ?>">
+                            <input type="hidden" name="incident_longitude" id="incident_longitude" value="<?php echo htmlspecialchars($formData['incident_longitude'] ?? ''); ?>">
+                        </div>
 
-                            <div class="form-group">
-                                 <label for="incident_location_constituency" class="form-label">Constituency *</label>
-                                 <select
-                                     id="incident_location_constituency"
-                                     name="incident_location_constituency"
-                                     class="form-control form-select <?php echo isset($errors['location']) ? 'error' : ''; ?>"
-                                     required
-                                 >
-                                    <option value="">Select constituency...</option>
-
-                                </select>
+                        <!-- Location Details Display (auto-populated from Google) -->
+                        <div id="location_details_display" style="display: none; margin-top: 1rem; padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #22c55e;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <strong style="color: #166534;">Location Captured</strong>
+                                <button type="button" onclick="clearLocation()" style="background: none; border: 1px solid #999; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">Clear & Reselect</button>
                             </div>
-
-                            <div class="form-group">
-                                <label for="incident_local_area" class="form-label">Local Area</label>
-                                <input
-                                    type="text"
-                                    id="incident_local_area"
-                                    name="incident_local_area"
-                                    class="form-control"
-                                    placeholder="e.g., Town name, Estate name, village, street"
-                                    value="<?php echo htmlspecialchars($formData['incident_local_area'] ?? ''); ?>"
-                                    maxlength="100"
-                                >
-                                <div class="form-help">Optional: Specific area or landmark</div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; font-size: 0.9rem;">
+                                <div>
+                                    <strong style="color: #666;">County</strong><br>
+                                    <span id="display_county" style="color: #333;"></span>
+                                </div>
+                                <div>
+                                    <strong style="color: #666;">Constituency</strong><br>
+                                    <span id="display_constituency" style="color: #333;"></span>
+                                </div>
+                                <div>
+                                    <strong style="color: #666;">Local Area</strong><br>
+                                    <span id="display_local_area" style="color: #333;"></span>
+                                </div>
                             </div>
                         </div>
 
                           <?php if (isset($errors['location'])): ?>
                               <div class="form-error"><?php echo htmlspecialchars($errors['location']); ?></div>
                           <?php endif; ?>
-                          <div class="form-help">Select the county and constituency where the incident occurred</div>
-
-                          <!-- Google Places Autocomplete for Incident Location -->
-                          <div class="form-group google-places-group" style="margin-top: 1rem; padding-top: 1.5rem; border-top: 1px dashed var(--light-gray);">
-                              <label for="incident_place_search" class="form-label">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                  Search Incident Location
-                              </label>
-                              <input 
-                                  type="text" 
-                                  id="incident_place_search" 
-                                  class="form-control"
-                                  placeholder="Start typing to search location in Kenya..."
-                                  autocomplete="off"
-                              >
-                              <div class="form-help">Use Google Places for precise GPS coordinates on the map</div>
-                              <div id="incident_place_details" class="place-details" style="display: none; margin-top: 0.5rem; padding: 0.75rem; background: #f0f9ff; border-radius: 6px; border: 1px solid #3b82f6; font-size: 0.85rem;">
-                                  <strong style="color: #1e40af;">Selected:</strong> <span id="incident_place_name" style="color: #1e40af;"></span><br>
-                                  <small style="color: #6b7280;">GPS: <span id="incident_coords"></span></small>
-                              </div>
-                              <!-- Hidden fields for coordinates -->
-                              <input type="hidden" name="incident_latitude" id="incident_latitude">
-                              <input type="hidden" name="incident_longitude" id="incident_longitude">
-                          </div>
                       </fieldset>
 
                       <fieldset class="mb-4">
@@ -973,10 +952,12 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         const lat = place.geometry.location.lat();
                         const lng = place.geometry.location.lng();
 
-                        // Extract county and sub-county from address components
+                        // Extract county, sub-county, and locality from address components
                         const addressComponents = place.address_components;
                         let county = '';
                         let subCounty = '';
+                        let localArea = '';
+                        let locality = '';
 
                         addressComponents.forEach(component => {
                             if (component.types.includes('administrative_area_level_1')) {
@@ -985,7 +966,22 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                             if (component.types.includes('administrative_area_level_2')) {
                                 subCounty = component.long_name;
                             }
+                            if (component.types.includes('sublocality') || component.types.includes('sublocality_level_1')) {
+                                localArea = component.long_name;
+                            }
+                            if (component.types.includes('locality')) {
+                                locality = component.long_name;
+                            }
                         });
+
+                        // If no sublocality, use route as fallback for local area
+                        if (!localArea) {
+                            addressComponents.forEach(component => {
+                                if (component.types.includes('route')) {
+                                    localArea = component.long_name;
+                                }
+                            });
+                        }
 
                         // Populate hidden fields with coordinates
                         document.getElementById('incident_latitude').value = lat.toFixed(8);
@@ -996,16 +992,60 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                         document.getElementById('incident_coords').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
                         document.getElementById('incident_place_details').style.display = 'block';
 
-                        // Auto-fill county dropdown if empty
-                        const countySelect = document.getElementById('incident_location_county');
-                        if (countySelect && !countySelect.value && county) {
-                            matchAndSelectCounty('incident_location_county', county);
+                        // Process and store location data
+                        let finalCounty = county || '';
+                        let finalConstituency = subCounty || '';
+                        let finalLocalArea = localArea || locality || (place.formatted_address ? place.formatted_address.split(',')[0] : '');
+
+                        // Normalize county name (remove "County" suffix for matching)
+                        let normalizedCounty = finalCounty.replace(/County$/i, '').trim();
+
+                        // If no county from Google, default to Nairobi
+                        if (!normalizedCounty) {
+                            normalizedCounty = 'Nairobi';
+                            finalConstituency = 'Westlands';
                         }
 
-                        console.log('Incident location selected:', place.name, 'Lat:', lat, 'Lng:', lng);
+                        // If no constituency from Google, find one from normalized county
+                        if (!finalConstituency && normalizedCounty) {
+                            const kenyanCounties = <?php echo json_encode(KENYAN_COUNTIES); ?>;
+                            if (kenyanCounties[normalizedCounty] && kenyanCounties[normalizedCounty].length > 0) {
+                                finalConstituency = kenyanCounties[normalizedCounty][0];
+                            }
+                        }
+
+                        // Populate hidden inputs (use normalized county name)
+                        document.getElementById('incident_location_county').value = normalizedCounty;
+                        document.getElementById('incident_location_constituency').value = finalConstituency;
+                        document.getElementById('incident_local_area').value = finalLocalArea || '';
+
+                        // Show location details display (use normalized county name for display)
+                        document.getElementById('display_county').textContent = finalCounty; // Show original for user
+                        document.getElementById('display_constituency').textContent = finalConstituency;
+                        document.getElementById('display_local_area').textContent = finalLocalArea || 'N/A';
+                        document.getElementById('location_details_display').style.display = 'block';
+
+                        console.log('Incident location selected:', place.name, 'Lat:', lat, 'Lng:', lng, 'County:', finalCounty, 'Constituency:', finalConstituency);
                     }
                 });
             }
+        }
+
+        /**
+         * Clear location and allow re-selection
+         */
+        function clearLocation() {
+            document.getElementById('incident_place_search').value = '';
+            document.getElementById('incident_location_county').value = '';
+            document.getElementById('incident_location_constituency').value = '';
+            document.getElementById('incident_local_area').value = '';
+            document.getElementById('incident_latitude').value = '';
+            document.getElementById('incident_longitude').value = '';
+            document.getElementById('incident_place_details').style.display = 'none';
+            document.getElementById('location_details_display').style.display = 'none';
+            document.getElementById('display_county').textContent = '';
+            document.getElementById('display_constituency').textContent = '';
+            document.getElementById('display_local_area').textContent = '';
         }
 
         /**
@@ -1032,6 +1072,72 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                     console.log('Auto-selected county:', select.options[i].text);
                     break;
                 }
+            }
+        }
+
+        /**
+         * Helper function to match Google sub-county with system constituencies (relaxed matching)
+         */
+        function matchAndSelectConstituency(selectId, googleSubCounty) {
+            const select = document.getElementById(selectId);
+            if (!select || select.options.length <= 1) return; // No options to match against
+
+            // Get current county to filter constituencies
+            const countySelect = document.getElementById('incident_location_county');
+            const currentCounty = countySelect ? countySelect.value : '';
+
+            // Normalize the Google sub-county name
+            const normalizedGoogle = googleSubCounty.toLowerCase()
+                .replace(/sub-county/g, '')
+                .replace(/sub county/g, '')
+                .replace(/constituency/g, '')
+                .trim();
+
+            let bestMatch = null;
+            let bestScore = 0;
+
+            for (let i = 0; i < select.options.length; i++) {
+                const optionText = select.options[i].text.toLowerCase().trim();
+                const optionValue = select.options[i].value.toLowerCase().trim();
+
+                if (!optionValue) continue; // Skip placeholder option
+
+                // Calculate match score (higher is better)
+                let score = 0;
+
+                // Exact match gets highest score
+                if (optionText === normalizedGoogle || optionValue === normalizedGoogle) {
+                    score = 100;
+                }
+                // Contains match
+                else if (optionText.includes(normalizedGoogle) || normalizedGoogle.includes(optionText)) {
+                    score = 80;
+                }
+                // Word match (split by spaces)
+                else {
+                    const googleWords = normalizedGoogle.split(/\s+/).filter(w => w.length > 2);
+                    const optionWords = optionText.split(/\s+/).filter(w => w.length > 2);
+                    const matchingWords = googleWords.filter(gw => 
+                        optionWords.some(ow => ow.includes(gw) || gw.includes(ow))
+                    );
+                    if (matchingWords.length > 0) {
+                        score = 50 + (matchingWords.length * 10);
+                    }
+                }
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMatch = i;
+                }
+            }
+
+            // Apply match if score is reasonable (at least 30)
+            if (bestMatch !== null && bestScore >= 30) {
+                select.selectedIndex = bestMatch;
+                select.dispatchEvent(new Event('change'));
+                console.log('Auto-selected constituency:', select.options[bestMatch].text, '(score:', bestScore + ')');
+            } else {
+                console.log('Could not match constituency:', googleSubCounty, '(best score:', bestScore + ')');
             }
         }
 
