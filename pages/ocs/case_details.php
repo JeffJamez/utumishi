@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../includes/utils/validation.php';
 require_once __DIR__ . '/../../includes/utils/sanitization.php';
 require_once __DIR__ . '/../../includes/classes/CaseManager.php';
 require_once __DIR__ . '/../../includes/classes/Station.php';
+require_once __DIR__ . '/../../includes/classes/WorkloadManager.php';
 
 requireRole(ROLE_OCS);
 
@@ -32,6 +33,10 @@ if ($caseId > 0) {
         $caseDetails = null;
     } else {
         $caseUpdates = $caseManager->getCaseUpdates($caseId);
+        
+        // Get station officers for reassignment
+        $station = new Station($stationId);
+        $stationOfficers = $station->getOfficers();
     }
 } else {
     $error = 'Invalid case ID';
@@ -69,6 +74,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $currentStatus = $caseDetails['status'];
             $caseManager->addCaseUpdate($caseId, $currentUser['id'], $updateText, $currentStatus, $currentStatus);
             $success = 'Case update added successfully';
+            
+        } elseif ($action === 'reassign_case') {
+            $workloadManager = new WorkloadManager();
+            $toOfficerId = (int)$_POST['to_officer_id'];
+            $reason = sanitizeText($_POST['reason'] ?? '');
+            $fromOfficerId = $caseDetails['assigned_officer_id'];
+            
+            if (!$fromOfficerId) {
+                throw new Exception('Case is not assigned to any officer');
+            }
+            
+            $result = $workloadManager->reassignCase($caseId, $fromOfficerId, $toOfficerId, $currentUser['id'], $reason);
+            if (!$result['success']) {
+                throw new Exception($result['message']);
+            }
+            
+            // Refresh case data to get updated officer info
+            $caseDetails = $caseManager->getCaseById($caseId);
+            $success = 'Case reassigned to ' . htmlspecialchars($caseDetails['assigned_officer_name']);
         }
 
         // Refresh case data
@@ -134,9 +158,59 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
                                     </button>
                                 </form>
                             <?php endif; ?>
+                            
+                            <?php if ($caseDetails['assigned_officer_id'] && $caseDetails['status'] !== 'closed'): ?>
+                                <button type="button" class="btn btn-primary" style="padding: 8px 16px; border-radius: 4px; font-size: 14px; min-width: 120px;" onclick="openModal('reassignModal')">
+                                    Reassign
+                                </button>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
+
+<!-- Reassign Case Modal -->
+                <?php if ($caseDetails['assigned_officer_id'] && $caseDetails['status'] !== 'closed'): ?>
+                <div id="reassignModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3 class="modal-title">Reassign Case</h3>
+                            <button type="button" class="btn-close" onclick="closeModal('reassignModal')">&times;</button>
+                        </div>
+                        <form method="POST">
+                            <?php echo csrfField(); ?>
+                            <div class="modal-body">
+                                <p><strong>Current Officer:</strong> <?php echo htmlspecialchars($caseDetails['assigned_officer_name']); ?></p>
+                                <p><strong>OB Number:</strong> <?php echo htmlspecialchars($caseDetails['ob_number']); ?></p>
+                                
+                                <div class="mb-3">
+                                    <label for="to_officer_id" class="form-label">Reassign to Officer *</label>
+                                    <select name="to_officer_id" id="to_officer_id" class="form-control" required onchange="toggleReassignButton()">
+                                        <option value="">Select Officer</option>
+                                        <?php if (!empty($stationOfficers)): ?>
+                                            <?php foreach ($stationOfficers as $officer): ?>
+                                                <?php if ($officer['id'] != $caseDetails['assigned_officer_id']): ?>
+                                                    <option value="<?php echo $officer['id']; ?>">
+                                                        <?php echo htmlspecialchars($officer['name']); ?> (<?php echo htmlspecialchars($officer['badge_number']); ?>) - <?php echo $officer['current_case_load']; ?> cases
+                                                    </option>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="reason" class="form-label">Reason (optional)</label>
+                                    <textarea name="reason" id="reason" class="form-control" rows="2" placeholder="Enter reason for reassignment..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" onclick="closeModal('reassignModal')">Cancel</button>
+                                <button type="submit" name="action" value="reassign_case" class="btn btn-primary" id="confirmReassignBtn" disabled>Confirm Reassignment</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                  <div class="col-md-4">
                         <!-- Case Details Panel -->
@@ -352,6 +426,30 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
             }
         }, 180000);
         
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        function toggleReassignButton() {
+            var select = document.getElementById('to_officer_id');
+            var btn = document.getElementById('confirmReassignBtn');
+            btn.disabled = select.value === '';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        };
+        
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.table-danger').forEach(row => {
                 row.style.borderLeft = '4px solid var(--danger-red)';
@@ -407,6 +505,69 @@ require_once __DIR__ . '/../../includes/layout/layout.php';
 
         .timeline-item:last-child::before {
             background: var(--medium-gray);
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
         }
     </style>
 </body>
