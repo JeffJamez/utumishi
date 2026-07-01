@@ -1,0 +1,6 @@
+Options -Indexes
+Deny from all
+<Files ~ "\.(pdf|jpg|jpeg|png)$">
+    # Allow access only through application
+    Deny from all
+</Files>
